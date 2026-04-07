@@ -1,0 +1,15 @@
+# Secrets & credentials
+.env
+*.key
+*.pem
+secrets/
+
+# OS noise
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Python (if you ever drop scripts here)
+__pycache__/
+*.pyc
+.venv/
