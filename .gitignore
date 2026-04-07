@@ -1,3 +1,6 @@
+# Claude local/machine-specific settings
+.claude/settings.local.json
+
 # Secrets & credentials
 .env
 *.key
