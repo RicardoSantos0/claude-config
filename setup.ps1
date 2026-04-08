@@ -1,4 +1,4 @@
-# Links ~/.claude/agents and ~/.claude/commands to this repo.
+# Links ~/.claude/agents, ~/.claude/commands, and ~/.claude/skills to this repo.
 # Run once per machine after cloning (as Administrator for symlinks).
 
 $RepoDir = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -25,3 +25,4 @@ function Link-Dir($name) {
 
 Link-Dir "agents"
 Link-Dir "commands"
+Link-Dir "skills"

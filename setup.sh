@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Links ~/.claude/agents and ~/.claude/commands to this repo.
+# Links ~/.claude/agents, ~/.claude/commands, and ~/.claude/skills to this repo.
 # Run once per machine after cloning.
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -24,3 +24,4 @@ link() {
 
 link agents
 link commands
+link skills
