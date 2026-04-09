@@ -1,0 +1,63 @@
+# ============================================================
+# SCALING AND CONCURRENCY — FUTURE ROADMAP
+# ============================================================
+
+scaling:
+
+  v1_model:
+    description: "Sequential, single-project, single-operator"
+    concurrency: "None. One agent active at a time."
+    projects: "One active project at a time."
+    operators: "Single operator."
+    rationale: >
+      Simplicity first. Get the governance model right before
+      adding concurrency complexity.
+
+  v2_model:
+    description: "Sequential agents, multiple projects, single operator"
+    changes:
+      - "Add project queue"
+      - "Master can context-switch between projects"
+      - "Each project has independent shared state"
+      - "Roster is shared across projects (already designed for this)"
+    prerequisite: "V1 must be stable for 5+ projects"
+
+  v3_model:
+    description: "Parallel agents within a project"
+    changes:
+      - "Add locking to SharedStateManager"
+      - "Add message queue for async handoffs"
+      - "Master manages concurrent agent execution"
+      - "Add deadlock detection"
+      - "Add race condition guards on shared state"
+    prerequisite: "V2 must be stable. Significant architectural change."
+
+  v4_model:
+    description: "Parallel agents, parallel projects, multi-operator"
+    changes:
+      - "Add operator authentication"
+      - "Add per-operator permissions"
+      - "Add cross-project resource locking"
+      - "Add project priority queue"
+      - "Consider database backing store"
+    prerequisite: "V3 must be stable. Major infrastructure change."
+
+  design_for_future_now:
+    description: >
+      Even in v1, design these interfaces to be swappable:
+    interfaces:
+      - name: "StorageProvider"
+        v1: "FileSystemStorage (YAML on disk)"
+        future: "DatabaseStorage, S3Storage"
+      - name: "LLMProvider"  
+        v1: "ClaudeProvider"
+        future: "OpenAIProvider, LocalModelProvider"
+      - name: "MessageBus"
+        v1: "DirectCallBus (synchronous function calls)"
+        future: "QueueBus (async message queue)"
+      - name: "HumanApprovalGate"
+        v1: "CLIApprovalGate (stdin)"
+        future: "UIApprovalGate, APIApprovalGate"
+      - name: "AuditLogger"
+        v1: "FileAuditLogger (append to file)"
+        future: "DatabaseAuditLogger, StreamAuditLogger"

@@ -1,0 +1,66 @@
+# ============================================================
+# PRODUCT MANAGER AGENT — EXPERT ANSWERS
+# ============================================================
+
+product_manager:
+
+  # Q1: External data access
+  external_data:
+    answer: "Not for v1. Product Manager works with the specification provided."
+
+  # Q2: Technically possible but not valuable
+  low_value_work:
+    answer: >
+      The Product Manager should flag it as 'low priority' with
+      rationale. It should appear in scope_exclusions with reason:
+      'technically feasible but low value relative to effort.'
+
+  # Q3: User stories
+  user_stories:
+    answer: >
+      Acceptance criteria format, not user stories. Format:
+      'The system must [verb] [object] [condition].'
+    rationale: "Acceptance criteria are more testable and less ambiguous."
+
+  # Q4: Tradeoff presentation
+  tradeoff_presentation:
+    answer: >
+      Present as options with a recommendation. Format:
+      - Option A: [description] — Pros: [...] Cons: [...]
+      - Option B: [description] — Pros: [...] Cons: [...]
+      - Recommendation: Option [X] because [rationale]
+      The Master decides.
+
+  # Q5: Strategy memory
+  strategy_memory:
+    answer: "Not for v1. Each project is independent."
+
+  # Q6: Multi-project requests
+  multi_project:
+    answer: "Not supported for v1. Each project is a single unit."
+
+  # Q7: Product risk vs delivery risk boundary
+  risk_boundary:
+    answer: >
+      Product risk: 'We might build the wrong thing.'
+      Delivery risk: 'We might build it wrong or late.'
+      If it's about WHAT → Product Manager.
+      If it's about HOW/WHEN → Project Manager.
+
+  # Q8: User interaction
+  user_interaction:
+    answer: "Product Manager does not interact with users directly. All user interaction goes through Inquirer/Master."
+
+  # Q9: Acceptance criteria detail level
+  criteria_detail:
+    answer: >
+      Behavioral. Each criterion describes observable behavior,
+      not implementation details. Format:
+      'When [trigger], the system must [behavior], resulting in [outcome].'
+
+  # Q10: Product brief document
+  product_brief:
+    answer: >
+      Yes. The Product Manager produces a product_plan.yaml in
+      the planning/ directory. It includes: problem statement,
+      scope, acceptance criteria, tradeoffs, risks, capability needs.

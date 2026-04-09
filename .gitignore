@@ -12,7 +12,20 @@ secrets/
 Thumbs.db
 desktop.ini
 
-# Python (if you ever drop scripts here)
+# Python
 __pycache__/
 *.pyc
+*.pyo
 .venv/
+.pytest_cache/
+*.egg-info/
+dist/
+.coverage
+
+# MAS runtime data (project-specific, not committed)
+projects/
+audit.log
+working_state/
+
+# MAS roster (committed, but large binaries excluded)
+roster/**/*.bak

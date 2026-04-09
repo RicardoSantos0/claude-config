@@ -1,0 +1,214 @@
+"""
+Prompt Assembler
+Loads agent .md templates and injects scoped shared state.
+Each agent receives ONLY the shared state fields it is authorized to read.
+This prevents attention pollution and enforces information boundaries.
+"""
+
+import re
+from pathlib import Path
+from typing import Any
+
+import yaml
+
+ROOT = Path(__file__).parent.parent
+AGENTS_DIR = ROOT / "agents"
+
+# Maps agent_id → list of state paths the agent may read
+# Each path is "section.field" or "section" (all fields in section)
+STATE_PROJECTIONS: dict[str, list[str]] = {
+    "master_orchestrator": [
+        "core_identity",
+        "project_definition",
+        "workflow",
+        "decisions",
+        "capability",
+        "consultation",
+        "evaluation",
+        "_meta",
+    ],
+    "scribe_agent": [
+        "core_identity",
+        "workflow.current_owner",
+        "workflow.handoff_history",
+        "workflow.completed_phases",
+        "decisions",
+        "artifacts",
+    ],
+    "inquirer_agent": [
+        "core_identity",
+        "project_definition.original_brief",
+        "project_definition.clarified_specification",
+    ],
+    "product_manager_agent": [
+        "core_identity",
+        "project_definition",
+        "workflow.current_owner",
+        "workflow.resource_requests",
+    ],
+    "project_manager_agent": [
+        "core_identity",
+        "project_definition",
+        "workflow",
+    ],
+    "hr_agent": [
+        "core_identity",
+        "workflow.resource_requests",
+        "workflow.resource_allocations",
+        "capability",
+    ],
+    "evaluator_agent": [
+        "core_identity",
+        "project_definition",
+        "workflow",
+        "decisions",
+        "artifacts",
+        "evaluation",
+        "capability.spawned_agents",
+    ],
+    "trainer_agent": [
+        "core_identity",
+        "evaluation",
+        "workflow.completed_phases",
+    ],
+    "spawner_agent": [
+        "core_identity",
+        "capability.spawn_requests",
+        "capability.spawned_agents",
+        "capability.capability_gap_certificates",
+    ],
+}
+
+# Consultant projections — only the consultation context the Master provides
+CONSULTANT_PROJECTION = ["core_identity.project_id"]
+for _c in ("risk_advisor", "quality_advisor", "devils_advocate",
+           "domain_expert", "efficiency_advisor"):
+    STATE_PROJECTIONS[_c] = CONSULTANT_PROJECTION
+
+
+def _get_nested(data: dict, path: str) -> Any:
+    """Get a value from nested dict by dot-notation path."""
+    parts = path.split(".")
+    node = data
+    for part in parts:
+        if not isinstance(node, dict) or part not in node:
+            return None
+        node = node[part]
+    return node
+
+
+def _project_state(state: dict, agent_id: str) -> dict:
+    """
+    Return a filtered view of state containing only fields
+    the agent is authorized to read.
+    """
+    projection_paths = STATE_PROJECTIONS.get(agent_id, [])
+    projected = {}
+
+    for path in projection_paths:
+        parts = path.split(".")
+        if len(parts) == 1:
+            # Full section
+            section = parts[0]
+            if section in state:
+                projected[section] = state[section]
+        elif len(parts) == 2:
+            # Single field within section
+            section, field = parts
+            if section in state and field in state[section]:
+                projected.setdefault(section, {})[field] = state[section][field]
+
+    return projected
+
+
+def _fill_placeholders(template: str, context: dict) -> str:
+    """Replace {placeholder} markers with values from context."""
+    def replacer(match):
+        key = match.group(1).strip()
+        val = context.get(key)
+        if val is None:
+            return match.group(0)  # Leave unfilled placeholders as-is
+        if isinstance(val, (dict, list)):
+            return yaml.dump(val, default_flow_style=False,
+                             allow_unicode=True).strip()
+        return str(val)
+
+    return re.sub(r"\{([^}]+)\}", replacer, template)
+
+
+class PromptAssembler:
+    """
+    Assembles agent system prompts by injecting scoped state context
+    into .md templates.
+    """
+
+    def __init__(self, agents_dir: Path = AGENTS_DIR):
+        self.agents_dir = agents_dir
+
+    def get_template_path(self, agent_id: str) -> Path:
+        return self.agents_dir / f"{agent_id}.md"
+
+    def load_template(self, agent_id: str) -> str:
+        """Load the raw .md template for an agent (strips YAML frontmatter)."""
+        path = self.get_template_path(agent_id)
+        if not path.exists():
+            raise FileNotFoundError(f"Agent template not found: {path}")
+        content = path.read_text(encoding="utf-8")
+        # Strip YAML frontmatter (--- ... ---)
+        if content.startswith("---"):
+            end = content.find("---", 3)
+            if end != -1:
+                content = content[end + 3:].lstrip()
+        return content
+
+    def assemble(self, agent_id: str, state: dict,
+                 extra_context: dict | None = None) -> str:
+        """
+        Assemble a complete prompt for an agent.
+        Injects scoped state and any extra context.
+        """
+        template = self.load_template(agent_id)
+        projected = _project_state(state, agent_id)
+
+        context = {
+            "injected_project_id": state.get("core_identity", {}).get("project_id", ""),
+            "injected_current_phase": state.get("core_identity", {}).get("current_phase", ""),
+            "injected_shared_state": yaml.dump(projected, default_flow_style=False,
+                                               allow_unicode=True, sort_keys=False),
+        }
+
+        # Add section-specific convenience keys
+        if "workflow" in projected:
+            context["injected_pending_items"] = yaml.dump(
+                projected["workflow"].get("pending_assignments", []),
+                default_flow_style=False, allow_unicode=True,
+            )
+            context["injected_recent_handoffs"] = yaml.dump(
+                projected["workflow"].get("handoff_history", [])[-5:],
+                default_flow_style=False, allow_unicode=True,
+            )
+
+        if "consultation" in projected:
+            context["injected_active_consultation"] = yaml.dump(
+                projected["consultation"].get("consultation_requests", [])[-1:],
+                default_flow_style=False, allow_unicode=True,
+            )
+
+        if "project_definition" in projected:
+            spec = projected["project_definition"].get("clarified_specification")
+            context["injected_clarified_specification"] = (
+                yaml.dump(spec, default_flow_style=False, allow_unicode=True)
+                if spec else "(not yet available)"
+            )
+            context["injected_original_brief"] = (
+                projected["project_definition"].get("original_brief") or "(not yet available)"
+            )
+
+        if extra_context:
+            context.update(extra_context)
+
+        return _fill_placeholders(template, context)
+
+    def get_state_projection(self, agent_id: str) -> list[str]:
+        """Return the list of state paths this agent is authorized to read."""
+        return STATE_PROJECTIONS.get(agent_id, [])

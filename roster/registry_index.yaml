@@ -1,0 +1,49 @@
+# ============================================================
+# ROSTER REGISTRY INDEX
+# Master index of all known agents, skills, and tools.
+# Owned by HR Agent. Never delete entries — retire only.
+# ============================================================
+
+registry:
+  version: "1.0.0"
+  last_updated: ""
+  maintained_by: "hr_agent"
+
+  agents: []
+  # Each entry:
+  #   agent_id: ""
+  #   name: ""
+  #   version: ""
+  #   trust_tier: ""           # T0_core | T1_established | T2_supervised | T3_provisional
+  #   status: ""               # active | probation | retired
+  #   definition_path: ""      # agents/{agent_id}.md
+  #   capabilities: []         # Keyword tags for matching
+  #   performance_score: null  # Running average, null until evaluated
+  #   spawn_origin: null       # null if core, spawn_request_id if spawned
+  #   created_at: ""
+  #   retired_at: null
+  #   retirement_reason: null
+
+  skills: []
+  # Each entry:
+  #   skill_id: ""
+  #   name: ""
+  #   version: ""
+  #   status: ""
+  #   definition_path: ""
+  #   capabilities: []
+  #   created_at: ""
+
+  tools: []
+  # Each entry:
+  #   tool_id: ""
+  #   name: ""
+  #   description: ""
+  #   risk_level: ""           # low | medium | high
+  #   allowed_agents: []
+
+counts:
+  active_agents: 0
+  active_skills: 0
+  retired_agents: 0
+  spawned_total: 0

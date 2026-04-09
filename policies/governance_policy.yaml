@@ -1,0 +1,70 @@
+# ============================================================
+# GOVERNANCE POLICY
+# Core rules that all agents must follow at all times.
+# ============================================================
+
+governance_policy:
+
+  # --- CORE PRINCIPLES ---
+  principles:
+    reuse_before_creation:
+      description: >
+        Always try to use an approved existing agent or skill
+        before attempting to create a new one.
+      enforcement: "HR capability search is mandatory before any spawn request"
+
+    document_before_forgetting:
+      description: >
+        Significant project decisions and artifacts must be written
+        into durable project memory, not left in transient context.
+      enforcement: "Scribe records every handoff, decision, and artifact"
+
+    improve_only_through_evidence:
+      description: >
+        Training and skill updates must be grounded in Evaluator
+        findings, not informal intuition.
+      enforcement: "Trainer proposals require minimum 1 evaluation report"
+
+  # --- HANDOFF RULES ---
+  handoff_rules:
+    - "Every agent-to-agent transfer MUST use the formal handoff protocol"
+    - "Every handoff MUST be authorized by the Master Orchestrator"
+    - "The receiving agent MUST explicitly accept or reject"
+    - "A rejected handoff returns to the sender with rejection reason"
+    - "No agent may begin work without an accepted handoff"
+    - "The Scribe records every handoff in project memory"
+
+  # --- AUTHORITY BOUNDARIES ---
+  authority_rules:
+    - "No agent may write to shared state fields it does not own"
+    - "No agent may spawn another agent without a gap certificate"
+    - "No agent may escalate authority without Master approval"
+    - "No agent may delete any record"
+    - "Spawned agents (T3) cannot spawn other agents"
+    - "Trainer at L0 cannot apply changes — advisory only"
+
+  # --- SHARED STATE RULES ---
+  shared_state_rules:
+    - "Shared state is the single source of truth"
+    - "No agent may maintain private state that contradicts shared state"
+    - "All writes go through SharedStateManager with access control checks"
+    - "Immutable fields cannot be changed after approval"
+    - "Append-only fields reject write operations"
+
+  # --- ESCALATION TO HUMAN ---
+  human_escalation_triggers:
+    - "Risk classification is 'critical'"
+    - "A consultant raises an unresolvable concern"
+    - "Two consecutive spawn requests are denied"
+    - "A phase is blocked after retry"
+    - "All consultants unanimously flag high-risk"
+    - "Master needs to override unanimous consultant recommendation"
+    - "Trust tier promotion requested"
+    - "Governance policy change requested"
+    - "Trainer L1 or L2 promotion requested"
+
+  # --- VIOLATION HANDLING ---
+  violations:
+    logging: "All violations are logged with full context"
+    agent_threshold: 3  # Violations before human escalation
+    block_before_execute: true  # Violations are blocked, not rolled back

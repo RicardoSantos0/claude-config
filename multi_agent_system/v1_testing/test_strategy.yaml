@@ -1,0 +1,199 @@
+# ============================================================
+# TESTING STRATEGY
+# ============================================================
+
+testing:
+
+  # --- TEST CATEGORIES ---
+  categories:
+
+    unit_tests:
+      description: "Test individual components in isolation"
+      targets:
+        - "SharedStateManager: read, write, access control"
+        - "HandoffEngine: create, validate, accept, reject"
+        - "CapabilityRegistry: search, add, score"
+        - "TaskBoard: CRUD, status transitions"
+        - "MetricsEngine: scoring functions"
+        - "SpawnPolicyEngine: limit checks, validation"
+        - "PromptAssembler: template rendering"
+      naming: "test_{component}_{function}_{scenario}"
+      location: "tests/unit/"
+
+    governance_tests:
+      description: >
+        Test that governance rules are enforced. These are the
+        most critical tests in the system.
+      tests:
+        - name: "test_unauthorized_write_blocked"
+          description: "Agent cannot write to field it doesn't own"
+          implementation: |
+            # For every agent, attempt to write every field.
+            # Verify that only authorized writes succeed.
+            for agent in all_agents:
+                for field in all_state_fields:
+                    result = state_manager.write(agent.id, field, "test")
+                    if agent.id in access_control[field].write:
+                        assert result.success
+                    else:
+                        assert not result.success
+                        assert result.reason == "unauthorized_write"
+
+        - name: "test_immutable_field_protection"
+          description: "Immutable fields cannot be changed after approval"
+          implementation: |
+            state_manager.write("inquirer_agent", "original_brief", "first value")
+            state_manager.approve("original_brief")
+            result = state_manager.write("inquirer_agent", "original_brief", "changed")
+            assert not result.success
+            assert result.reason == "field_is_immutable"
+
+        - name: "test_append_only_enforcement"
+          description: "Append-only fields reject non-append operations"
+          implementation: |
+            state_manager.append("scribe_agent", "decision_log", decision_1)
+            result = state_manager.write("scribe_agent", "decision_log", [])
+            assert not result.success
+            assert result.reason == "field_is_append_only"
+
+        - name: "test_spawn_requires_certificate"
+          description: "Spawner rejects requests without gap certificate"
+          implementation: |
+            request = {"need": "test_agent", "certificate": None}
+            result = spawner.receive_spawn_request(request)
+            assert not result
+            assert "certificate_required" in spawner.last_error
+
+        - name: "test_spawn_limit_per_project"
+          description: "System blocks spawning beyond project limit"
+          implementation: |
+            for i in range(3):
+                spawn_agent(project_id)  # Should succeed
+            result = spawn_agent(project_id)  # Should fail
+            assert not result.success
+            assert result.reason == "project_spawn_limit_reached"
+
+        - name: "test_recursive_spawn_blocked"
+          description: "Spawned agents cannot invoke spawning"
+          implementation: |
+            spawned_agent = create_spawned_agent(trust_tier="T3")
+            result = spawn_policy.check_recursive_spawn(spawned_agent.id)
+            assert not result  # Blocked
+
+        - name: "test_trainer_L0_cannot_apply"
+          description: "Trainer at L0 cannot apply changes"
+          implementation: |
+            trainer = TrainerAgent(authority_level="L0_advisory")
+            with pytest.raises(AuthorityError):
+                trainer.apply_change(proposal)
+
+        - name: "test_handoff_required"
+          description: "Agents cannot transfer work without handoff"
+          implementation: |
+            # Verify that there is no direct communication path
+            # between agents that bypasses the handoff engine
+            # All agent.send() calls must go through handoff_engine
+
+        - name: "test_consultation_independence"
+          description: "Consultants cannot see each other's responses"
+          implementation: |
+            panel = ConsultantPanelManager()
+            request = create_test_consultation()
+            # Distribute request
+            panel.distribute_request(request)
+            # Verify each consultant received only the request, not other responses
+            for consultant in panel.consultants.values():
+                assert consultant.last_input == request
+                assert "other_responses" not in consultant.last_input
+
+        - name: "test_unanimous_risk_forces_escalation"
+          description: "All consultants flagging high-risk requires human escalation"
+          implementation: |
+            responses = [
+                {"consultant": c, "risk_flags": ["high_risk"]}
+                for c in all_consultants
+            ]
+            result = synthesis_engine.determine_escalation(responses)
+            assert result == True  # Must escalate
+
+      location: "tests/governance/"
+
+    integration_tests:
+      description: "Test multi-agent workflows end-to-end"
+      tests:
+        - name: "test_full_project_lifecycle"
+          description: "Complete project from brief to closure"
+          steps:
+            - "Submit raw brief to Inquirer"
+            - "Complete clarification Q&A"
+            - "Master initializes project"
+            - "Scribe creates folder"
+            - "Product Manager creates product plan"
+            - "HR discovers capabilities"
+            - "Project Manager creates execution plan"
+            - "Execute tasks"
+            - "Evaluator evaluates"
+            - "Trainer proposes improvements"
+            - "Scribe closes project"
+          verification:
+            - "All shared state fields populated correctly"
+            - "All project files exist"
+            - "All handoffs logged"
+            - "All decisions recorded"
+            - "Evaluation report exists"
+            - "Improvement proposals exist"
+            - "Project summary exists"
+
+        - name: "test_capability_gap_to_spawn"
+          description: "Full spawn pathway from gap to draft"
+          steps:
+            - "Manager requests capability"
+            - "HR finds no match"
+            - "HR produces gap certificate"
+            - "Master consults panel"
+            - "Master approves spawn"
+            - "Spawner creates draft"
+            - "Evaluator verifies"
+            - "HR registers new agent"
+          verification:
+            - "Gap certificate in shared state"
+            - "Consultation recorded"
+            - "Synthesis recorded"
+            - "Agent package exists"
+            - "Verification results exist"
+            - "Agent in roster at T3"
+
+        - name: "test_error_recovery"
+          description: "System recovers from agent failure"
+          steps:
+            - "Start a project normally"
+            - "Simulate agent failure during execution"
+            - "Verify retry occurs"
+            - "Simulate second failure"
+            - "Verify escalation to Master"
+            - "Verify error is logged"
+            - "Verify project can continue"
+
+      location: "tests/integration/"
+
+    prompt_tests:
+      description: "Test that prompts render correctly"
+      tests:
+        - name: "test_all_prompts_render"
+          description: "Every agent prompt renders without errors"
+          implementation: |
+            for agent in all_agents:
+                prompt = assembler.assemble(agent.id, test_project_id)
+                assert "{" not in prompt  # No unresolved placeholders
+                assert len(prompt) > 100  # Not empty
+                assert len(prompt) < 50000  # Not too large
+
+        - name: "test_state_projection_completeness"
+          description: "Every agent gets the state fields it needs"
+          implementation: |
+            for agent in all_agents:
+                projection = assembler.get_state_projection(agent.id)
+                # Verify all fields referenced in the prompt template
+                # are included in the projection
+
+      location: "tests/prompts/"

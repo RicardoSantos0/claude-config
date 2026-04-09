@@ -1,0 +1,27 @@
+capability_gap_certificate:
+  certificate_id: "gap-{project_id}-{sequence}"
+  requested_by: "{agent_id}"           # Which manager or Master requested this
+  project_id: "{project_id}"
+  
+  need_description: ""                  # What capability is missing
+  search_performed:
+    exact_matches_found: 0
+    partial_matches_found: 0
+    partial_match_details: []
+    search_scope: "full_roster"         # or "project_scoped"
+  
+  why_existing_fails:
+    nearest_capability: ""              # Best existing match
+    gap_description: ""                 # Why it's not good enough
+    could_be_parameterized: false       # Could we just configure an existing agent?
+    parameterization_rejected_because: ""
+  
+  spawn_recommendation:
+    should_spawn: true
+    is_bounded: true                    # Is the need specific and scoped?
+    is_recurring: true                  # Will this be useful beyond this project?
+    is_verifiable: true                 # Can we test the result?
+    risk_classification: "low"          # low | medium | high
+    
+  approved_by_hr: true
+  forwarded_to_spawner: false           # Set true only after Master approval

@@ -1,0 +1,161 @@
+# ============================================================
+# GOVERNANCE ENFORCEMENT MECHANISMS
+# ============================================================
+# These are not just rules — they are implemented checks that
+# prevent violations before they happen.
+# ============================================================
+
+governance_enforcement:
+
+  # --- ACCESS CONTROL MATRIX ---
+  # This matrix is enforced by SharedStateManager.write_state()
+  # Every write attempt is checked against this matrix.
+  access_control:
+    
+    core_identity:
+      project_id: { write: ["master_orchestrator"], after_approval: "immutable" }
+      request_id: { write: ["inquirer_agent"], after_approval: "immutable" }
+      current_phase: { write: ["master_orchestrator"] }
+      status: { write: ["master_orchestrator"] }
+      created_at: { write: ["system"], after_approval: "immutable" }
+      updated_at: { write: ["system"] }
+
+    project_definition:
+      original_brief: { write: ["inquirer_agent"], after_approval: "immutable" }
+      clarified_specification: { write: ["inquirer_agent"], after_approval: "immutable" }
+      project_goal: { write: ["product_manager_agent"], after_approval: "immutable" }
+      problem_statement: { write: ["product_manager_agent"], after_approval: "immutable" }
+      scope: { write: ["product_manager_agent"], after_approval: "append_only" }
+      constraints: { write: ["product_manager_agent"], after_approval: "append_only" }
+      success_criteria: { write: ["product_manager_agent"], after_approval: "immutable" }
+      acceptance_criteria: { write: ["product_manager_agent"], after_approval: "immutable" }
+      risk_classification: { write: ["product_manager_agent", "master_orchestrator"] }
+      priority: { write: ["product_manager_agent", "master_orchestrator"] }
+
+    workflow:
+      active_agents: { write: ["master_orchestrator"] }
+      completed_phases: { write: ["master_orchestrator"], mode: "append_only" }
+      pending_assignments: { write: ["master_orchestrator"] }
+      current_owner: { write: ["master_orchestrator"] }
+      handoff_history: { write: ["system"], mode: "append_only" }
+      resource_requests: { write: ["product_manager_agent", "project_manager_agent"], mode: "append_only" }
+      resource_allocations: { write: ["hr_agent"], mode: "append_only" }
+
+    decisions:
+      decision_log: { write: ["scribe_agent"], mode: "append_only" }
+      assumptions: { write: ["any_agent"], mode: "append_only" }
+      open_questions: { write: ["any_agent"], mode: "append_only_with_resolution" }
+      approvals: { write: ["master_orchestrator"], mode: "append_only" }
+      policy_flags: { write: ["any_agent"], mode: "append_only" }
+
+    capability:
+      available_skills_snapshot: { write: ["hr_agent"] }
+      reuse_candidates: { write: ["hr_agent"] }
+      capability_gap_certificates: { write: ["hr_agent"], mode: "append_only" }
+      spawn_requests: { write: ["hr_agent"], mode: "append_only" }
+      spawned_agents: { write: ["spawner_agent"], mode: "append_only" }
+      verification_results: { write: ["evaluator_agent"], mode: "append_only" }
+
+    artifacts:
+      documents: { write: ["scribe_agent"], mode: "append_only" }
+      deliverables: { write: ["scribe_agent"], mode: "append_only" }
+      change_log: { write: ["scribe_agent"], mode: "append_only" }
+
+    evaluation:
+      performance_metrics: { write: ["evaluator_agent"], mode: "append_only" }
+      quality_findings: { write: ["evaluator_agent"], mode: "append_only" }
+      improvement_proposals: { write: ["trainer_agent"], mode: "append_only" }
+      approved_updates: { write: ["master_orchestrator"], mode: "append_only" }
+
+    consultation:
+      consultation_requests: { write: ["master_orchestrator"], mode: "append_only" }
+      consultation_responses: { write: ["consultant_agents"], mode: "append_only" }
+      synthesis: { write: ["master_orchestrator"], mode: "append_only" }
+
+  # --- ENFORCEMENT IMPLEMENTATION ---
+  enforcement_implementation:
+
+    shared_state_guard:
+      description: >
+        Every call to SharedStateManager.write_state() passes through
+        this guard before the write is executed.
+      implementation: |
+        def guard_write(agent_id: str, path: str, value: any, 
+                        project_id: str) -> WriteResult:
+            
+            # 1. Check if agent is allowed to write this field
+            allowed_writers = access_control[path].write
+            if agent_id not in allowed_writers and "any_agent" not in allowed_writers:
+                log_governance_violation(agent_id, path, "unauthorized_write")
+                return WriteResult(success=False, reason="unauthorized_write")
+            
+            # 2. Check mutability rules
+            mutability = access_control[path].get("after_approval", None)
+            if mutability == "immutable":
+                current_value = read_state(project_id, path)
+                if current_value is not None:
+                    log_governance_violation(agent_id, path, "immutable_field_write")
+                    return WriteResult(success=False, reason="field_is_immutable")
+            
+            # 3. Check append-only rules
+            mode = access_control[path].get("mode", "overwrite")
+            if mode == "append_only":
+                if not isinstance(value, list) or operation != "append":
+                    log_governance_violation(agent_id, path, "non_append_to_append_only")
+                    return WriteResult(success=False, reason="field_is_append_only")
+            
+            # 4. Write succeeded all checks
+            execute_write(project_id, path, value)
+            log_audit(agent_id, path, "write", value)
+            return WriteResult(success=True)
+
+    spawn_guard:
+      description: >
+        Enforced before any spawn request is processed.
+      checks:
+        - name: "certificate_required"
+          rule: "Spawn request must include a valid, Master-approved Capability Gap Certificate"
+          enforcement: "spawner_agent.receive_spawn_request() checks for certificate"
+        - name: "project_limit"
+          rule: "Maximum 3 spawns per project"
+          enforcement: "spawn_policy.check_limits() before processing"
+        - name: "phase_limit"
+          rule: "Maximum 1 spawn per phase"
+          enforcement: "spawn_policy.check_limits() before processing"
+        - name: "recursive_block"
+          rule: "Spawned agents (T3) cannot invoke spawning"
+          enforcement: "spawn_policy.check_recursive_spawn() before processing"
+        - name: "no_auto_deploy"
+          rule: "Spawned agents default to draft-only"
+          enforcement: "spawner_agent output mode is always 'spawn_draft_only'"
+
+    trainer_guard:
+      description: >
+        Enforced on every Trainer action.
+      checks:
+        - name: "authority_level_check"
+          rule: "Trainer can only perform actions allowed at its current level"
+          enforcement: "trainer_agent.check_authority() before every action"
+        - name: "evidence_required"
+          rule: "Every proposal must reference evaluation report IDs"
+          enforcement: "Proposal schema validation requires non-empty evidence"
+        - name: "no_direct_modification"
+          rule: "At L0, Trainer cannot call any write APIs on agent definitions"
+          enforcement: "Trainer agent class does not have write methods at L0"
+
+    consultation_guard:
+      description: >
+        Enforced on consultation protocol.
+      checks:
+        - name: "independence"
+          rule: "Consultants do not see each other's responses"
+          enforcement: "Panel manager distributes requests independently, collects before sharing"
+        - name: "mandatory_consultation"
+          rule: "Certain decision types require consultation"
+          enforcement: "Master.make_decision() checks if consultation is required"
+        - name: "synthesis_required"
+          rule: "Master must produce a synthesis for every consultation"
+          enforcement: "Consultation is incomplete until synthesis_id is set"
+        - name: "unanimous_risk_escalation"
+          rule: "All consultants flagging high-risk requires human escalation"
+          enforcement: "synthesis_engine.determine_escalation() checks for unanimous risk"

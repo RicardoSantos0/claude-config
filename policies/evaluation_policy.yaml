@@ -1,0 +1,56 @@
+# ============================================================
+# EVALUATION POLICY
+# Defines how projects and agents are evaluated.
+# ============================================================
+
+evaluation_policy:
+
+  # --- TRIGGER ---
+  trigger: "Automatic after every project completion. Can be manually triggered."
+
+  # --- MINIMUM METRICS (v1) ---
+  minimum_metrics:
+    goal_achievement:
+      description: "Degree to which project goal was achieved"
+      scale: "0-100"
+      weight: 1.0
+    acceptance_criteria_pass_rate:
+      description: "Percentage of acceptance criteria met"
+      scale: "0-100%"
+      weight: 1.0
+    handoff_acceptance_rate:
+      description: "Percentage of handoffs accepted on first attempt"
+      scale: "0-100%"
+      weight: 1.0
+    documentation_completeness:
+      description: "Percentage of required documentation produced"
+      scale: "0-100%"
+      weight: 1.0
+    boundary_violation_count:
+      description: "Number of governance boundary violations detected"
+      scale: "integer (lower is better)"
+      weight: 1.0
+
+  # --- QUALITATIVE SCORING RUBRIC ---
+  decision_quality_rubric:
+    "0-25": "Decisions undocumented or contradicted stated goals"
+    "26-50": "Decisions documented but lacked rationale"
+    "51-75": "Decisions documented with rationale"
+    "76-100": "Decisions documented with rationale, alternatives, and traceability"
+
+  # --- BENCHMARKS ---
+  benchmarks:
+    start_after_projects: 3  # Relative benchmarks after 3rd project
+    before_benchmarks: "Use absolute rubric scales"
+
+  # --- AGENT EVALUATION ---
+  agent_evaluation:
+    probation_threshold: 60  # Average score below this → probation flag
+    exemplary_threshold: 90  # Score above this → flag output as exemplary
+
+  # --- TOKEN TRACKING ---
+  token_tracking:
+    enabled: true
+    field: "token_usage"
+    location: "handoff_record"
+    purpose: "Cost analysis, not enforcement in v1"

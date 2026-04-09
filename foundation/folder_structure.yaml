@@ -1,0 +1,111 @@
+# ============================================================
+# PROJECT FOLDER STRUCTURE
+# Every project gets this structure. Created by Scribe at
+# project initialization. No deviations allowed.
+# ============================================================
+
+folder_structure:
+
+  system_root:
+    roster:
+      subdirs:
+        - agents           # Agent definition files: {agent_id}.yaml
+        - skills           # Skill definition files: {skill_id}.yaml
+        - tools            # Tool access profiles: {tool_id}.yaml
+        - trust_tiers      # Trust tier rules
+      files:
+        - registry_index.yaml    # Master index of all roster entries
+        - version_history.yaml   # Change log for roster
+
+    policies:
+      files:
+        - spawn_policy.yaml
+        - governance_policy.yaml
+        - handoff_protocol.yaml
+        - trust_tier_policy.yaml
+        - evaluation_policy.yaml
+        - training_policy.yaml
+
+    templates:
+      files:
+        - project_spec_template.yaml
+        - capability_gap_certificate_template.yaml
+        - spawn_request_template.yaml
+        - evaluation_report_template.yaml
+        - handoff_template.yaml
+        - consultation_request_template.yaml
+
+    projects:
+      description: "One subdirectory per project, created dynamically by Scribe"
+      project_dir:  # Pattern: projects/{project_id}/
+        files:
+          - shared_state.yaml    # The live shared state for this project
+          - project_spec.yaml    # Approved specification
+          - project_summary.yaml # Final summary (written at close)
+          - lessons_learned.yaml # Post-project lessons
+        subdirs:
+          intake:
+            files:
+              - original_brief.md       # Raw input
+              - clarification_qa.yaml   # Inquirer Q&A log
+              - clarified_spec.yaml     # Output of intake
+          planning:
+            files:
+              - product_plan.yaml           # Product Manager output
+              - execution_plan.yaml         # Project Manager output
+              - capability_assessment.yaml  # HR capability check
+          execution:
+            description: "One subdirectory per task: {task_id}/"
+            task_dir:
+              files:
+                - task_definition.yaml
+                - task_log.yaml
+              subdirs:
+                - task_output   # Deliverables
+          decisions:
+            files:
+              - decision_log.yaml    # All decisions
+              - assumptions.yaml     # All assumptions
+              - open_questions.yaml  # Tracked questions
+          capability:
+            subdirs:
+              - gap_certificates    # Capability gap certificates
+              - spawn_requests      # Spawn request records
+              - spawn_results       # Spawned agent records
+          evaluation:
+            files:
+              - project_evaluation.yaml
+            subdirs:
+              - agent_evaluations   # Per-agent evaluation
+          improvement:
+            subdirs:
+              - improvement_proposals  # Trainer proposals
+              - approved_updates       # Master-approved changes
+          consultation:
+            files:
+              - consultation_log.yaml  # All consultant interactions
+          working_state:
+            description: "Ephemeral. Cleaned up at phase completion."
+
+    foundation:
+      files:
+        - memory_types.yaml
+        - shared_state_schema.yaml
+        - handoff_protocol.yaml
+        - folder_structure.yaml
+
+    agents:
+      description: "Claude Code agent definitions: {agent_id}.md"
+
+    core:
+      description: "Python governance utilities"
+
+    tests:
+      subdirs:
+        - unit
+        - governance
+        - integration
+        - prompts
+
+    domains:
+      description: "Domain context files for Domain Expert consultant"

@@ -1,0 +1,20 @@
+# ============================================================
+# ROSTER VERSION HISTORY
+# All changes to the roster are logged here.
+# Append-only. Never delete entries.
+# ============================================================
+
+version_history:
+  maintained_by: "hr_agent"
+  entries: []
+  # Each entry:
+  #   change_id: ""            # vh-{sequence}
+  #   timestamp: ""
+  #   changed_by: ""
+  #   change_type: ""          # add | update | retire | promote | demote
+  #   target_id: ""            # agent_id or skill_id
+  #   target_type: ""          # agent | skill | tool
+  #   old_values: {}
+  #   new_values: {}
+  #   reason: ""
+  #   authorized_by: ""        # master_orchestrator or human

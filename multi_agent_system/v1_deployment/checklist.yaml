@@ -1,0 +1,192 @@
+# ============================================================
+# DEPLOYMENT CHECKLIST — PER PHASE
+# ============================================================
+
+checklist:
+
+  phase_0:
+    name: "Foundation Layer"
+    must_exist:
+      directories:
+        - "roster/"
+        - "roster/agents/"
+        - "roster/skills/"
+        - "roster/tools/"
+        - "roster/trust_tiers/"
+        - "policies/"
+        - "templates/"
+        - "projects/"
+        - "foundation/"
+        - "agents/"
+        - "core/"
+        - "tests/"
+        - "tests/unit/"
+        - "tests/governance/"
+        - "tests/integration/"
+        - "tests/prompts/"
+        - "domains/"
+      files:
+        - "system_config.yaml"
+        - "foundation/memory_types.yaml"
+        - "foundation/shared_state_schema.yaml"
+        - "foundation/handoff_protocol.yaml"
+        - "foundation/folder_structure.yaml"
+        - "policies/spawn_policy.yaml"
+        - "policies/governance_policy.yaml"
+        - "policies/trust_tier_policy.yaml"
+        - "policies/evaluation_policy.yaml"
+        - "policies/training_policy.yaml"
+        - "templates/project_spec_template.yaml"
+        - "templates/capability_gap_certificate_template.yaml"
+        - "templates/spawn_request_template.yaml"
+        - "templates/evaluation_report_template.yaml"
+        - "templates/handoff_template.yaml"
+        - "templates/consultation_request_template.yaml"
+    must_pass:
+      - "All YAML files parse without errors"
+      - "All templates have required fields"
+      - "Directory structure matches specification"
+
+  phase_1:
+    name: "Master Orchestrator + Scribe"
+    must_exist:
+      files:
+        - "agents/master_orchestrator/agent_definition.yaml"
+        - "agents/master_orchestrator/agent.py"
+        - "agents/master_orchestrator/system_prompt.md"
+        - "agents/master_orchestrator/synthesis_engine.py"
+        - "agents/scribe_agent/agent_definition.yaml"
+        - "agents/scribe_agent/agent.py"
+        - "agents/scribe_agent/system_prompt.md"
+        - "core/shared_state_manager.py"
+        - "core/handoff_engine.py"
+        - "core/message_bus.py"
+        - "core/prompt_assembler.py"
+    must_pass:
+      - "tests/unit/test_shared_state_manager.py"
+      - "tests/unit/test_handoff_engine.py"
+      - "tests/unit/test_message_bus.py"
+      - "tests/governance/test_access_control.py"
+      - "tests/governance/test_immutable_fields.py"
+      - "tests/governance/test_append_only.py"
+      - "tests/integration/test_master_scribe_initialization.py"
+
+  phase_2:
+    name: "Inquirer + Product Manager"
+    must_exist:
+      files:
+        - "agents/inquirer_agent/agent_definition.yaml"
+        - "agents/inquirer_agent/agent.py"
+        - "agents/inquirer_agent/system_prompt.md"
+        - "agents/product_manager_agent/agent_definition.yaml"
+        - "agents/product_manager_agent/agent.py"
+        - "agents/product_manager_agent/system_prompt.md"
+        - "core/intake_checklist.py"
+    must_pass:
+      - "tests/unit/test_intake_checklist.py"
+      - "tests/integration/test_intake_to_product_plan.py"
+      - "tests/prompts/test_inquirer_prompt.py"
+      - "tests/prompts/test_product_manager_prompt.py"
+
+  phase_3:
+    name: "HR Agent + Capability Registry"
+    must_exist:
+      files:
+        - "agents/hr_agent/agent_definition.yaml"
+        - "agents/hr_agent/agent.py"
+        - "agents/hr_agent/system_prompt.md"
+        - "core/capability_registry.py"
+        - "roster/registry_index.yaml"
+    must_pass:
+      - "tests/unit/test_capability_registry.py"
+      - "tests/integration/test_capability_discovery.py"
+      - "tests/integration/test_gap_certification.py"
+
+  phase_4:
+    name: "Project Manager + Execution"
+    must_exist:
+      files:
+        - "agents/project_manager_agent/agent_definition.yaml"
+        - "agents/project_manager_agent/agent.py"
+        - "agents/project_manager_agent/system_prompt.md"
+        - "core/task_board.py"
+    must_pass:
+      - "tests/unit/test_task_board.py"
+      - "tests/integration/test_full_planning_pipeline.py"
+
+  phase_5:
+    name: "Performance Evaluator"
+    must_exist:
+      files:
+        - "agents/evaluator_agent/agent_definition.yaml"
+        - "agents/evaluator_agent/agent.py"
+        - "agents/evaluator_agent/system_prompt.md"
+        - "core/metrics_engine.py"
+    must_pass:
+      - "tests/unit/test_metrics_engine.py"
+      - "tests/integration/test_project_evaluation.py"
+
+  phase_6:
+    name: "Spawner"
+    must_exist:
+      files:
+        - "agents/spawner_agent/agent_definition.yaml"
+        - "agents/spawner_agent/agent.py"
+        - "agents/spawner_agent/system_prompt.md"
+        - "core/spawn_policy.py"
+    must_pass:
+      - "tests/unit/test_spawn_policy.py"
+      - "tests/governance/test_spawn_limits.py"
+      - "tests/governance/test_recursive_spawn_blocked.py"
+      - "tests/governance/test_spawn_requires_certificate.py"
+      - "tests/integration/test_gap_to_spawn.py"
+
+  phase_7:
+    name: "Trainer"
+    must_exist:
+      files:
+        - "agents/trainer_agent/agent_definition.yaml"
+        - "agents/trainer_agent/agent.py"
+        - "agents/trainer_agent/system_prompt.md"
+    must_pass:
+      - "tests/governance/test_trainer_L0_blocked.py"
+      - "tests/integration/test_evaluation_to_proposal.py"
+
+  phase_8:
+    name: "Consultant Panel"
+    must_exist:
+      files:
+        - "agents/consultant_panel/panel_definition.yaml"
+        - "agents/consultant_panel/panel_manager.py"
+        - "agents/consultant_panel/consultants/risk_advisor.yaml"
+        - "agents/consultant_panel/consultants/risk_advisor.py"
+        - "agents/consultant_panel/consultants/quality_advisor.yaml"
+        - "agents/consultant_panel/consultants/quality_advisor.py"
+        - "agents/consultant_panel/consultants/devils_advocate.yaml"
+        - "agents/consultant_panel/consultants/devils_advocate.py"
+        - "agents/consultant_panel/consultants/domain_expert.yaml"
+        - "agents/consultant_panel/consultants/domain_expert.py"
+        - "agents/consultant_panel/consultants/efficiency_advisor.yaml"
+        - "agents/consultant_panel/consultants/efficiency_advisor.py"
+        - "agents/master_orchestrator/synthesis_engine.py"
+    must_pass:
+      - "tests/governance/test_consultation_independence.py"
+      - "tests/governance/test_unanimous_risk_escalation.py"
+      - "tests/integration/test_consultation_cycle.py"
+
+  final_acceptance:
+    name: "Full System Acceptance"
+    must_pass:
+      - "tests/integration/test_full_project_lifecycle.py"
+      - "tests/integration/test_capability_gap_to_spawn.py"
+      - "tests/integration/test_error_recovery.py"
+      - "All governance tests pass"
+      - "All prompt tests pass"
+      - "All unit tests pass"
+    manual_verification:
+      - "Run one complete project from raw brief to closure"
+      - "Verify all project files exist and are correctly populated"
+      - "Verify audit log contains all expected events"
+      - "Verify roster is correctly maintained"
+      - "Review evaluation report for reasonableness"
+      - "Review improvement proposals for reasonableness"

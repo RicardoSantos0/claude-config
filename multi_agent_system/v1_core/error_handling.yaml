@@ -1,0 +1,155 @@
+# ============================================================
+# ERROR HANDLING AND RECOVERY FRAMEWORK
+# ============================================================
+
+error_handling:
+
+  # --- ERROR CLASSIFICATION ---
+  error_types:
+
+    transient_error:
+      description: "Temporary failure that may resolve on retry"
+      examples:
+        - "LLM API timeout"
+        - "File write temporary failure"
+        - "Prompt rendering with stale state"
+      response:
+        action: "retry"
+        max_retries: 1
+        backoff: "none for v1"
+        on_persistent_failure: "escalate to agent_error"
+
+    agent_error:
+      description: "An agent fails to complete its task"
+      examples:
+        - "Agent produces invalid output"
+        - "Agent violates authority boundary"
+        - "Agent cannot fulfill handoff requirements"
+      response:
+        action: "mark_task_failed"
+        steps:
+          - "Log the error with full context"
+          - "Set task status to 'failed'"
+          - "Return handoff to Master with failure details"
+          - "Master decides: retry with same agent, reassign, or escalate"
+        max_agent_retries: 1
+
+    state_error:
+      description: "Shared state is corrupted or inconsistent"
+      examples:
+        - "YAML parse failure"
+        - "Missing required fields"
+        - "Conflicting field values"
+      response:
+        action: "halt_and_recover"
+        steps:
+          - "Log the state error"
+          - "Attempt to load last phase snapshot"
+          - "If snapshot loads: resume from snapshot, log data loss"
+          - "If snapshot fails: halt system, escalate to human"
+        human_escalation: "mandatory"
+
+    governance_violation:
+      description: "An agent attempts an action outside its authority"
+      examples:
+        - "Agent writes to a field it doesn't own"
+        - "Spawned agent attempts to spawn"
+        - "Trainer attempts to apply changes at L0"
+      response:
+        action: "block_and_log"
+        steps:
+          - "Block the action before it executes"
+          - "Log the violation with full context"
+          - "Increment boundary_violation_count for the agent"
+          - "Alert Master"
+          - "If violation count > 3 for any agent: escalate to human"
+        preventive: >
+          Every write operation passes through the SharedStateManager
+          which checks access rules before allowing the write.
+
+    handoff_rejection:
+      description: "A receiving agent rejects a handoff"
+      examples:
+        - "Incomplete payload"
+        - "Missing required fields"
+        - "Contradictory instructions"
+      response:
+        action: "return_to_sender"
+        steps:
+          - "Log the rejection with reason"
+          - "Return to sending agent with rejection details"
+          - "Sending agent must address the issue and re-submit"
+          - "If rejected twice: escalate to Master"
+
+    unknown_state_error:
+      description: "System encounters a state it cannot interpret"
+      response:
+        action: "halt_and_escalate"
+        steps:
+          - "Preserve all current state to disk"
+          - "Log the unknown state with full context"
+          - "Halt the project"
+          - "Escalate to human"
+          - "Do NOT attempt to auto-resolve"
+
+  # --- RECOVERY MECHANISMS ---
+  recovery:
+
+    phase_snapshot_recovery:
+      description: >
+        Shared state is snapshotted at every phase transition.
+        On state corruption, load the last valid snapshot and
+        replay from that phase.
+      implementation:
+        snapshot_on: "every phase transition"
+        snapshot_location: "projects/{project_id}/snapshots/"
+        snapshot_format: "shared_state_snapshot_{phase}_{timestamp}.yaml"
+        recovery_steps:
+          - "Load latest valid snapshot"
+          - "Set current_phase to the snapshot's phase"
+          - "Log the recovery event"
+          - "Resume from the recovered phase"
+          - "Note: work completed after the snapshot is lost"
+
+    agent_replacement:
+      description: >
+        If an agent consistently fails (> 2 failures on same task),
+        the Master may request HR to find an alternative capability.
+      triggers:
+        - "Same agent fails same task type twice"
+        - "Agent's boundary_violation_count exceeds threshold"
+      process:
+        - "Master flags the agent to HR"
+        - "HR searches for alternative"
+        - "If alternative exists: reassign"
+        - "If no alternative: escalate to human"
+
+    project_cancellation:
+      description: >
+        If errors are unrecoverable, the Master can cancel the project.
+      process:
+        - "Master sets status to 'cancelled'"
+        - "Scribe creates cancellation record with reason"
+        - "All resources are released"
+        - "Evaluator still evaluates what was completed"
+        - "Lessons learned are still recorded"
+
+  # --- ERROR LOGGING FORMAT ---
+  error_log_schema:
+    error_id: "string"
+    timestamp: "datetime_iso8601"
+    project_id: "string"
+    phase: "string"
+    agent_id: "string"
+    error_type: "enum[transient, agent, state, governance_violation, handoff_rejection, unknown_state]"
+    description: "string"
+    context:
+      task_id: "string | null"
+      handoff_id: "string | null"
+      state_field: "string | null"
+      attempted_action: "string"
+    resolution:
+      action_taken: "string"
+      resolved: "boolean"
+      escalated_to: "string | null"
+    stack_trace: "string | null"

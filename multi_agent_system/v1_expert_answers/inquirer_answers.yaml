@@ -1,0 +1,70 @@
+# ============================================================
+# INQUIRER AGENT — EXPERT ANSWERS
+# ============================================================
+
+inquirer:
+
+  # Q1: Max clarification rounds
+  max_rounds:
+    answer: "5 rounds is correct."
+    rationale: "If 5 rounds can't clarify, the project itself may be too vague to proceed."
+
+  # Q2: User refuses to answer
+  refusal_handling:
+    answer: >
+      Record the unanswered questions as explicit 'unresolved_ambiguities'
+      in the specification. Flag them to Master. Let Master decide
+      whether to proceed with assumptions or escalate to human.
+    implementation: >
+      Add unresolved_ambiguities list to clarified_specification.
+      Master checks this list and either accepts with documented
+      assumptions or sends back for more intake.
+
+  # Q3: Access to previous specs
+  prior_spec_access:
+    answer: "Yes, but read-only. Inject titles and summaries of past projects, not full specs."
+    rationale: "Past projects provide context for better questions without overwhelming the prompt."
+
+  # Q4: Minimum quality threshold
+  quality_threshold:
+    answer: >
+      All 7 'required' checklist items must have an answer (even if
+      the answer is a documented assumption). At least 3 of 5
+      'recommended' items should have answers.
+    implementation: >
+      Completeness score = (required_answered / 7) * 0.7 +
+      (recommended_answered / 5) * 0.3. Threshold: >= 0.85
+
+  # Q5: Capability scope validation
+  scope_validation:
+    answer: "No. The Inquirer validates specification quality, not system capability."
+    rationale: "Capability assessment belongs to HR. Separation of concerns."
+
+  # Q6: Conflicting answers
+  conflicting_answers:
+    answer: >
+      Flag the conflict explicitly. Ask the user to resolve it.
+      If unresolvable after one attempt, record both positions
+      and flag to Master as unresolved_ambiguity.
+
+  # Q7: Multiple input formats
+  input_formats:
+    answer: "Text only for v1. Accept structured YAML if provided, but don't require it."
+
+  # Q8: Already-complete spec
+  complete_spec:
+    answer: >
+      Run the completeness check. If it passes, skip questions
+      and proceed directly to handoff. Log that no clarification
+      was needed.
+
+  # Q9: Ethical/policy flags
+  ethical_flags:
+    answer: "Flag obvious concerns but do not block. Add to unresolved_ambiguities for Master."
+
+  # Q10: Modify existing vs new project
+  modify_vs_new:
+    answer: >
+      If the user references an existing project_id, route to Master
+      as a 'modification request' not a new project. If no project_id,
+      treat as new.

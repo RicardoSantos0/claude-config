@@ -1,0 +1,108 @@
+# ============================================================
+# CAPABILITY GAP DISCOVERY — MESSAGE FLOW
+# ============================================================
+
+scenario: "A manager requests a capability that doesn't exist"
+
+flow:
+
+  - step: 1
+    from: "project_manager_agent"
+    to: "shared_state"
+    action: "Write resource_request to workflow.resource_requests"
+    content:
+      capability_needed: "automated_test_generation"
+      urgency: "high"
+      context: "Need to generate test cases for the delivery"
+
+  - step: 2
+    from: "master_orchestrator"
+    to: "hr_agent"
+    message_type: "capability_query"
+    content:
+      need_description: "automated_test_generation"
+      required_inputs: ["code_artifact", "acceptance_criteria"]
+      expected_outputs: ["test_suite"]
+
+  - step: 3
+    from: "hr_agent"
+    to: "hr_agent"
+    message_type: "internal"
+    action: >
+      Search roster:
+      - Exact matches: 0
+      - Partial matches: 1 (code_reviewer_agent, 40% coverage)
+      Conclusion: No sufficient capability exists.
+
+  - step: 4
+    from: "hr_agent"
+    to: "hr_agent"
+    message_type: "internal"
+    action: >
+      Validate gap criteria:
+      - Bounded: YES (generate tests for specific code)
+      - Recurring: YES (useful for future projects)
+      - Verifiable: YES (tests either run or they don't)
+      - Output defined: YES (test suite)
+      - Tools defined: YES (code access, test framework)
+      All criteria met.
+
+  - step: 5
+    from: "hr_agent"
+    to: "master_orchestrator"
+    message_type: "capability_gap_certificate"
+    content:
+      certificate_id: "gap-proj-20260409-001-001"
+      need: "automated_test_generation"
+      search_evidence:
+        exact_matches: 0
+        partial_matches:
+          - agent: "code_reviewer_agent"
+            coverage: 40
+            gap: "Can review code but cannot generate tests"
+      recommendation:
+        should_spawn: true
+        risk: "low"
+
+  - step: 6
+    from: "master_orchestrator"
+    to: "consultant_panel"
+    message_type: "consultation_request"
+    content:
+      question: "Should we spawn a test_generation_agent?"
+      context: "{gap certificate}"
+      decision_type: "spawn"
+
+  - step: 7
+    from: "consultant_panel"
+    to: "master_orchestrator"
+    message_type: "consultation_responses"
+    content:
+      risk_advisor: "Low risk. Tests are sandboxed."
+      quality_advisor: "Useful. Recommend strong verification."
+      devils_advocate: "Could we extend code_reviewer instead?"
+      domain_expert: "Standard practice. Test gen is well-understood."
+      efficiency_advisor: "Worth it if reusable across projects."
+
+  - step: 8
+    from: "master_orchestrator"
+    to: "master_orchestrator"
+    message_type: "internal"
+    action: >
+      Synthesis: 4/5 support spawning. Devil's Advocate raises
+      valid point about extending code_reviewer, but HR already
+      assessed that at 40% coverage — insufficient. Approve spawn.
+
+  - step: 9
+    from: "master_orchestrator"
+    to: "spawner_agent"
+    message_type: "approved_spawn_request"
+    via: "hr_agent"
+
+  - step: 10
+    from: "spawner_agent"
+    to: "master_orchestrator"
+    message_type: "spawn_draft"
+    content:
+      agent_package: "{complete definition}"
+      decision: "spawn_draft_only"

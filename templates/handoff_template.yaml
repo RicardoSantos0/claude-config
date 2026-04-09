@@ -1,0 +1,41 @@
+# ============================================================
+# HANDOFF TEMPLATE
+# Every agent-to-agent transfer uses this structure.
+# ============================================================
+
+handoff:
+  # --- IDENTITY ---
+  handoff_id: ""                # ho-{project_id}-{sequence}
+  project_id: ""
+  timestamp: ""                 # ISO 8601
+
+  # --- PARTIES ---
+  from_agent: ""
+  to_agent: ""
+  authorized_by: ""             # Usually master_orchestrator
+
+  # --- CONTEXT ---
+  phase: ""
+  task_description: ""
+
+  # --- PAYLOAD ---
+  payload:
+    summary: ""                 # What was done before this handoff
+    artifacts_produced: []      # List of artifact references
+    decisions_made: []          # References to decision_log entries
+    open_questions: []          # Unresolved items
+    constraints_for_next: []    # What the receiving agent must respect
+    shared_state_fields_modified: []  # Which fields were changed
+
+  # --- TOKEN TRACKING ---
+  token_usage:
+    prompt_tokens: 0
+    completion_tokens: 0
+    total_tokens: 0
+
+  # --- ACCEPTANCE ---
+  acceptance:
+    status: "pending"           # pending | accepted | rejected | accepted_with_questions
+    rejection_reason: null
+    follow_up_questions: null
+    accepted_at: null

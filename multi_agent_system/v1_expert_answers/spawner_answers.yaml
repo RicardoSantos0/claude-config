@@ -1,0 +1,89 @@
+# ============================================================
+# SPAWNER — EXPERT ANSWERS
+# ============================================================
+
+spawner:
+
+  # Q1: Spawned agent format
+  agent_format:
+    answer: >
+      YAML definition file + Markdown prompt template + Python class stub.
+      All three are required for a complete agent package.
+    implementation: >
+      agents/{new_agent_id}/agent_definition.yaml
+      agents/{new_agent_id}/system_prompt.md
+      agents/{new_agent_id}/agent.py (stub with interface)
+
+  # Q2: Verification tests
+  verification_tests:
+    answer: >
+      Minimum verification:
+      1. Agent definition parses without errors
+      2. All required fields are present
+      3. Authority boundaries don't overlap with existing agents
+      4. System prompt renders correctly with sample state
+      5. Agent respects its 'must_never' rules in a test scenario
+    implementation: "Evaluator runs verification. Results in spawn_results/."
+
+  # Q3: Spawn templates
+  spawn_templates:
+    answer: >
+      Yes. Create 3 starter templates:
+      - execution_agent_template: for task execution agents
+      - analysis_agent_template: for analysis/review agents
+      - utility_agent_template: for utility/helper agents
+
+  # Q4: Previously retired agent types
+  retired_handling:
+    answer: >
+      The Spawner should check if a similar agent was previously
+      created and retired. If so, include the retirement reason
+      in the spawn draft. The Master decides whether to recreate
+      or find a different solution.
+
+  # Q5: Expiration date
+  expiration:
+    answer: >
+      Project-scoped agents expire when the project closes.
+      Reusable agents do not expire but enter 'review' status
+      after 3 months of no use.
+
+  # Q6: Minimum tool set
+  minimum_tools:
+    answer: >
+      The spawn request specifies allowed tools. The Spawner
+      should propose the MINIMUM set that satisfies the mission.
+      Default: read access to shared state only. Additional
+      tools require explicit justification.
+
+  # Q7: Behavioral contract
+  behavioral_contract:
+    answer: >
+      Yes. Every spawned agent gets a behavioral_contract.yaml:
+      - mission_boundary: what it must do
+      - authority_boundary: what it can decide
+      - interaction_boundary: who it can communicate with
+      - tool_boundary: what tools it can use
+      - forbidden_actions: what it must never do
+
+  # Q8: State after project ends
+  post_project_state:
+    answer: >
+      Project-scoped: agent definition archived in project folder.
+      Reusable: agent remains in roster with spawn_origin recorded.
+
+  # Q9: Clone and modify
+  clone_and_modify:
+    answer: >
+      Allowed. The Spawner can start from an existing agent
+      definition and modify it. The new agent must have a
+      different agent_id and its own version history. The
+      source agent must be referenced in spawn_origin.
+
+  # Q10: Unsupported tool access
+  unsupported_tools:
+    answer: >
+      If the requested tools don't exist in the system, the
+      Spawner produces a 'do_not_spawn' decision with reason:
+      'required tools not available.' The gap is recorded for
+      future system enhancement.

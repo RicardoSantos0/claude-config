@@ -1,0 +1,46 @@
+# ============================================================
+# PROMPT STRUCTURE — ALL AGENTS FOLLOW THIS PATTERN
+# ============================================================
+
+prompt_structure:
+  sections:
+    1_identity:
+      content: "Agent ID, Trust Tier, Authority level"
+    2_mission:
+      content: "One-paragraph mission statement"
+    3_process:
+      content: "Step-by-step process the agent follows"
+    4_decision_framework:
+      content: "How the agent makes decisions within its authority"
+    5_bright_lines:
+      content: "Explicit boundaries with other agents"
+    6_edge_cases:
+      content: "How to handle exceptions and ambiguity"
+    7_output_format:
+      content: "Required format for all outputs"
+    8_must_never:
+      content: "Explicit list of forbidden actions"
+    9_injected_context:
+      content: "Dynamic context from shared state"
+
+  injection_rules:
+    - "Use {placeholder} syntax for all dynamic content"
+    - "Each agent receives ONLY the shared state fields it reads"
+    - "Inject roster data only for HR and Master"
+    - "Inject evaluation data only for Evaluator and Trainer"
+    - "Inject consultation data only for Master and Consultants"
+    - "Context injection is handled by the PromptAssembler"
+
+  prompt_assembler_interface: |
+    class PromptAssembler:
+        def assemble(self, agent_id: str, project_id: str) -> str:
+            """
+            1. Load the agent's system_prompt.md template
+            2. Load the shared state for the project
+            3. Use the agent's state_projection to select relevant fields
+            4. Fill in all {placeholder} markers
+            5. Return the complete prompt
+            """
+    
+        def get_state_projection(self, agent_id: str) -> list:
+            """Return the list of shared state paths this agent reads."""

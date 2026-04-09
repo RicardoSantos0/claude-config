@@ -1,0 +1,59 @@
+# ============================================================
+# SPAWN POLICY
+# Controls when and how new agents may be created.
+# ============================================================
+
+spawn_policy:
+
+  # --- PREREQUISITES FOR ANY SPAWN ---
+  prerequisites:
+    - "A formal Capability Gap Certificate must exist"
+    - "The certificate must be approved by HR Agent"
+    - "The Master Orchestrator must grant explicit spawn approval"
+    - "A structured spawn request must be submitted via HR"
+    - "Project spawn limit must not be exceeded"
+
+  # --- LIMITS ---
+  limits:
+    max_spawns_per_project: 3
+    max_spawns_per_phase: 1
+    recursive_spawn_allowed: false      # Spawned agents cannot spawn
+    spawner_can_self_spawn: false
+
+  # --- SPAWN WORTHINESS CRITERIA ---
+  # All four must be true for spawn to be approved
+  worthiness_criteria:
+    bounded:
+      description: "The needed capability is specific and well-scoped"
+      required: true
+    recurring:
+      description: "The capability will be useful beyond this project"
+      required: true
+    verifiable:
+      description: "The spawned agent's output can be tested"
+      required: true
+    no_existing_match:
+      description: "No existing agent scores >= 80% match on the need"
+      required: true
+
+  # --- SPAWN MODES ---
+  modes:
+    draft_only:
+      description: "Agent is designed but never auto-deployed"
+      default: true
+      requires_human_review: true
+
+  # --- POST-SPAWN ---
+  post_spawn:
+    initial_trust_tier: "T3_provisional"
+    requires_verification: true
+    verifier: "evaluator_agent"
+    promotion_requires_human: true
+
+  # --- CONSULTANT CONSULTATION ---
+  consultation:
+    required: true
+    consultants: "all_five"
+    override_rule: >
+      If all five consultants flag high-risk, Master MUST escalate
+      to human. Cannot override unanimous high-risk without human approval.

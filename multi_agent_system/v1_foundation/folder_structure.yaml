@@ -1,0 +1,72 @@
+# ============================================================
+# PROJECT FOLDER STRUCTURE
+# Every project gets this structure. Created by Scribe at
+# project initialization. No deviations allowed.
+# ============================================================
+
+folder_structure:
+
+  system_root:
+    roster/:
+      agents/:
+        "{agent_id}.yaml"          # Agent definition file
+      skills/:
+        "{skill_id}.yaml"          # Skill definition file
+      tools/:
+        "{tool_id}.yaml"           # Tool access profile
+      trust_tiers/:
+        "tier_definitions.yaml"    # Trust tier rules
+      "registry_index.yaml"        # Master index of all roster entries
+      "version_history.yaml"       # Change log for roster
+
+    policies/:
+      "spawn_policy.yaml"          # Spawning rules
+      "governance_policy.yaml"     # Governance rules
+      "handoff_protocol.yaml"      # Handoff rules
+      "trust_tier_policy.yaml"     # Trust tier definitions
+      "evaluation_policy.yaml"     # Evaluation criteria
+      "training_policy.yaml"       # Training authority levels
+
+    templates/:
+      "project_spec_template.yaml"
+      "capability_gap_certificate_template.yaml"
+      "spawn_request_template.yaml"
+      "evaluation_report_template.yaml"
+      "handoff_template.yaml"
+      "consultation_request_template.yaml"
+
+    projects/:
+      "{project_id}/":
+        "shared_state.yaml"        # The live shared state for this project
+        "project_spec.yaml"        # Approved specification
+        intake/:
+          "original_brief.md"      # Raw input
+          "clarification_qa.yaml"  # Inquirer Q&A log
+          "clarified_spec.yaml"    # Output of intake
+        planning/:
+          "product_plan.yaml"      # Product Manager output
+          "execution_plan.yaml"    # Project Manager output
+          "capability_assessment.yaml"  # HR capability check
+        execution/:
+          "{task_id}/":
+            "task_definition.yaml"
+            "task_output/"         # Deliverables
+            "task_log.yaml"
+        decisions/:
+          "decision_log.yaml"      # All decisions
+          "assumptions.yaml"       # All assumptions
+          "open_questions.yaml"    # Tracked questions
+        capability/:
+          "gap_certificates/"      # Capability gap certificates
+          "spawn_requests/"        # Spawn request records
+          "spawn_results/"         # Spawned agent records
+        evaluation/:
+          "project_evaluation.yaml"
+          "agent_evaluations/"     # Per-agent evaluation
+        improvement/:
+          "improvement_proposals/" # Trainer proposals
+          "approved_updates/"      # Master-approved changes
+        consultation/:
+          "consultation_log.yaml"  # All consultant interactions
+        "project_summary.yaml"     # Final summary (written at close)
+        "lessons_learned.yaml"     # Post-project lessons
