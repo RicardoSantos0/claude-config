@@ -1,20 +1,178 @@
-# ============================================================
-# ROSTER VERSION HISTORY
-# All changes to the roster are logged here.
-# Append-only. Never delete entries.
-# ============================================================
-
 version_history:
-  maintained_by: "hr_agent"
-  entries: []
-  # Each entry:
-  #   change_id: ""            # vh-{sequence}
-  #   timestamp: ""
-  #   changed_by: ""
-  #   change_type: ""          # add | update | retire | promote | demote
-  #   target_id: ""            # agent_id or skill_id
-  #   target_type: ""          # agent | skill | tool
-  #   old_values: {}
-  #   new_values: {}
-  #   reason: ""
-  #   authorized_by: ""        # master_orchestrator or human
+  maintained_by: hr_agent
+  entries:
+  - change_id: vh-0001
+    timestamp: '2026-04-09T14:12:51.075282+00:00'
+    changed_by: hr_agent
+    change_type: add
+    target_id: master_orchestrator
+    target_type: agent
+    old_values: {}
+    new_values:
+      agent_id: master_orchestrator
+      name: Master Orchestrator
+      version: 1.0.0
+      trust_tier: T0_core
+      status: active
+      capabilities:
+      - orchestration
+      - coordination
+      - governance
+      - delegation
+      - phase-management
+      - decision-making
+      - spawn-approval
+      performance_score: null
+      spawn_origin: null
+      created_at: '2026-04-09T00:00:00+00:00'
+    reason: ''
+    authorized_by: master_orchestrator
+  - change_id: vh-0002
+    timestamp: '2026-04-09T14:12:51.357494+00:00'
+    changed_by: hr_agent
+    change_type: add
+    target_id: scribe_agent
+    target_type: agent
+    old_values: {}
+    new_values:
+      agent_id: scribe_agent
+      name: Scribe Agent
+      version: 1.0.0
+      trust_tier: T0_core
+      status: active
+      capabilities:
+      - documentation
+      - record-keeping
+      - decision-logging
+      - artifact-tracking
+      - audit-trail
+      performance_score: null
+      spawn_origin: null
+      created_at: '2026-04-09T00:00:00+00:00'
+    reason: ''
+    authorized_by: master_orchestrator
+  - change_id: vh-0003
+    timestamp: '2026-04-09T14:12:51.649080+00:00'
+    changed_by: hr_agent
+    change_type: add
+    target_id: inquirer_agent
+    target_type: agent
+    old_values: {}
+    new_values:
+      agent_id: inquirer_agent
+      name: Inquirer Agent
+      version: 1.0.0
+      trust_tier: T1_established
+      status: active
+      capabilities:
+      - intake
+      - requirements-elicitation
+      - clarification
+      - specification
+      - qa-process
+      performance_score: null
+      spawn_origin: null
+      created_at: '2026-04-09T00:00:00+00:00'
+    reason: ''
+    authorized_by: master_orchestrator
+  - change_id: vh-0004
+    timestamp: '2026-04-09T14:12:51.940083+00:00'
+    changed_by: hr_agent
+    change_type: add
+    target_id: product_manager_agent
+    target_type: agent
+    old_values: {}
+    new_values:
+      agent_id: product_manager_agent
+      name: Product Manager Agent
+      version: 1.0.0
+      trust_tier: T1_established
+      status: active
+      capabilities:
+      - product-planning
+      - requirements
+      - moscow-prioritization
+      - acceptance-criteria
+      - risk-identification
+      - scope-definition
+      performance_score: null
+      spawn_origin: null
+      created_at: '2026-04-09T00:00:00+00:00'
+    reason: ''
+    authorized_by: master_orchestrator
+  - change_id: vh-0005
+    timestamp: '2026-04-09T14:12:52.235262+00:00'
+    changed_by: hr_agent
+    change_type: add
+    target_id: hr_agent
+    target_type: agent
+    old_values: {}
+    new_values:
+      agent_id: hr_agent
+      name: HR Agent
+      version: 1.0.0
+      trust_tier: T1_established
+      status: active
+      capabilities:
+      - capability-discovery
+      - roster-management
+      - gap-certification
+      - match-scoring
+      - agent-registration
+      - agent-retirement
+      performance_score: null
+      spawn_origin: null
+      created_at: '2026-04-09T00:00:00+00:00'
+    reason: ''
+    authorized_by: master_orchestrator
+  - change_id: vh-0006
+    timestamp: '2026-04-09T14:22:03.478435+00:00'
+    changed_by: hr_agent
+    change_type: add
+    target_id: project_manager_agent
+    target_type: agent
+    old_values: {}
+    new_values:
+      agent_id: project_manager_agent
+      name: Project Manager Agent
+      version: 1.0.0
+      trust_tier: T1_established
+      status: active
+      capabilities:
+      - execution-planning
+      - task-decomposition
+      - milestone-tracking
+      - dependency-mapping
+      - progress-reporting
+      - delivery-risk
+      - blocker-escalation
+      performance_score: null
+      spawn_origin: null
+      created_at: '2026-04-09T00:00:00+00:00'
+    reason: ''
+    authorized_by: master_orchestrator
+  - change_id: vh-0007
+    timestamp: '2026-04-09T14:33:09.406563+00:00'
+    changed_by: hr_agent
+    change_type: add
+    target_id: evaluator_agent
+    target_type: agent
+    old_values: {}
+    new_values:
+      agent_id: evaluator_agent
+      name: Performance Evaluation Agent
+      version: 1.0.0
+      trust_tier: T1_established
+      status: active
+      capabilities:
+      - performance-evaluation
+      - metric-scoring
+      - evaluation-reporting
+      - pattern-detection
+      - improvement-identification
+      - exemplary-flagging
+      performance_score: null
+      spawn_origin: null
+      created_at: '2026-04-09T00:00:00+00:00'
+    reason: ''
+    authorized_by: master_orchestrator

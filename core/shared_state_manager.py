@@ -97,6 +97,15 @@ def create_initial_state(project_id: str, request_id: str) -> dict:
             "spawned_agents": [],
             "verification_results": [],
         },
+        "execution": {
+            "execution_plan_path": None,
+            "milestones": [],
+            "tasks": [],
+            "resource_requests": [],
+            "progress_reports": [],
+            "blocker_alerts": [],
+            "delivery_risks": [],
+        },
         "artifacts": {
             "documents": [],
             "deliverables": [],

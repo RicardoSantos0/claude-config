@@ -50,6 +50,9 @@ STATE_PROJECTIONS: dict[str, list[str]] = {
         "core_identity",
         "project_definition",
         "workflow",
+        "execution",
+        "capability.reuse_candidates",
+        "capability.capability_gap_certificates",
     ],
     "hr_agent": [
         "core_identity",

@@ -72,6 +72,15 @@ ACCESS_CONTROL: dict[str, dict] = {
     "capability.spawned_agents":               {"write": ["spawner_agent"],     "mode": "append_only"},
     "capability.verification_results":         {"write": ["evaluator_agent"],   "mode": "append_only"},
 
+    # === EXECUTION ===
+    "execution.execution_plan_path": {"write": ["project_manager_agent"]},
+    "execution.milestones":          {"write": ["project_manager_agent"],                    "mode": "append_only"},
+    "execution.tasks":               {"write": ["project_manager_agent"],                    "mode": "append_only"},
+    "execution.resource_requests":   {"write": ["project_manager_agent"],                    "mode": "append_only"},
+    "execution.progress_reports":    {"write": ["project_manager_agent"],                    "mode": "append_only"},
+    "execution.blocker_alerts":      {"write": ["project_manager_agent", "master_orchestrator"], "mode": "append_only"},
+    "execution.delivery_risks":      {"write": ["project_manager_agent"],                    "mode": "append_only"},
+
     # === ARTIFACTS ===
     "artifacts.documents":    {"write": ["scribe_agent"], "mode": "append_only"},
     "artifacts.deliverables": {"write": ["scribe_agent"], "mode": "append_only"},
