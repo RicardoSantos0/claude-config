@@ -309,6 +309,51 @@ shared_state:
       set_by: "master_orchestrator"
       mutability: "append_only"
 
+  # --- COMMUNICATION EFFICIENCY ---
+  # System-managed counters for wire protocol adoption and token tracking.
+  # Written exclusively by system methods (bypass ACL). Read by evaluator and trainer.
+  communication:
+    token_tracking_enabled:
+      type: "boolean"
+      set_by: "master_orchestrator"
+      mutability: "master_only"
+      default: true
+      description: "Enable/disable token usage tracking for this project"
+    total_tokens_used:
+      type: "integer"
+      set_by: "system"
+      mutability: "system_only"
+      default: 0
+      description: "Cumulative estimated tokens across all messages in the project"
+    tokens_by_agent:
+      type: "dict[agent_id, integer]"
+      set_by: "system"
+      mutability: "system_only"
+      description: "Per-agent token usage totals"
+    tokens_by_phase:
+      type: "dict[phase, integer]"
+      set_by: "system"
+      mutability: "system_only"
+      description: "Per-phase token usage totals"
+    wire_compliant_count:
+      type: "integer"
+      set_by: "system"
+      mutability: "system_only"
+      default: 0
+      description: "Number of handoff payloads that passed wire protocol validation"
+    wire_total_count:
+      type: "integer"
+      set_by: "system"
+      mutability: "system_only"
+      default: 0
+      description: "Total number of handoff payloads submitted (compliant + non-compliant)"
+    wire_compliance_rate:
+      type: "float | null"
+      set_by: "system"
+      mutability: "system_only"
+      default: null
+      description: "wire_compliant_count / wire_total_count; null when wire_total_count == 0"
+
   # --- CONSULTANT PANEL ---
   consultation:
     consultation_requests:

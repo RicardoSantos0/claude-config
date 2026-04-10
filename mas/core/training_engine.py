@@ -30,6 +30,11 @@ from typing import Optional
 
 import yaml
 
+try:
+    from core.metrics_engine import MetricsEngine
+except ImportError:
+    MetricsEngine = None  # type: ignore
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -41,6 +46,8 @@ PRIORITY_SCORES: dict[str, int] = {
     "boundary_violation": 5,
     "governance_failure": 4,
     "repeated_quality_issue": 3,
+    "communication_waste": 2,
+    "context_bloat": 2,
     "efficiency_improvement": 2,
     "prompt_refinement": 1,
 }
@@ -407,6 +414,10 @@ class TrainingEngine:
             return "governance_failure"
         if metric in ("documentation_completeness", "decision_quality"):
             return "efficiency_improvement"
+        if metric in ("token_efficiency", "payload_density"):
+            return "communication_waste"
+        if metric in ("context_injection_efficiency", "consultation_overhead"):
+            return "context_bloat"
         if score < 50.0:
             return "repeated_quality_issue"
         return "efficiency_improvement"
@@ -423,6 +434,10 @@ class TrainingEngine:
             "acceptance_criteria_pass_rate": "agents/project_manager_agent.md",
             "scope_adherence": "agents/project_manager_agent.md",
             "task_completion_rate": "agents/project_manager_agent.md",
+            "token_efficiency": "core/wire_protocol.py",
+            "payload_density": "core/wire_protocol.py",
+            "context_injection_efficiency": "core/prompt_assembler.py",
+            "consultation_overhead": "core/consultation_engine.py",
         }
         return mapping.get(metric, "policies/")
 
@@ -465,6 +480,26 @@ class TrainingEngine:
                 "Agent did not complete assigned tasks. Review task assignment process "
                 "and ensure agents only receive tasks within their capability profile."
             ),
+            "token_efficiency": (
+                "High token waste detected in handoff payloads. Adopt wire protocol "
+                "compact encoding for all agent-to-agent messages. Use status codes "
+                "instead of prose summaries."
+            ),
+            "payload_density": (
+                "Handoff payloads carry too much redundant content. Strip empty fields, "
+                "compress repeated context, and limit reasoning to 100 words. "
+                "Use wire protocol encode() for all payloads."
+            ),
+            "context_injection_efficiency": (
+                "State injection into prompts is over-sized. Review STATE_PROJECTIONS in "
+                "prompt_assembler.py — tighten per-agent field lists, enable compact "
+                "projection, and trim handoff history to 2 entries."
+            ),
+            "consultation_overhead": (
+                "Consultation rounds are consuming excessive tokens. Ensure responses use "
+                "structured wire format with reasoning capped at 100 words. "
+                "Review consultation trigger thresholds in master_orchestrator."
+            ),
         }
         return recs.get(metric, f"Investigate and address low score for metric '{metric}' (score: {score:.1f}).")
 
@@ -486,8 +521,124 @@ class TrainingEngine:
             "phase_efficiency": "Fewer handoffs may mean less review and higher error risk.",
             "handoff_quality": "More handoff validation adds latency to each phase transition.",
             "boundary_adherence": "Restricting agent tools may limit its ability to handle edge cases.",
+            "token_efficiency": "Wire encoding reduces human readability of raw payloads.",
+            "payload_density": "Stripping context may require recipients to re-query state.",
+            "context_injection_efficiency": "Tighter projections may miss edge-case fields agents need.",
+            "consultation_overhead": "Capping reasoning may reduce nuance in high-stakes decisions.",
         }
         return tradeoffs.get(metric, "No known tradeoffs for this metric.")
+
+    # ------------------------------------------------------------------
+    # Communication proposals (Phase 3 — commsopt)
+    # ------------------------------------------------------------------
+
+    def generate_communication_proposals(
+        self,
+        state: dict,
+        project_id: str = "",
+    ) -> list[TrainingProposal]:
+        """
+        Generate training proposals from communication metrics in shared state.
+
+        Reads the `communication` section of shared_state and the 4 efficiency
+        scores produced by MetricsEngine. Emits proposals for any score below
+        LOW_THRESHOLD, without raising governance violations.
+
+        Args:
+            state: Shared state dict (loaded from shared_state.yaml).
+            project_id: Project ID string for evidence tracking.
+
+        Returns:
+            List of TrainingProposal objects (may be empty).
+        """
+        if MetricsEngine is None:
+            return []
+        _me = MetricsEngine()
+
+        proposals: list[TrainingProposal] = []
+        pid = project_id or state.get("core_identity", {}).get("project_id", "unknown")
+
+        comm = state.get("communication", {})
+        wf = state.get("workflow", {})
+        handoff_history = wf.get("handoff_history") or []
+        completed_phases = wf.get("completed_phases") or []
+        phase_count = max(len(completed_phases), 1)
+
+        consultation_responses = (
+            state.get("consultation", {}).get("consultation_responses") or []
+        )
+        decisions_made = len(
+            state.get("decisions", {}).get("decision_log") or []
+        ) or 1  # avoid div-by-zero
+
+        # Score the 4 communication metrics
+        metric_calls = [
+            ("token_efficiency",             lambda: _me.score_token_efficiency(handoff_history, phase_count)),
+            ("payload_density",              lambda: _me.score_payload_density(handoff_history)),
+            ("context_injection_efficiency", lambda: _me.score_context_injection_efficiency([], comm.get("total_tokens_used", 0) or 1)),
+            ("consultation_overhead",        lambda: _me.score_consultation_overhead(consultation_responses, decisions_made)),
+        ]
+
+        for metric_name, call_fn in metric_calls:
+            try:
+                result = call_fn()
+            except Exception:
+                continue
+
+            score = result.score
+            if score >= LOW_THRESHOLD:
+                continue
+
+            ptype = self._metric_to_proposal_type(metric_name, score)
+            proposals.append(TrainingProposal(
+                proposal_id=f"prop-comm-{uuid.uuid4().hex[:8]}",
+                proposal_type=ptype,
+                priority=PRIORITY_SCORES[ptype],
+                target_agent="system",
+                target_artifact=self._metric_to_artifact(metric_name),
+                description=(
+                    f"Communication metric '{metric_name}' scored {score:.1f}/100 "
+                    f"(below threshold {LOW_THRESHOLD}). "
+                    f"Breakdown: {result.breakdown}"
+                ),
+                recommended_change=self._recommend_for_metric(metric_name, score, {}),
+                evidence=[f"comm-metrics-{pid}"],
+                tradeoffs=self._tradeoffs_for_metric(metric_name),
+                minimum_evidence_met=True,
+                systemic=False,
+                project_ids=[pid],
+            ))
+
+        # Wire compliance summary proposal
+        wire_total = comm.get("wire_total_count", 0)
+        wire_compliant = comm.get("wire_compliant_count", 0)
+        compliance_rate = comm.get("wire_compliance_rate")
+
+        if wire_total >= 5 and compliance_rate is not None and compliance_rate < 0.5:
+            proposals.append(TrainingProposal(
+                proposal_id=f"prop-wire-adopt-{uuid.uuid4().hex[:8]}",
+                proposal_type="communication_waste",
+                priority=PRIORITY_SCORES["communication_waste"],
+                target_agent="system",
+                target_artifact="core/wire_protocol.py",
+                description=(
+                    f"Wire protocol adoption is low: {wire_compliant}/{wire_total} "
+                    f"handoffs compliant ({compliance_rate:.0%}). "
+                    "Agents are using legacy prose payloads."
+                ),
+                recommended_change=(
+                    "Update all agent templates to use wire protocol encode() for "
+                    "handoff payloads. Prioritize high-frequency agents: "
+                    "master_orchestrator, project_manager_agent, evaluator_agent."
+                ),
+                evidence=[f"wire-compliance-{pid}"],
+                tradeoffs="Wire encoding reduces human readability of raw handoff data.",
+                minimum_evidence_met=wire_total >= 10,
+                systemic=False,
+                project_ids=[pid],
+            ))
+
+        return proposals
 
 
 # ---------------------------------------------------------------------------

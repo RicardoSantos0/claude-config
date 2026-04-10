@@ -128,3 +128,22 @@ communication:
   wire_protocol_version: "1.0"
   wire_compliance_enforcement: "metric"  # metric (never governance violation)
   consultation_reasoning_max_words: 100  # optional reasoning field cap
+
+# --- SKILL BRIDGE ---
+skill_access:
+  enabled: true
+  skills_dir: "../skills"               # relative to mas/
+  audit_log: "projects/{project_id}/skill_audit_log.yaml"
+  unauthorized_outcome: "denied"         # denied (never governance violation for skill access)
+  per_agent_access:
+    master_orchestrator: ["*"]           # all skills
+    scribe_agent: ["research-extract", "research-sync"]
+    inquirer_agent: ["research-extract"]
+    product_manager_agent: ["research-extract", "research-sync"]
+    project_manager_agent: ["research-extract"]
+    hr_agent: []
+    evaluator_agent: ["research-extract"]
+    trainer_agent: []
+    spawner_agent: ["skill-builder"]
+    domain_expert: ["research-extract"]
+    # All other consultants: no skill access (empty = default)

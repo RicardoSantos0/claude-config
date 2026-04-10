@@ -54,3 +54,40 @@ evaluation_policy:
     field: "token_usage"
     location: "handoff_record"
     purpose: "Cost analysis, not enforcement in v1"
+
+  # --- COMMUNICATION EFFICIENCY DIMENSION ---
+  # Scored by MetricsEngine after every project. Advisory only — low scores
+  # produce training proposals, never governance violations.
+  communication_efficiency:
+    enabled: true
+    weight: 0.5  # Half-weight relative to core metrics (comms is secondary concern)
+    low_score_threshold: 65
+    metrics:
+      token_efficiency:
+        description: "Ratio of information density to raw token cost across handoff payloads"
+        source: "communication.total_tokens_used + workflow.handoff_history"
+        scoring: "Higher = more information per token. Penalised for large prose payloads."
+        training_proposal_type: "communication_waste"
+      payload_density:
+        description: "Average meaningful field count per handoff payload vs. total field count"
+        source: "workflow.handoff_history[].payload"
+        scoring: "Higher = less noise. Empty fields and prose summaries reduce score."
+        training_proposal_type: "communication_waste"
+      context_injection_efficiency:
+        description: "Ratio of state fields actually used in agent tasks to total fields injected"
+        source: "prompt_assembler STATE_PROJECTIONS + workflow.handoff_history"
+        scoring: "Higher = tighter projections. Over-injection reduces score."
+        training_proposal_type: "context_bloat"
+      consultation_overhead:
+        description: "Token cost of consultation rounds as fraction of total project token spend"
+        source: "consultation.consultation_responses + communication.total_tokens_used"
+        scoring: "Lower overhead = higher score. Long prose reasoning reduces score."
+        training_proposal_type: "context_bloat"
+    wire_compliance:
+      description: "Fraction of handoff payloads using wire protocol encoding"
+      source: "communication.wire_compliance_rate"
+      enforcement: "metric_only"
+      note: >
+        Wire non-compliance is tracked and reported but is NEVER a governance violation.
+        Non-compliant payloads are accepted and processed normally.
+        Low compliance produces a training proposal via training_engine.generate_communication_proposals().
