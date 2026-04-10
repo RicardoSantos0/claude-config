@@ -235,6 +235,15 @@ class SharedStateManager:
         state["core_identity"]["updated_at"] = datetime.now(timezone.utc).isoformat()
         self._save(state)
         self.logger.log_write(agent_id, field_path, self.project_id, True)
+
+        # 6. Checkpoint after phase transitions
+        if field_path == "core_identity.current_phase":
+            try:
+                from core.checkpoint_writer import CheckpointWriter
+                CheckpointWriter(self.project_id).write()
+            except Exception:
+                pass  # checkpoint failure must never block state writes
+
         return WriteResult(True)
 
     def append(self, agent_id: str, section: str, field: str,

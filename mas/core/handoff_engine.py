@@ -32,6 +32,7 @@ ROOT = Path(__file__).parent.parent
 
 from core.shared_state_manager import SharedStateManager
 from core.audit_logger import get_logger
+from core.checkpoint_writer import CheckpointWriter
 
 
 REQUIRED_PAYLOAD_KEYS = [
@@ -188,6 +189,10 @@ class HandoffEngine:
                 to_agent="",
                 status=status,
             )
+            try:
+                CheckpointWriter(sm.project_id).write()
+            except Exception:
+                pass  # checkpoint failure must never block handoff acceptance
         return ok
 
     def reject(self, sm: SharedStateManager, handoff_id: str,
