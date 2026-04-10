@@ -75,7 +75,7 @@ decision_log:
 
 7. **Register the project folder in shared state** — append a document record:
 ```bash
-uv run python core/shared_state_manager.py append \
+uv run python mas/core/shared_state_manager.py append \
   --project-id {project_id} \
   --section artifacts \
   --field documents \
@@ -85,7 +85,7 @@ uv run python core/shared_state_manager.py append \
 
 8. **Accept the handoff** from Master (using the handoff_id provided):
 ```bash
-uv run python core/handoff_engine.py accept --handoff-id {handoff_id} --project-id {project_id}
+uv run python mas/core/handoff_engine.py accept --handoff-id {handoff_id} --project-id {project_id}
 ```
 
 9. **Create a return handoff** to Master confirming initialization is complete.
@@ -95,7 +95,7 @@ When recording a decision from a handoff:
 1. Append to `projects/{project_id}/decisions/decision_log.yaml`
 2. Append to shared state decision_log via:
 ```bash
-uv run python core/shared_state_manager.py append \
+uv run python mas/core/shared_state_manager.py append \
   --project-id {project_id} \
   --section decisions \
   --field decision_log \
@@ -106,7 +106,7 @@ uv run python core/shared_state_manager.py append \
 ## Recording Artifacts
 When an agent produces an artifact, register it in shared state:
 ```bash
-uv run python core/shared_state_manager.py append \
+uv run python mas/core/shared_state_manager.py append \
   --project-id {project_id} \
   --section artifacts \
   --field documents \
@@ -137,7 +137,7 @@ When Master sends a close directive:
 ## Reading Your Current Task
 When invoked, first check what handoff is pending for you:
 ```bash
-uv run python core/handoff_engine.py pending --project-id {project_id} --to-agent scribe_agent
+uv run python mas/core/handoff_engine.py pending --project-id {project_id} --to-agent scribe_agent
 ```
 
 Then read the handoff payload to understand your task, and proceed accordingly.

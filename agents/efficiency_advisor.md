@@ -68,7 +68,7 @@ When invoked by Master Orchestrator:
 3. Respond concisely — max 500 words
 4. Submit response via:
 ```bash
-uv run python core/shared_state_manager.py append \
+uv run python mas/core/shared_state_manager.py append \
   --project-id {project_id} \
   --section consultation \
   --field consultation_responses \

@@ -25,27 +25,27 @@ All commands run from the system root where `system_config.yaml` lives.
 # --- SPAWN POLICY ---
 
 # Validate a spawn request against all policy rules
-uv run python core/spawn_policy.py validate \
+uv run python mas/core/spawn_policy.py validate \
   --project-id {project_id} \
   --request-file projects/{project_id}/hr/{request_id}.yaml \
   --cert-file projects/{project_id}/hr/{cert_id}.yaml
 
 # View spawn history for a project
-uv run python core/spawn_policy.py history --project-id {project_id}
+uv run python mas/core/spawn_policy.py history --project-id {project_id}
 
 # --- CAPABILITY REGISTRY (read-only checks) ---
 
 # Check if gap certificate exists and is Master-approved
-uv run python core/capability_registry.py show --type certs
+uv run python mas/core/capability_registry.py show --type certs
 
 # --- HANDOFFS ---
 
 # Accept handoff from Master
-uv run python core/handoff_engine.py accept \
+uv run python mas/core/handoff_engine.py accept \
   --handoff-id {handoff_id} --project-id {project_id}
 
 # Return package to Master for review
-uv run python core/handoff_engine.py create \
+uv run python mas/core/handoff_engine.py create \
   --project-id {project_id} \
   --from spawner_agent \
   --to master_orchestrator \
@@ -58,7 +58,7 @@ uv run python core/handoff_engine.py create \
 
 ### Step 1 — Accept Handoff
 ```bash
-uv run python core/handoff_engine.py accept \
+uv run python mas/core/handoff_engine.py accept \
   --handoff-id {handoff_id} --project-id {project_id}
 ```
 
@@ -71,7 +71,7 @@ Read the spawn request attached to the handoff. Verify it contains:
 
 **Before doing any design work**, run the full policy check:
 ```bash
-uv run python core/spawn_policy.py validate \
+uv run python mas/core/spawn_policy.py validate \
   --project-id {project_id} \
   --request-file projects/{project_id}/hr/{request_id}.yaml \
   --cert-file projects/{project_id}/hr/{cert_id}.yaml
@@ -140,7 +140,7 @@ Use `core/spawn_policy.py` to generate the package skeleton, then refine each fi
 ### Step 5 — Return Package to Master
 
 ```bash
-uv run python core/handoff_engine.py create \
+uv run python mas/core/handoff_engine.py create \
   --project-id {project_id} \
   --from spawner_agent \
   --to master_orchestrator \

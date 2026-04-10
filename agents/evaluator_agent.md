@@ -24,27 +24,27 @@ All commands run from the system root where `system_config.yaml` lives.
 # --- METRICS ENGINE ---
 
 # Score all project metrics
-uv run python core/metrics_engine.py score-project --project-id {project_id}
+uv run python mas/core/metrics_engine.py score-project --project-id {project_id}
 
 # Score a single agent
-uv run python core/metrics_engine.py score-agent \
+uv run python mas/core/metrics_engine.py score-agent \
   --project-id {project_id} \
   --agent-id {agent_id}
 
 # Produce full evaluation report (dry run)
-uv run python core/metrics_engine.py report \
+uv run python mas/core/metrics_engine.py report \
   --project-id {project_id} \
   --agents "master_orchestrator,inquirer_agent,product_manager_agent,hr_agent,project_manager_agent"
 
 # Produce and save evaluation report
-uv run python core/metrics_engine.py report \
+uv run python mas/core/metrics_engine.py report \
   --project-id {project_id} \
   --agents "master_orchestrator,inquirer_agent,product_manager_agent,hr_agent,project_manager_agent" \
   --save
 
 # --- ROSTER: update agent performance scores (after Master authorizes) ---
 
-uv run python core/capability_registry.py \
+uv run python mas/core/capability_registry.py \
   register --entry-json '{
     "agent_id": "{agent_id}",
     "performance_score": {score}
@@ -53,7 +53,7 @@ uv run python core/capability_registry.py \
 # --- SHARED STATE ---
 
 # Write performance metrics to evaluation section
-uv run python core/shared_state_manager.py append \
+uv run python mas/core/shared_state_manager.py append \
   --project-id {project_id} \
   --section evaluation \
   --field performance_metrics \
@@ -61,7 +61,7 @@ uv run python core/shared_state_manager.py append \
   --agent evaluator_agent
 
 # Write quality findings
-uv run python core/shared_state_manager.py append \
+uv run python mas/core/shared_state_manager.py append \
   --project-id {project_id} \
   --section evaluation \
   --field quality_findings \
@@ -69,21 +69,21 @@ uv run python core/shared_state_manager.py append \
   --agent evaluator_agent
 
 # Read project state
-uv run python core/shared_state_manager.py read \
+uv run python mas/core/shared_state_manager.py read \
   --project-id {project_id} \
   --path {path}
 
 # Show full state
-uv run python core/shared_state_manager.py show --project-id {project_id}
+uv run python mas/core/shared_state_manager.py show --project-id {project_id}
 
 # --- HANDOFFS ---
 
 # Accept handoff from Master
-uv run python core/handoff_engine.py accept \
+uv run python mas/core/handoff_engine.py accept \
   --handoff-id {handoff_id} --project-id {project_id}
 
 # Return evaluation report to Master
-uv run python core/handoff_engine.py create \
+uv run python mas/core/handoff_engine.py create \
   --project-id {project_id} \
   --from evaluator_agent \
   --to master_orchestrator \
@@ -97,13 +97,13 @@ uv run python core/handoff_engine.py create \
 ### Step 1 — Accept Handoff
 When Master sends you an evaluation request:
 ```bash
-uv run python core/handoff_engine.py accept \
+uv run python mas/core/handoff_engine.py accept \
   --handoff-id {handoff_id} --project-id {project_id}
 ```
 
 Read the full project state:
 ```bash
-uv run python core/shared_state_manager.py show --project-id {project_id}
+uv run python mas/core/shared_state_manager.py show --project-id {project_id}
 ```
 
 ### Step 2 — Collect Project Data
@@ -117,7 +117,7 @@ Note what is present and what is missing — both inform documentation_completen
 ### Step 3 — Score Project Metrics
 Run all project-level metrics:
 ```bash
-uv run python core/metrics_engine.py score-project --project-id {project_id}
+uv run python mas/core/metrics_engine.py score-project --project-id {project_id}
 ```
 
 **Minimum metrics (v1):**
@@ -133,7 +133,7 @@ uv run python core/metrics_engine.py score-project --project-id {project_id}
 ### Step 4 — Score Each Agent
 Run agent evaluation for each agent active in the project:
 ```bash
-uv run python core/metrics_engine.py score-agent \
+uv run python mas/core/metrics_engine.py score-agent \
   --project-id {project_id} \
   --agent-id {agent_id}
 ```
@@ -151,7 +151,7 @@ uv run python core/metrics_engine.py score-agent \
 
 ### Step 5 — Produce Evaluation Report
 ```bash
-uv run python core/metrics_engine.py report \
+uv run python mas/core/metrics_engine.py report \
   --project-id {project_id} \
   --agents "{comma-separated agent IDs}" \
   --save
@@ -169,7 +169,7 @@ Review the report for:
 Write key findings:
 ```bash
 # For each metric result
-uv run python core/shared_state_manager.py append \
+uv run python mas/core/shared_state_manager.py append \
   --project-id {project_id} \
   --section evaluation \
   --field performance_metrics \
@@ -183,7 +183,7 @@ uv run python core/shared_state_manager.py append \
   --agent evaluator_agent
 
 # For each significant finding
-uv run python core/shared_state_manager.py append \
+uv run python mas/core/shared_state_manager.py append \
   --project-id {project_id} \
   --section evaluation \
   --field quality_findings \
@@ -201,7 +201,7 @@ uv run python core/shared_state_manager.py append \
 ### Step 7 — Return to Master
 Send the completed evaluation back:
 ```bash
-uv run python core/handoff_engine.py create \
+uv run python mas/core/handoff_engine.py create \
   --project-id {project_id} \
   --from evaluator_agent \
   --to master_orchestrator \

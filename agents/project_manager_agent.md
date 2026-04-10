@@ -26,52 +26,52 @@ All commands run from the system root where `system_config.yaml` lives.
 # --- TASK BOARD ---
 
 # Create a milestone
-uv run python core/task_board.py create-milestone \
+uv run python mas/core/task_board.py create-milestone \
   --project-id {project_id} \
   --milestone-json '{"name":"...", "completion_criteria":"..."}'
 
 # Create a task
-uv run python core/task_board.py create-task \
+uv run python mas/core/task_board.py create-task \
   --project-id {project_id} \
   --task-json '{"description":"...","milestone":"{ms_id}","dependencies":[],"estimated_effort":"small"}'
 
 # Update task status
-uv run python core/task_board.py update-status \
+uv run python mas/core/task_board.py update-status \
   --project-id {project_id} \
   --task-id {task_id} \
   --status in_progress
 
 # List tasks (optional filters)
-uv run python core/task_board.py list --project-id {project_id}
-uv run python core/task_board.py list --project-id {project_id} --status blocked
-uv run python core/task_board.py list --project-id {project_id} --milestone {ms_id}
+uv run python mas/core/task_board.py list --project-id {project_id}
+uv run python mas/core/task_board.py list --project-id {project_id} --status blocked
+uv run python mas/core/task_board.py list --project-id {project_id} --milestone {ms_id}
 
 # Check blocked tasks
-uv run python core/task_board.py blocked --project-id {project_id}
+uv run python mas/core/task_board.py blocked --project-id {project_id}
 
 # Milestone completion status
-uv run python core/task_board.py milestone-status --project-id {project_id} --milestone-id {ms_id}
+uv run python mas/core/task_board.py milestone-status --project-id {project_id} --milestone-id {ms_id}
 
 # Progress report
-uv run python core/task_board.py progress-report --project-id {project_id}
-uv run python core/task_board.py progress-report --project-id {project_id} --milestone-id {ms_id}
+uv run python mas/core/task_board.py progress-report --project-id {project_id}
+uv run python mas/core/task_board.py progress-report --project-id {project_id} --milestone-id {ms_id}
 
 # Dependency chain for a task
-uv run python core/task_board.py deps --project-id {project_id} --task-id {task_id}
+uv run python mas/core/task_board.py deps --project-id {project_id} --task-id {task_id}
 
 # Compile and write the execution plan
-uv run python core/task_board.py plan \
+uv run python mas/core/task_board.py plan \
   --project-id {project_id} \
   --product-plan-path "projects/{project_id}/planning/product_plan.yaml"
 
 # --- SHARED STATE ---
 
 # Read product plan path
-uv run python core/shared_state_manager.py read \
+uv run python mas/core/shared_state_manager.py read \
   --project-id {project_id} --path project_definition.project_goal
 
 # Write execution plan path to shared state
-uv run python core/shared_state_manager.py write \
+uv run python mas/core/shared_state_manager.py write \
   --project-id {project_id} \
   --section execution \
   --field execution_plan_path \
@@ -79,7 +79,7 @@ uv run python core/shared_state_manager.py write \
   --agent project_manager_agent
 
 # Append a blocker alert
-uv run python core/shared_state_manager.py append \
+uv run python mas/core/shared_state_manager.py append \
   --project-id {project_id} \
   --section execution \
   --field blocker_alerts \
@@ -87,7 +87,7 @@ uv run python core/shared_state_manager.py append \
   --agent project_manager_agent
 
 # Append a progress report
-uv run python core/shared_state_manager.py append \
+uv run python mas/core/shared_state_manager.py append \
   --project-id {project_id} \
   --section execution \
   --field progress_reports \
@@ -97,11 +97,11 @@ uv run python core/shared_state_manager.py append \
 # --- HANDOFFS ---
 
 # Accept handoff from Master
-uv run python core/handoff_engine.py accept \
+uv run python mas/core/handoff_engine.py accept \
   --handoff-id {handoff_id} --project-id {project_id}
 
 # Send capability request to HR via Master
-uv run python core/handoff_engine.py create \
+uv run python mas/core/handoff_engine.py create \
   --project-id {project_id} \
   --from project_manager_agent \
   --to master_orchestrator \
@@ -110,7 +110,7 @@ uv run python core/handoff_engine.py create \
   --summary "{summary}"
 
 # Return execution plan to Master
-uv run python core/handoff_engine.py create \
+uv run python mas/core/handoff_engine.py create \
   --project-id {project_id} \
   --from project_manager_agent \
   --to master_orchestrator \
@@ -125,7 +125,7 @@ uv run python core/handoff_engine.py create \
 When Master sends you a handoff:
 1. Accept it:
 ```bash
-uv run python core/handoff_engine.py accept --handoff-id {handoff_id} --project-id {project_id}
+uv run python mas/core/handoff_engine.py accept --handoff-id {handoff_id} --project-id {project_id}
 ```
 2. Read the product plan from disk. The handoff payload will include `product_plan_path`. Read the YAML:
 ```bash
@@ -134,7 +134,7 @@ uv run python core/handoff_engine.py accept --handoff-id {handoff_id} --project-
 ```
 3. Read shared state context:
 ```bash
-uv run python core/shared_state_manager.py read --project-id {project_id} --path project_definition
+uv run python mas/core/shared_state_manager.py read --project-id {project_id} --path project_definition
 ```
 
 ### Step 2 — Define Milestones
@@ -147,7 +147,7 @@ Group the work into logical milestones. Each milestone is a coherent delivery un
 
 Create each milestone:
 ```bash
-uv run python core/task_board.py create-milestone \
+uv run python mas/core/task_board.py create-milestone \
   --project-id {project_id} \
   --milestone-json '{
     "name": "M1: Foundation",
@@ -167,7 +167,7 @@ For each `must_have` requirement in the product plan, decompose into discrete, a
 - `should_have` and `could_have` items can be tasks if scope allows
 
 ```bash
-uv run python core/task_board.py create-task \
+uv run python mas/core/task_board.py create-task \
   --project-id {project_id} \
   --task-json '{
     "description": "Set up AWS VPC and networking",
@@ -197,7 +197,7 @@ Build a resource request for each distinct capability need:
 
 Append each request to shared state:
 ```bash
-uv run python core/shared_state_manager.py append \
+uv run python mas/core/shared_state_manager.py append \
   --project-id {project_id} \
   --section execution \
   --field resource_requests \
@@ -210,14 +210,14 @@ Then return to Master requesting HR capability discovery for each need.
 ### Step 5 — Produce Execution Plan
 After resources are identified (or HR results are received), compile the execution plan:
 ```bash
-uv run python core/task_board.py plan \
+uv run python mas/core/task_board.py plan \
   --project-id {project_id} \
   --product-plan-path "projects/{project_id}/planning/product_plan.yaml"
 ```
 
 Write the plan path to shared state:
 ```bash
-uv run python core/shared_state_manager.py write \
+uv run python mas/core/shared_state_manager.py write \
   --project-id {project_id} \
   --section execution \
   --field execution_plan_path \
@@ -228,7 +228,7 @@ uv run python core/shared_state_manager.py write \
 ### Step 6 — Return to Master
 Send the execution plan back for Master approval:
 ```bash
-uv run python core/handoff_engine.py create \
+uv run python mas/core/handoff_engine.py create \
   --project-id {project_id} \
   --from project_manager_agent \
   --to master_orchestrator \
@@ -247,17 +247,17 @@ When Master assigns tasks and agents report completion back through you:
 
 ```bash
 # Task started
-uv run python core/task_board.py update-status \
+uv run python mas/core/task_board.py update-status \
   --project-id {project_id} --task-id {task_id} --status in_progress
 
 # Task blocked
-uv run python core/task_board.py update-status \
+uv run python mas/core/task_board.py update-status \
   --project-id {project_id} --task-id {task_id} \
   --status blocked \
   --blocker "Missing Salesforce API credentials — requires stakeholder action"
 
 # Task complete
-uv run python core/task_board.py update-status \
+uv run python mas/core/task_board.py update-status \
   --project-id {project_id} --task-id {task_id} \
   --status completed --actual-effort small
 ```
@@ -272,7 +272,7 @@ Escalate to Master immediately if:
 ### Progress Reports
 Produce a progress report at each milestone boundary:
 ```bash
-uv run python core/task_board.py progress-report \
+uv run python mas/core/task_board.py progress-report \
   --project-id {project_id} \
   --milestone-id {ms_id}
 ```

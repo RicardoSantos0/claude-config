@@ -25,17 +25,17 @@ All commands run from the system root where `system_config.yaml` lives.
 When Master sends you a handoff:
 1. Accept it:
 ```bash
-uv run python core/handoff_engine.py accept --handoff-id {handoff_id} --project-id {project_id}
+uv run python mas/core/handoff_engine.py accept --handoff-id {handoff_id} --project-id {project_id}
 ```
 2. Read the clarified specification from shared state:
 ```bash
-uv run python core/shared_state_manager.py read \
+uv run python mas/core/shared_state_manager.py read \
   --project-id {project_id} \
   --path project_definition.clarified_specification
 ```
 3. Also read the original brief if available:
 ```bash
-uv run python core/shared_state_manager.py read \
+uv run python mas/core/shared_state_manager.py read \
   --project-id {project_id} \
   --path project_definition.original_brief
 ```
@@ -105,7 +105,7 @@ approval_status: pending_master_review
 
 ### Step 4 — Register Artifact in Shared State
 ```bash
-uv run python core/shared_state_manager.py append \
+uv run python mas/core/shared_state_manager.py append \
   --project-id {project_id} \
   --section artifacts \
   --field documents \
@@ -117,7 +117,7 @@ Note: Only Scribe can append artifacts, so coordinate with Scribe or include thi
 
 ### Step 5 — Write Project Goal to Shared State
 ```bash
-uv run python core/shared_state_manager.py write \
+uv run python mas/core/shared_state_manager.py write \
   --project-id {project_id} \
   --section project_definition \
   --field project_goal \
@@ -127,7 +127,7 @@ uv run python core/shared_state_manager.py write \
 
 ### Step 6 — Handoff to Master
 ```bash
-uv run python core/handoff_engine.py create \
+uv run python mas/core/handoff_engine.py create \
   --project-id {project_id} \
   --from product_manager_agent \
   --to master_orchestrator \
@@ -166,6 +166,6 @@ uv run python core/handoff_engine.py create \
 ## Reading Your Current Task
 When invoked, check what handoff is pending:
 ```bash
-uv run python core/handoff_engine.py pending --project-id {project_id} --to-agent product_manager_agent
+uv run python mas/core/handoff_engine.py pending --project-id {project_id} --to-agent product_manager_agent
 ```
 Read the handoff payload to get the `project_id`, then read the clarified specification and proceed through the planning lifecycle.

@@ -25,22 +25,22 @@ All commands run from the system root where `system_config.yaml` lives.
 # --- TRAINING ENGINE ---
 
 # Analyze a single project's evaluation report and produce proposals
-uv run python core/training_engine.py analyze \
+uv run python mas/core/training_engine.py analyze \
   --project-id {project_id}
 
 # View training backlog
-uv run python core/training_engine.py backlog
+uv run python mas/core/training_engine.py backlog
 
 # View backlog filtered by status
-uv run python core/training_engine.py backlog --status pending
+uv run python mas/core/training_engine.py backlog --status pending
 
 # (After Master approves) Mark proposal as approved
-uv run python core/training_engine.py approve \
+uv run python mas/core/training_engine.py approve \
   --proposal-id {proposal_id} \
   --authorized-by master_orchestrator
 
 # (After Master decides) Reject a proposal
-uv run python core/training_engine.py reject \
+uv run python mas/core/training_engine.py reject \
   --proposal-id {proposal_id} \
   --reason "{reason}" \
   --authorized-by master_orchestrator
@@ -48,7 +48,7 @@ uv run python core/training_engine.py reject \
 # --- SHARED STATE ---
 
 # Append improvement proposal to shared state
-uv run python core/shared_state_manager.py append \
+uv run python mas/core/shared_state_manager.py append \
   --project-id {project_id} \
   --section evaluation \
   --field improvement_proposals \
@@ -56,18 +56,18 @@ uv run python core/shared_state_manager.py append \
   --agent trainer_agent
 
 # Read evaluation findings
-uv run python core/shared_state_manager.py read \
+uv run python mas/core/shared_state_manager.py read \
   --project-id {project_id} \
   --path evaluation.quality_findings
 
 # --- HANDOFFS ---
 
 # Accept handoff from Master
-uv run python core/handoff_engine.py accept \
+uv run python mas/core/handoff_engine.py accept \
   --handoff-id {handoff_id} --project-id {project_id}
 
 # Return proposals to Master
-uv run python core/handoff_engine.py create \
+uv run python mas/core/handoff_engine.py create \
   --project-id {project_id} \
   --from trainer_agent \
   --to master_orchestrator \
@@ -80,16 +80,16 @@ uv run python core/handoff_engine.py create \
 
 ### Step 1 — Accept Handoff
 ```bash
-uv run python core/handoff_engine.py accept \
+uv run python mas/core/handoff_engine.py accept \
   --handoff-id {handoff_id} --project-id {project_id}
 ```
 
 Read the evaluation report and quality findings:
 ```bash
-uv run python core/shared_state_manager.py read \
+uv run python mas/core/shared_state_manager.py read \
   --project-id {project_id} --path evaluation.quality_findings
 
-uv run python core/shared_state_manager.py read \
+uv run python mas/core/shared_state_manager.py read \
   --project-id {project_id} --path evaluation.performance_metrics
 ```
 
@@ -97,7 +97,7 @@ uv run python core/shared_state_manager.py read \
 
 Run the training engine on this project's evaluation:
 ```bash
-uv run python core/training_engine.py analyze --project-id {project_id}
+uv run python mas/core/training_engine.py analyze --project-id {project_id}
 ```
 
 This produces:
@@ -107,7 +107,7 @@ This produces:
 Review the brief and check if any proposals are **systemic** — the same metric
 was low in a previous project too. Check the backlog for patterns:
 ```bash
-uv run python core/training_engine.py backlog --status pending
+uv run python mas/core/training_engine.py backlog --status pending
 ```
 
 ### Step 3 — Evaluate Evidence Threshold
@@ -126,7 +126,7 @@ submit it to Master yet. Instead, keep it in the backlog for the next cycle.
 
 For each proposal with sufficient evidence:
 ```bash
-uv run python core/shared_state_manager.py append \
+uv run python mas/core/shared_state_manager.py append \
   --project-id {project_id} \
   --section evaluation \
   --field improvement_proposals \
@@ -149,7 +149,7 @@ uv run python core/shared_state_manager.py append \
 ### Step 5 — Return to Master
 
 ```bash
-uv run python core/handoff_engine.py create \
+uv run python mas/core/handoff_engine.py create \
   --project-id {project_id} \
   --from trainer_agent \
   --to master_orchestrator \
