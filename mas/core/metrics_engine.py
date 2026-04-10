@@ -41,6 +41,10 @@ from typing import Optional
 
 import yaml
 
+from core.token_counter import TokenCounter
+
+_token_counter = TokenCounter()
+
 ROOT = Path(__file__).parent.parent
 
 EXEMPLARY_THRESHOLD = 90.0    # Agent score above this → flagged exemplary
@@ -58,6 +62,7 @@ class MetricResult:
     evidence: str
     findings: str
     exemplary: bool = False   # True if score > EXEMPLARY_THRESHOLD
+    breakdown: dict = field(default_factory=dict)  # optional detailed data
 
 
 @dataclass
@@ -518,6 +523,178 @@ class MetricsEngine:
             evidence=f"{count} violations for {agent_id}",
             findings=findings,
             exemplary=(count == 0 and score > EXEMPLARY_THRESHOLD),
+        )
+
+    # ------------------------------------------------------------------
+    # Communication efficiency metrics (Phase 3 — CommsOpt)
+    # ------------------------------------------------------------------
+
+    def score_token_efficiency(
+        self,
+        handoff_history: list,
+        phase_count: int,
+    ) -> MetricResult:
+        """
+        Tokens per phase. Lower is better. Score: 100 if avg < 500 tokens/phase,
+        linearly degrades to 0 at 5000 tokens/phase.
+        Returns breakdown by agent and phase.
+        """
+        if not handoff_history or phase_count == 0:
+            return MetricResult(
+                metric="token_efficiency",
+                score=0.0,
+                evidence="No handoff history or phases",
+                findings="Cannot compute — no data.",
+            )
+
+        tokens_by_agent: dict[str, int] = {}
+        tokens_by_phase: dict[str, int] = {}
+        total = 0
+
+        for h in handoff_history:
+            tok = h.get("token_usage") or h.get("tok")
+            if isinstance(tok, dict):
+                t = tok.get("total_tokens", 0) or 0
+            elif isinstance(tok, list) and len(tok) >= 3:
+                t = tok[2]
+            else:
+                # Estimate from payload
+                payload = h.get("payload") or h.get("p") or {}
+                t = _token_counter.count_dict(payload)
+
+            agent = h.get("from_agent") or h.get("from", "unknown")
+            phase = h.get("phase") or h.get("ph", "unknown")
+            tokens_by_agent[agent] = tokens_by_agent.get(agent, 0) + t
+            tokens_by_phase[phase] = tokens_by_phase.get(phase, 0) + t
+            total += t
+
+        avg_per_phase = total / phase_count
+        score = max(0.0, min(100.0, 100.0 - (avg_per_phase - 500) / 45.0))
+
+        findings = (
+            f"Total tokens: {total}. Avg per phase: {avg_per_phase:.0f}. "
+            f"Top consumer: {max(tokens_by_agent, key=tokens_by_agent.get, default='none')}."
+        )
+
+        return MetricResult(
+            metric="token_efficiency",
+            score=round(score, 1),
+            evidence=f"total={total}, phases={phase_count}, avg_per_phase={avg_per_phase:.0f}",
+            findings=findings,
+            breakdown={
+                "total_tokens": total,
+                "avg_per_phase": round(avg_per_phase, 1),
+                "by_agent": tokens_by_agent,
+                "by_phase": tokens_by_phase,
+            },
+        )
+
+    def score_payload_density(
+        self,
+        handoff_history: list,
+    ) -> MetricResult:
+        """
+        Ratio of structured fields to prose in payloads.
+        Score: 100 if all payloads use structured wire format, 0 if all prose.
+        """
+        if not handoff_history:
+            return MetricResult(
+                metric="payload_density",
+                score=0.0,
+                evidence="No handoff history",
+                findings="Cannot compute — no data.",
+            )
+
+        structured = 0
+        prose = 0
+
+        for h in handoff_history:
+            payload = h.get("payload") or h.get("p") or {}
+            summary = payload.get("summary") or payload.get("s", "")
+            # Heuristic: structured if summary is a short status code (no spaces or <30 chars)
+            if isinstance(summary, str) and (len(summary) < 30 and " " not in summary.strip()):
+                structured += 1
+            else:
+                prose += 1
+
+        total = structured + prose
+        rate = structured / total if total > 0 else 0.0
+        score = rate * 100.0
+
+        return MetricResult(
+            metric="payload_density",
+            score=round(score, 1),
+            evidence=f"structured={structured}, prose={prose}, total={total}",
+            findings=(
+                f"{rate:.0%} wire format compliance ({structured}/{total} payloads). "
+                + ("Target: >90%." if rate < 0.9 else "Target met.")
+            ),
+        )
+
+    def score_context_injection_efficiency(
+        self,
+        prompt_token_counts: list[int],
+        total_prompt_tokens: int,
+    ) -> MetricResult:
+        """
+        Injected context tokens vs total prompt tokens. Lower ratio = better.
+        Score: 100 if context is <20% of total, 0 if >80%.
+        """
+        if total_prompt_tokens == 0 or not prompt_token_counts:
+            return MetricResult(
+                metric="context_injection_efficiency",
+                score=0.0,
+                evidence="No prompt token data",
+                findings="Cannot compute — no data.",
+            )
+
+        context_tokens = sum(prompt_token_counts)
+        ratio = context_tokens / total_prompt_tokens
+        score = max(0.0, min(100.0, 100.0 - (ratio - 0.2) / 0.006))
+
+        return MetricResult(
+            metric="context_injection_efficiency",
+            score=round(score, 1),
+            evidence=f"context={context_tokens}, total={total_prompt_tokens}, ratio={ratio:.2f}",
+            findings=(
+                f"Context injection is {ratio:.0%} of total prompt tokens. "
+                + ("Within target (<20%)." if ratio < 0.2 else f"Above target — reduce by {context_tokens - int(total_prompt_tokens * 0.2)} tokens.")
+            ),
+        )
+
+    def score_consultation_overhead(
+        self,
+        consultation_data: list,
+        decisions_made: int,
+    ) -> MetricResult:
+        """
+        Total consultation tokens vs number of decisions.
+        Score: 100 if avg < 200 tokens/decision, degrades to 0 at 3000.
+        """
+        if not consultation_data or decisions_made == 0:
+            return MetricResult(
+                metric="consultation_overhead",
+                score=0.0,
+                evidence="No consultation data or decisions",
+                findings="Cannot compute — no data.",
+            )
+
+        total = sum(
+            _token_counter.count(r.get("response_text", ""))
+            for r in consultation_data
+            if isinstance(r, dict)
+        )
+        avg = total / decisions_made
+        score = max(0.0, min(100.0, 100.0 - (avg - 200) / 28.0))
+
+        return MetricResult(
+            metric="consultation_overhead",
+            score=round(score, 1),
+            evidence=f"total_consultation_tokens={total}, decisions={decisions_made}, avg={avg:.0f}",
+            findings=(
+                f"Avg {avg:.0f} consultation tokens per decision. "
+                + ("Within target." if avg < 200 else "Above target — enforce wire format for consultants.")
+            ),
         )
 
     # ------------------------------------------------------------------

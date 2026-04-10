@@ -38,6 +38,7 @@ ACCESS_CONTROL: dict[str, dict] = {
 
     # === PROJECT DEFINITION ===
     "project_definition.original_brief":          {"write": ["inquirer_agent"],         "mutability": "immutable_after_approval"},
+    "project_definition.brief_summary":          {"write": ["inquirer_agent"],         "mutability": "immutable_after_approval"},
     "project_definition.clarified_specification": {"write": ["inquirer_agent"],         "mutability": "immutable_after_approval"},
     "project_definition.project_goal":            {"write": ["product_manager_agent"],  "mutability": "immutable_after_approval"},
     "project_definition.problem_statement":       {"write": ["product_manager_agent"],  "mutability": "immutable_after_approval"},
@@ -45,6 +46,7 @@ ACCESS_CONTROL: dict[str, dict] = {
     "project_definition.constraints":             {"write": ["product_manager_agent"],  "mode": "append_only_after_approval"},
     "project_definition.success_criteria":        {"write": ["product_manager_agent"],  "mutability": "immutable_after_approval"},
     "project_definition.acceptance_criteria":     {"write": ["product_manager_agent"],  "mutability": "immutable_after_approval"},
+    "project_definition.expected_outputs":        {"write": ["product_manager_agent"],  "mutability": "immutable_after_approval"},
     "project_definition.risk_classification":     {"write": ["product_manager_agent", "master_orchestrator"]},
     "project_definition.priority":                {"write": ["product_manager_agent", "master_orchestrator"]},
 
@@ -96,6 +98,15 @@ ACCESS_CONTROL: dict[str, dict] = {
     "consultation.consultation_requests":  {"write": ["master_orchestrator"],   "mode": "append_only"},
     "consultation.consultation_responses": {"write": list(CONSULTANT_AGENTS),   "mode": "append_only"},
     "consultation.synthesis":              {"write": ["master_orchestrator"],   "mode": "append_only"},
+
+    # === COMMUNICATION (token tracking + wire protocol metrics) ===
+    "communication.token_tracking_enabled": {"write": ["master_orchestrator"]},
+    "communication.total_tokens_used":      {"write": [SYSTEM]},
+    "communication.tokens_by_agent":        {"write": [SYSTEM]},
+    "communication.tokens_by_phase":        {"write": [SYSTEM]},
+    "communication.wire_compliance_rate":   {"write": [SYSTEM]},
+    "communication.wire_compliant_count":   {"write": [SYSTEM]},
+    "communication.wire_total_count":       {"write": [SYSTEM]},
 }
 
 

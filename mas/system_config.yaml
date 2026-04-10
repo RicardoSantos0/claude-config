@@ -118,3 +118,13 @@ audit:
     - "error"
     - "human_escalation"
     - "human_approval"
+
+# --- COMMUNICATION / TOKEN TRACKING ---
+communication:
+  token_tracking_enabled: true
+  token_counter_backend: "heuristic"   # heuristic | tiktoken
+  token_counter_model: "cl100k_base"   # used only if backend = tiktoken
+  wire_protocol_enabled: true
+  wire_protocol_version: "1.0"
+  wire_compliance_enforcement: "metric"  # metric (never governance violation)
+  consultation_reasoning_max_words: 100  # optional reasoning field cap

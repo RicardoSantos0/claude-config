@@ -10,6 +10,10 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Callable, Optional
 
+from core.token_counter import TokenCounter
+
+_token_counter = TokenCounter()
+
 
 class MessageType(Enum):
     HANDOFF = "handoff"
@@ -42,6 +46,9 @@ class Message:
     payload: dict = field(default_factory=dict)
     requires_response: bool = False
     correlation_id: Optional[str] = None
+    token_usage: dict = field(default_factory=lambda: {
+        "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0
+    })
 
 
 @dataclass
@@ -88,6 +95,15 @@ class DirectCallBus(MessageBus):
         self._handlers.pop(agent_id, None)
 
     def send(self, message: Message) -> MessageResult:
+        # Estimate payload token cost if not already set by caller
+        if message.token_usage.get("total_tokens", 0) == 0:
+            payload_tokens = _token_counter.count_dict(message.payload)
+            message.token_usage = {
+                "prompt_tokens": payload_tokens,
+                "completion_tokens": 0,
+                "total_tokens": payload_tokens,
+            }
+
         self._message_log.append(message)
 
         if self._audit_logger:

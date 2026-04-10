@@ -11,6 +11,10 @@ from typing import Any
 
 import yaml
 
+from core.token_counter import TokenCounter
+
+_token_counter = TokenCounter()
+
 ROOT = Path(__file__).parent.parent
 AGENTS_DIR = ROOT / "agents"
 
@@ -214,6 +218,9 @@ class PromptAssembler:
         """
         Assemble a complete prompt for an agent.
         Injects scoped state and any extra context.
+
+        After assembly, self.last_token_count holds the estimated
+        token count of the assembled prompt.
         """
         template = self.load_template(agent_id)
         projected = _project_state(state, agent_id)
@@ -256,7 +263,9 @@ class PromptAssembler:
         if extra_context:
             context.update(extra_context)
 
-        return _fill_placeholders(template, context)
+        prompt = _fill_placeholders(template, context)
+        self.last_token_count: int = _token_counter.count(prompt)
+        return prompt
 
     def get_state_projection(self, agent_id: str) -> list[str]:
         """Return the list of state paths this agent is authorized to read."""

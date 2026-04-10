@@ -122,6 +122,15 @@ def create_initial_state(project_id: str, request_id: str) -> dict:
             "consultation_responses": [],
             "synthesis": [],
         },
+        "communication": {
+            "token_tracking_enabled": True,
+            "total_tokens_used": 0,
+            "tokens_by_agent": {},
+            "tokens_by_phase": {},
+            "wire_compliance_rate": None,
+            "wire_compliant_count": 0,
+            "wire_total_count": 0,
+        },
         "_meta": {
             "version": "1.0.0",
             "approved_fields": [],
