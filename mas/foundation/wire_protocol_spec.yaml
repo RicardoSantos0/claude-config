@@ -1,0 +1,184 @@
+# ============================================================
+# MAS Wire Protocol Specification v1.0
+# ============================================================
+# Defines the structured inter-agent communication format.
+# Implementation: mas/core/wire_protocol.py
+#
+# RULE: Wire format is agent-to-agent only.
+#       Inquirer ↔ human stays natural language.
+#       Non-compliance = metric warning, never governance violation.
+# ============================================================
+
+version: "1.0"
+created: "2026-04-10"
+project: "proj-20260410-002-commsopt"
+
+# ---------------------------------------------------------------------------
+# Core principles
+# ---------------------------------------------------------------------------
+principles:
+  - "Every wire message carries a _v version field"
+  - "Status is a compact code: 'section:outcome' (e.g. task:complete)"
+  - "Human-facing output always uses expand() before rendering"
+  - "Reasoning field (rsn) is optional, max 100 words"
+  - "Empty lists and null values are omitted"
+  - "Unknown fields pass through unchanged (forward compatibility)"
+  - "Non-compliance triggers a metric warning, never a governance violation"
+
+# ---------------------------------------------------------------------------
+# Field name mappings: expanded → compact
+# ---------------------------------------------------------------------------
+field_map:
+  # Payload fields
+  summary:                      s
+  artifacts_produced:           art
+  decisions_made:               dec
+  open_questions:               oq
+  constraints_for_next:         con
+  shared_state_fields_modified: mod
+  findings:                     f
+  risk_level:                   rl
+  recommendation:               rec
+  key_concerns:                 kc
+  reasoning:                    rsn
+  status:                       st
+  action:                       act
+  path:                         path
+  data:                         d
+
+# ---------------------------------------------------------------------------
+# Finding item schema (used in findings arrays)
+# ---------------------------------------------------------------------------
+finding_schema:
+  path:   path   # dot-path to the field in question (e.g. "scope.exclusions")
+  status: st     # one of: ok | ambiguous | missing | conflicting | unclear
+  action: act    # one of: clarify | ask | resolve | accept | reject
+
+# ---------------------------------------------------------------------------
+# Status code vocabulary
+# ---------------------------------------------------------------------------
+status_codes:
+
+  # Inquirer
+  spec_analysis:ok:           "Spec analyzed — all fields present and clear"
+  spec_analysis:incomplete:   "Spec missing critical fields"
+  clarification:complete:     "All clarification rounds done"
+  clarification:pending:      "Clarification rounds in progress"
+
+  # Product Manager
+  product_plan:ready:         "Product plan produced and ready for approval"
+  product_plan:revision:      "Product plan revised per feedback"
+  spec:ready:                 "Specification written and complete"
+
+  # HR Agent
+  capability:match:           "Required capability found in registry"
+  capability:gap:             "Gap found — gap certificate issued"
+  capability:no_gaps:         "No capability gaps — all covered"
+
+  # Project Manager
+  exec_plan:ready:            "Execution plan compiled"
+  milestone:complete:         "Milestone — all tasks completed"
+  task:complete:              "Task completed successfully"
+  task:blocked:               "Task blocked — dependency or resource issue"
+  task:failed:                "Task failed — requires intervention"
+
+  # Evaluator
+  eval:report_ready:          "Evaluation report produced"
+  eval:pass:                  "Project passed evaluation"
+  eval:fail:                  "Project failed evaluation — issues found"
+
+  # Trainer
+  training:proposals_ready:   "Training proposals generated"
+  training:backlog_updated:   "Training backlog updated"
+
+  # Scribe
+  scribe:folder_ready:        "Project folder initialized"
+  scribe:recorded:            "Event recorded in project memory"
+
+  # Spawner
+  spawn:package_ready:        "Agent package built and ready for review"
+  spawn:rejected:             "Spawn request rejected"
+
+  # Consultants
+  consult:approve:            "Recommends approval"
+  consult:caution:            "Recommends approval with caveats"
+  consult:oppose:             "Recommends against"
+
+  # Generic
+  ok:                         "Operation completed successfully"
+  error:                      "Operation failed"
+  pending:                    "Operation in progress"
+  escalate:                   "Human escalation required"
+
+# ---------------------------------------------------------------------------
+# Message type schemas (per agent output type)
+# ---------------------------------------------------------------------------
+message_schemas:
+
+  handoff_payload:
+    required: [s]             # status code
+    optional: [art, dec, oq, con, mod, f, d]
+    example:
+      _v: "1.0"
+      s: "task:complete"
+      art: ["mas/core/token_counter.py"]
+      dec: [{id: "d-001", v: "char_over_4_heuristic"}]
+
+  consultant_response:
+    required: [s, rl, rec]   # status, risk_level, recommendation
+    optional: [kc, rsn]      # key_concerns (list), reasoning (max 100 words)
+    rl_values: [none, low, medium, high]
+    rec_values: [consult:approve, consult:caution, consult:oppose]
+    example:
+      _v: "1.0"
+      s: "consult:caution"
+      rl: "medium"
+      rec: "consult:caution"
+      kc: ["scope creep risk", "missing timeline"]
+      rsn: "The proposal lacks explicit phase boundaries. Risk is medium because prior similar projects slipped when phases were not time-boxed."
+
+  spec_analysis:
+    required: [s]
+    optional: [f, oq]
+    example:
+      _v: "1.0"
+      s: "spec_analysis:incomplete"
+      f:
+        - {path: "scope.exclusions", st: "missing", act: "ask"}
+        - {path: "timeline", st: "missing", act: "ask"}
+
+  capability_assessment:
+    required: [s]
+    optional: [d]   # gap details if capability:gap
+    example:
+      _v: "1.0"
+      s: "capability:no_gaps"
+
+# ---------------------------------------------------------------------------
+# Compliance enforcement
+# ---------------------------------------------------------------------------
+compliance:
+  mode: metric                # metric | strict (currently: metric only)
+  metric_name: wire_compliance_rate
+  target: 0.90                # 90% of payloads should be wire-format
+  violation_on_noncompliance: false   # NEVER a governance violation
+  warning_on_noncompliance: true
+
+# ---------------------------------------------------------------------------
+# Versioning and migration
+# ---------------------------------------------------------------------------
+versioning:
+  current: "1.0"
+  known_versions: ["1.0"]
+  migration:
+    strategy: "expand() handles all known versions"
+    unknown_version: "pass through unchanged, log warning"
+
+# ---------------------------------------------------------------------------
+# Backward compatibility
+# ---------------------------------------------------------------------------
+backward_compatibility:
+  legacy_format: "expanded — no _v field, full field names"
+  detection: "absence of _v field indicates legacy format"
+  handling: "decode() and expand() accept both formats transparently"
+  existing_tests: "use expand() — all 620+ tests unaffected"

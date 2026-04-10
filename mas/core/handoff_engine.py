@@ -33,6 +33,9 @@ ROOT = Path(__file__).parent.parent
 from core.shared_state_manager import SharedStateManager
 from core.audit_logger import get_logger
 from core.checkpoint_writer import CheckpointWriter
+from core.wire_protocol import WireValidator as _WireValidator
+
+_wire_validator = _WireValidator()
 
 
 REQUIRED_PAYLOAD_KEYS = [
@@ -126,6 +129,21 @@ class HandoffEngine:
             from_agent=from_agent,
             to_agent=to_agent,
         )
+
+        # Track wire protocol compliance (metric only — never blocks)
+        try:
+            compliant, warnings = _wire_validator.validate(payload)
+            sm.system_increment_wire_compliance(compliant)
+            if not compliant:
+                self.logger.log(
+                    "wire_noncompliant",
+                    handoff_id=handoff_id,
+                    project_id=sm.project_id,
+                    warnings=warnings,
+                )
+        except Exception:
+            pass  # compliance tracking must never block handoff creation
+
         return handoff
 
     # --- VALIDATE ---

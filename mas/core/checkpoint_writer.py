@@ -26,6 +26,12 @@ from typing import Any
 
 import yaml
 
+try:
+    from core.wire_protocol import WireDecoder as _WireDecoder
+    _wire_decoder = _WireDecoder()
+except ImportError:
+    _wire_decoder = None  # type: ignore
+
 ROOT = Path(__file__).parent.parent   # mas/
 
 
@@ -154,7 +160,11 @@ class CheckpointWriter:
             ho_ts   = _fmt_ts(last_handoff.get("timestamp"))
             ho_st   = last_handoff.get("acceptance", {}).get("status", "—")
             task    = last_handoff.get("task_description", "—")
-            summary = last_handoff.get("payload", {}).get("summary", "—")
+            raw_payload = last_handoff.get("payload", {})
+            # Expand wire format before rendering human-readable Markdown
+            if _wire_decoder and isinstance(raw_payload, dict) and "_v" in raw_payload:
+                raw_payload = _wire_decoder.decode(raw_payload)
+            summary = raw_payload.get("summary", "—") if raw_payload else "—"
             lines += [
                 f"| Field     | Value |",
                 f"|-----------|-------|",

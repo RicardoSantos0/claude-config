@@ -291,6 +291,25 @@ class SharedStateManager:
         """Internal system append — bypasses agent authorization check for system-owned fields."""
         return self.append(SYSTEM, section, field, item)
 
+    def system_increment_wire_compliance(self, compliant: bool) -> None:
+        """
+        Increment wire compliance counters in communication section.
+        Best-effort — never raises. Called by HandoffEngine after each create().
+        """
+        try:
+            state = self.load()
+            comm = state.setdefault("communication", {})
+            comm["wire_total_count"] = comm.get("wire_total_count", 0) + 1
+            if compliant:
+                comm["wire_compliant_count"] = comm.get("wire_compliant_count", 0) + 1
+            total = comm["wire_total_count"]
+            comm["wire_compliance_rate"] = round(
+                comm["wire_compliant_count"] / total, 4
+            ) if total > 0 else None
+            self._save(state)
+        except Exception:
+            pass  # never block handoff creation
+
     # --- APPROVAL ---
 
     def approve(self, agent_id: str, section: str, field: str) -> WriteResult:

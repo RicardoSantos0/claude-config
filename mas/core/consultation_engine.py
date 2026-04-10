@@ -36,6 +36,7 @@ import yaml
 # ---------------------------------------------------------------------------
 
 MAX_RESPONSE_WORDS: int = 500
+MAX_REASONING_WORDS: int = 100   # wire protocol: optional rsn field cap
 FOLLOW_UP_ROUNDS_MAX: int = 1
 
 ALL_CONSULTANTS: list[str] = [
@@ -170,9 +171,11 @@ class ConsultationEngine:
         risk_level: str = "low",
         key_concerns: Optional[list[str]] = None,
         recommendation: str = "",
+        reasoning: str = "",
     ) -> ConsultationResponse:
         """
-        Record a consultant's response. Enforces 500-word cap.
+        Record a consultant's response.
+        Enforces 500-word cap on response_text; 100-word cap on reasoning.
         Returns the ConsultationResponse and mutates request.responses.
         """
         if consultant_id not in request.consultants_selected:
@@ -191,6 +194,12 @@ class ConsultationEngine:
         else:
             word_count = len(words)
 
+        # Enforce reasoning word cap (wire protocol: max 100 words)
+        if reasoning:
+            rsn_words = reasoning.split()
+            if len(rsn_words) > MAX_REASONING_WORDS:
+                reasoning = " ".join(rsn_words[:MAX_REASONING_WORDS]) + " [truncated]"
+
         resp = ConsultationResponse(
             consultant_id=consultant_id,
             response_text=response_text,
@@ -201,7 +210,7 @@ class ConsultationEngine:
             truncated=truncated,
         )
 
-        request.responses[consultant_id] = {
+        response_dict = {
             "response_text": resp.response_text,
             "word_count": resp.word_count,
             "risk_level": resp.risk_level,
@@ -210,6 +219,9 @@ class ConsultationEngine:
             "responded_at": resp.responded_at,
             "truncated": resp.truncated,
         }
+        if reasoning:
+            response_dict["reasoning"] = reasoning
+        request.responses[consultant_id] = response_dict
 
         # Update status once all selected have responded
         if set(request.consultants_selected) == set(request.responses.keys()):

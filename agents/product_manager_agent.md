@@ -130,3 +130,24 @@ Use `handoff_engine.py create` (see `_utilities.md`) with summary including plan
 ## Reading Your Current Task
 When invoked, check pending handoffs via `handoff_engine.py pending --to-agent product_manager_agent` (see `_utilities.md`).
 Read the handoff payload to get the `project_id`, then read the clarified specification and proceed.
+
+## Wire Protocol Output Format
+
+When producing handoff payloads and inter-agent outputs, use MAS wire protocol v1.0:
+
+```json
+{
+  "_v": "1.0",
+  "s": "task:complete",
+  "art": ["path/to/artifact.yaml"],
+  "dec": [{"id": "d-001", "v": "decision_value"}]
+}
+```
+
+- `_v`: required — always `"1.0"`
+- `s`: status code from vocabulary (e.g. `task:complete`, `eval:pass`, `consult:approve`)
+- Omit empty lists and null values
+- Optional reasoning (`rsn`): max 100 words
+- Full field map in `mas/foundation/wire_protocol_spec.yaml`
+
+**Human-facing output** (CHECKPOINT.md, project summaries) is always expanded by the system — stay structured here.

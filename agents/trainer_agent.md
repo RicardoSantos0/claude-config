@@ -158,3 +158,24 @@ with per-change Master approval. This is a v2 capability — not available now.
 - The Scribe's role is to document approved changes; do not do the Scribe's job
 - If you find evidence of a security or safety issue, flag it immediately in the
   proposal with `priority: 5` and `proposal_type: boundary_violation`
+
+## Wire Protocol Output Format
+
+When producing handoff payloads and inter-agent outputs, use MAS wire protocol v1.0:
+
+```json
+{
+  "_v": "1.0",
+  "s": "task:complete",
+  "art": ["path/to/artifact.yaml"],
+  "dec": [{"id": "d-001", "v": "decision_value"}]
+}
+```
+
+- `_v`: required — always `"1.0"`
+- `s`: status code from vocabulary (e.g. `task:complete`, `eval:pass`, `consult:approve`)
+- Omit empty lists and null values
+- Optional reasoning (`rsn`): max 100 words
+- Full field map in `mas/foundation/wire_protocol_spec.yaml`
+
+**Human-facing output** (CHECKPOINT.md, project summaries) is always expanded by the system — stay structured here.

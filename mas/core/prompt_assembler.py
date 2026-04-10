@@ -226,11 +226,25 @@ class PromptAssembler:
         projected = _project_state(state, agent_id)
         compact = _compact_projection(projected)
 
+        # Wire protocol instruction (agent-to-agent outputs only; never for human-facing)
+        # Inquirer is excluded — its output is natural language for humans.
+        _WIRE_INSTRUCTION = (
+            "\n\n## Output Format\n"
+            "For all agent-to-agent outputs (handoff payloads, consultation responses), "
+            "use MAS wire protocol v1.0:\n"
+            '- Status: compact code, e.g. `"s": "task:complete"`\n'
+            '- Version: `"_v": "1.0"` in every payload\n'
+            "- Omit empty lists and null fields\n"
+            "- Optional reasoning (`rsn`): max 100 words\n"
+            "- Human-facing text (CHECKPOINT.md, reports) uses expand() — stay structured here.\n"
+        ) if agent_id != "inquirer_agent" else ""
+
         context = {
             "injected_project_id": state.get("core_identity", {}).get("project_id", ""),
             "injected_current_phase": state.get("core_identity", {}).get("current_phase", ""),
             "injected_shared_state": yaml.dump(compact, default_flow_style=False,
                                                allow_unicode=True, sort_keys=False),
+            "injected_wire_instruction": _WIRE_INSTRUCTION,
         }
 
         # Add section-specific convenience keys
