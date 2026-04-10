@@ -144,6 +144,13 @@ class HandoffEngine:
         except Exception:
             pass  # compliance tracking must never block handoff creation
 
+        # Record handoff episode in graph memory (non-fatal)
+        try:
+            from core.graph_memory import EpisodeWriter as _EpisodeWriter
+            _EpisodeWriter(sm.project_id).record_handoff(handoff)
+        except Exception:
+            pass
+
         return handoff
 
     # --- VALIDATE ---

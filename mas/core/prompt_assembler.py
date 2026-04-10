@@ -258,7 +258,7 @@ class PromptAssembler:
                 default_flow_style=False, allow_unicode=True,
             )
 
-        if "consultation" in projected:
+        if "consultation" in compact:
             context["injected_active_consultation"] = yaml.dump(
                 compact["consultation"].get("consultation_requests", [])[-1:],
                 default_flow_style=False, allow_unicode=True,
@@ -274,12 +274,42 @@ class PromptAssembler:
                 compact["project_definition"].get("original_brief") or "(not yet available)"
             )
 
+        # Graph memory context injection (replaces part of state dump when available)
+        # Only used when graph has ≥ 5 nodes — not enough data otherwise.
+        graph_context = self._graph_context(agent_id, state)
+        if graph_context:
+            context["injected_graph_context"] = graph_context
+
         if extra_context:
             context.update(extra_context)
 
         prompt = _fill_placeholders(template, context)
         self.last_token_count: int = _token_counter.count(prompt)
         return prompt
+
+    def _graph_context(self, agent_id: str, state: dict) -> str:
+        """
+        Query graph memory for agent-relevant facts.
+        Returns a compact string for prompt injection, or "" if unavailable.
+        Requires graph to have ≥ 5 nodes to be useful.
+        """
+        try:
+            from core.graph_memory import GraphMemory
+            project_id = state.get("core_identity", {}).get("project_id", "")
+            if not project_id:
+                return ""
+            gm = GraphMemory(project_id)
+            if gm.store.node_count() < 5:
+                return ""
+            phase = state.get("core_identity", {}).get("current_phase", "")
+            result = gm.query(agent_id, context=phase)
+            facts = result.get("facts", [])
+            if not facts:
+                return ""
+            lines = [f"[{f['type']}] {f['summary']}" for f in facts]
+            return "## Relevant Context (from graph memory)\n" + "\n".join(lines)
+        except Exception:
+            return ""
 
     def get_state_projection(self, agent_id: str) -> list[str]:
         """Return the list of state paths this agent is authorized to read."""
