@@ -23,9 +23,13 @@ dist/
 .coverage
 
 # MAS runtime data (project-specific, not committed)
-projects/
+mas/projects/
 audit.log
-working_state/
+mas/working_state/
 
 # MAS roster (committed, but large binaries excluded)
-roster/**/*.bak
+mas/roster/**/*.bak
+
+# Skills runtime/auth data
+skills/notebooklm/data/browser_state/
+skills/notebooklm/data/auth_info.json

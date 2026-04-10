@@ -1,0 +1,203 @@
+registry:
+  version: 1.0.0
+  last_updated: '2026-04-09T20:35:49.918117+00:00'
+  maintained_by: hr_agent
+  agents:
+  - agent_id: master_orchestrator
+    name: Master Orchestrator
+    version: 1.0.0
+    trust_tier: T0_core
+    status: active
+    capabilities:
+    - orchestration
+    - coordination
+    - governance
+    - delegation
+    - phase-management
+    - decision-making
+    - spawn-approval
+    performance_score: null
+    spawn_origin: null
+    created_at: '2026-04-09T00:00:00+00:00'
+  - agent_id: scribe_agent
+    name: Scribe Agent
+    version: 1.0.0
+    trust_tier: T0_core
+    status: active
+    capabilities:
+    - documentation
+    - record-keeping
+    - decision-logging
+    - artifact-tracking
+    - audit-trail
+    performance_score: null
+    spawn_origin: null
+    created_at: '2026-04-09T00:00:00+00:00'
+  - agent_id: inquirer_agent
+    name: Inquirer Agent
+    version: 1.0.0
+    trust_tier: T1_established
+    status: active
+    capabilities:
+    - intake
+    - requirements-elicitation
+    - clarification
+    - specification
+    - qa-process
+    performance_score: null
+    spawn_origin: null
+    created_at: '2026-04-09T00:00:00+00:00'
+  - agent_id: product_manager_agent
+    name: Product Manager Agent
+    version: 1.0.0
+    trust_tier: T1_established
+    status: active
+    capabilities:
+    - product-planning
+    - requirements
+    - moscow-prioritization
+    - acceptance-criteria
+    - risk-identification
+    - scope-definition
+    performance_score: null
+    spawn_origin: null
+    created_at: '2026-04-09T00:00:00+00:00'
+  - agent_id: hr_agent
+    name: HR Agent
+    version: 1.0.0
+    trust_tier: T1_established
+    status: active
+    capabilities:
+    - capability-discovery
+    - roster-management
+    - gap-certification
+    - match-scoring
+    - agent-registration
+    - agent-retirement
+    performance_score: null
+    spawn_origin: null
+    created_at: '2026-04-09T00:00:00+00:00'
+  - agent_id: project_manager_agent
+    name: Project Manager Agent
+    version: 1.0.0
+    trust_tier: T1_established
+    status: active
+    capabilities:
+    - execution-planning
+    - task-decomposition
+    - milestone-tracking
+    - dependency-mapping
+    - progress-reporting
+    - delivery-risk
+    - blocker-escalation
+    performance_score: null
+    spawn_origin: null
+    created_at: '2026-04-09T00:00:00+00:00'
+  - agent_id: evaluator_agent
+    name: Performance Evaluation Agent
+    version: 1.0.0
+    trust_tier: T1_established
+    status: active
+    capabilities:
+    - performance-evaluation
+    - metric-scoring
+    - evaluation-reporting
+    - pattern-detection
+    - improvement-identification
+    - exemplary-flagging
+    performance_score: null
+    spawn_origin: null
+    created_at: '2026-04-09T00:00:00+00:00'
+  - agent_id: spawner_agent
+    name: Agent Designer (Spawner)
+    version: 1.0.0
+    trust_tier: T2_supervised
+    status: active
+    capabilities:
+    - agent-design
+    - spawn-policy
+    - capability-packaging
+    - draft-generation
+    - template-instantiation
+    spawn_origin: null
+    created_at: '2026-04-09T19:29:22.349744+00:00'
+  - agent_id: trainer_agent
+    name: Trainer Agent
+    version: 1.0.0
+    trust_tier: T1_established
+    status: active
+    capabilities:
+    - improvement-proposals
+    - pattern-detection
+    - backlog-management
+    - training-analysis
+    - evidence-evaluation
+    spawn_origin: null
+    created_at: '2026-04-09T20:04:46.287758+00:00'
+  - agent_id: risk_advisor
+    name: Risk Advisor
+    version: 1.0.0
+    trust_tier: T1_established
+    status: active
+    capabilities:
+    - risk-analysis
+    - failure-mode-analysis
+    - mitigation-planning
+    - blast-radius-assessment
+    spawn_origin: null
+    created_at: '2026-04-09T20:35:48.725398+00:00'
+  - agent_id: quality_advisor
+    name: Quality Advisor
+    version: 1.0.0
+    trust_tier: T1_established
+    status: active
+    capabilities:
+    - quality-review
+    - completeness-check
+    - testability-assessment
+    - quality-gates
+    spawn_origin: null
+    created_at: '2026-04-09T20:35:49.027083+00:00'
+  - agent_id: devils_advocate
+    name: Devils Advocate
+    version: 1.0.0
+    trust_tier: T1_established
+    status: active
+    capabilities:
+    - assumption-challenging
+    - alternative-perspectives
+    - blind-spot-detection
+    - consensus-questioning
+    spawn_origin: null
+    created_at: '2026-04-09T20:35:49.326265+00:00'
+  - agent_id: domain_expert
+    name: Domain Expert
+    version: 1.0.0
+    trust_tier: T1_established
+    status: active
+    capabilities:
+    - domain-knowledge
+    - best-practices
+    - prior-art
+    - domain-constraints
+    spawn_origin: null
+    created_at: '2026-04-09T20:35:49.625580+00:00'
+  - agent_id: efficiency_advisor
+    name: Efficiency Advisor
+    version: 1.0.0
+    trust_tier: T1_established
+    status: active
+    capabilities:
+    - efficiency-analysis
+    - overengineering-detection
+    - cost-estimation
+    - simplification
+    spawn_origin: null
+    created_at: '2026-04-09T20:35:49.918117+00:00'
+  skills: []
+  tools: []
+counts:
+  active_agents: 14
+  active_skills: 0
+  retired_agents: 0
+  spawned_total: 0
