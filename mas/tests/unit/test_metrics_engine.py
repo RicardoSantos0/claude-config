@@ -490,7 +490,7 @@ class TestFullReport:
             agents_to_evaluate=["master_orchestrator"]
         )
         assert report.project_id == "proj-001"
-        assert len(report.project_metrics) == 6
+        assert len(report.project_metrics) == 8
         assert len(report.agent_evaluations) == 1
         assert "bottlenecks" in report.systemic_findings
         assert "improvement_areas" in report.recommendations

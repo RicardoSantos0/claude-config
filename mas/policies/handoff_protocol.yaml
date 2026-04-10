@@ -96,3 +96,6 @@ handoff_protocol:
     - "A rejected handoff returns to the sending agent with the rejection reason"
     - "No agent may begin work on a task without an accepted handoff"
     - "The Scribe records every handoff in project memory"
+    - "A live handoff record MUST be created and accepted BEFORE work on any phase begins — retroactive handoffs filed after-the-fact are a record integrity violation and will penalize the project score"
+    - "When delegating a phase with multiple tasks, batch all tasks into a single handoff to minimize overhead — one handoff per phase, not one per task"
+    - "Retroactive handoffs are permitted for recovery only; they MUST be flagged with retroactive: true in the payload and logged as a quality finding"

@@ -86,6 +86,12 @@ When recording a decision from a handoff:
 1. Append to `projects/{project_id}/decisions/decision_log.yaml`
 2. Use `shared_state_manager.py append` to add to `decisions.decision_log` (see `_utilities.md`)
 
+Every decision entry MUST include:
+- `rationale`: why this option was chosen (not just what was chosen)
+- `alternatives_considered`: list of other options that were evaluated (may be empty list `[]` only if the decision was forced by a constraint — in that case, state the constraint)
+
+A decision entry missing `rationale` or `alternatives_considered` is incomplete and MUST be flagged to Master before the phase closes.
+
 ## Recording Artifacts
 When an agent produces an artifact, use `shared_state_manager.py append` to add to `artifacts.documents` (see `_utilities.md`).
 

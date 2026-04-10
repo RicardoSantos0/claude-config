@@ -56,6 +56,9 @@ except ImportError:
 
 ROOT = Path(__file__).parent.parent   # mas/
 
+# Special sentinel: the cross-project global graph stored at mas/global_graph.yaml
+GLOBAL_PROJECT_ID = "__global__"
+
 # ---------------------------------------------------------------------------
 # Constants — entity and relationship vocabulary
 # ---------------------------------------------------------------------------
@@ -104,7 +107,10 @@ class GraphStore:
 
     def __init__(self, project_id: str):
         self.project_id = project_id
-        self.graph_path = ROOT / "projects" / project_id / "graph_memory.yaml"
+        if project_id == GLOBAL_PROJECT_ID:
+            self.graph_path = ROOT / "global_graph.yaml"
+        else:
+            self.graph_path = ROOT / "projects" / project_id / "graph_memory.yaml"
         self._g = self._create_graph()
         self._load()
 
@@ -268,6 +274,11 @@ class GraphMemory:
     def __init__(self, project_id: str):
         self.project_id = project_id
         self.store = GraphStore(project_id)
+        # Global overlay — omitted when we ARE the global graph to avoid recursion
+        self._global_store: GraphStore | None = (
+            None if project_id == GLOBAL_PROJECT_ID
+            else GraphStore(GLOBAL_PROJECT_ID)
+        )
 
     # ------------------------------------------------------------------
     # query() — retrieve relevant facts for a prompt injection
@@ -281,23 +292,58 @@ class GraphMemory:
     ) -> dict:
         """
         Return a compact fact summary relevant to agent_id and context string.
-
-        Result is token-bounded (max_tokens). Suitable for direct injection
-        into agent prompts as a replacement for full state dumps.
+        Merges results from this project's graph AND the global cross-project graph.
+        Project-local facts take priority; global facts fill remaining token budget.
 
         Returns:
             {
                 "agent_id": str,
                 "context_used": str,
-                "facts": [{"type": str, "summary": str}, ...],
+                "facts": [{"type": str, "summary": str, "scope": "local"|"global"}, ...],
                 "token_estimate": int,
             }
         """
+        local_facts = self._collect_facts(self.store, agent_id, context)
+        # Tag scope before merging so callers know the origin
+        for f in local_facts:
+            f["scope"] = "local"
+
+        global_facts: list[dict] = []
+        if self._global_store is not None:
+            global_facts = self._collect_facts(self._global_store, agent_id, context)
+            for f in global_facts:
+                f["scope"] = "global"
+
+        # Merge: local first, then global — deduplicate on summary text
+        seen: set[str] = set()
+        merged: list[dict] = []
+        for f in local_facts + global_facts:
+            key = f["summary"]
+            if key not in seen:
+                seen.add(key)
+                merged.append(f)
+
+        # Token-bound the merged result
+        result_lines = [f"[{f['type']}] {f['summary']}" for f in merged]
+        bounded = self._bound_to_tokens(result_lines, max_tokens)
+        bounded_facts = merged[:len(bounded)]
+
+        token_estimate = _tc.count("\n".join(bounded)) if _tc else len("\n".join(bounded)) // 4
+
+        return {
+            "agent_id": agent_id,
+            "context_used": context,
+            "facts": bounded_facts,
+            "token_estimate": token_estimate,
+        }
+
+    def _collect_facts(self, store: "GraphStore", agent_id: str, context: str) -> list[dict]:
+        """Collect raw facts from a single GraphStore (no token bounding)."""
         facts: list[dict] = []
 
         # Gather agent's neighborhood
-        if self.store.has_node(agent_id):
-            neighbors = self.store.neighbors(agent_id, depth=2)
+        if store.has_node(agent_id):
+            neighbors = store.neighbors(agent_id, depth=2)
             for n in neighbors[:MAX_QUERY_RESULTS]:
                 ntype = n.get("entity_type", "unknown")
                 label = n.get("label") or n.get("node_id", "")
@@ -306,8 +352,8 @@ class GraphMemory:
         # Context keyword matching — find nodes whose label contains context words
         if context:
             keywords = set(context.lower().split())
-            if _NX_AVAILABLE and self.store._g is not None:
-                for node_id, attrs in self.store._g.nodes(data=True):
+            if _NX_AVAILABLE and store._g is not None:
+                for node_id, attrs in store._g.nodes(data=True):
                     label = str(attrs.get("label", "")).lower()
                     if any(kw in label for kw in keywords):
                         facts.append({
@@ -315,7 +361,7 @@ class GraphMemory:
                             "summary": attrs.get("label", node_id),
                         })
             else:
-                for nid, attrs in getattr(self.store, "_nodes", {}).items():
+                for nid, attrs in getattr(store, "_nodes", {}).items():
                     label = str(attrs.get("label", "")).lower()
                     if any(kw in label for kw in keywords):
                         facts.append({
@@ -323,28 +369,7 @@ class GraphMemory:
                             "summary": attrs.get("label", nid),
                         })
 
-        # Deduplicate
-        seen: set[str] = set()
-        unique_facts = []
-        for f in facts:
-            key = f["summary"]
-            if key not in seen:
-                seen.add(key)
-                unique_facts.append(f)
-
-        # Token-bound the result
-        result_lines = [f"[{f['type']}] {f['summary']}" for f in unique_facts]
-        bounded = self._bound_to_tokens(result_lines, max_tokens)
-
-        token_estimate = _tc.count("\n".join(bounded)) if _tc else len("\n".join(bounded)) // 4
-
-        return {
-            "agent_id": agent_id,
-            "context_used": context,
-            "facts": [{"type": f["type"], "summary": f["summary"]}
-                      for f in unique_facts[:len(bounded)]],
-            "token_estimate": token_estimate,
-        }
+        return facts
 
     # ------------------------------------------------------------------
     # get_related() — neighborhood lookup
@@ -381,9 +406,16 @@ class GraphMemory:
     # write_episode() — record a project event as a graph node + edges
     # ------------------------------------------------------------------
 
-    def write_episode(self, episode_type: str, data: dict) -> str:
+    def write_episode(
+        self,
+        episode_type: str,
+        data: dict,
+        mirror_to_global: bool = True,
+    ) -> str:
         """
         Record a project event (handoff, decision, artifact, etc.) as a graph episode.
+        By default also mirrors key structural nodes (agents, phases, project) to the
+        cross-project global graph at mas/global_graph.yaml.
 
         Episode types:
           - "handoff"   → creates handoff node + edges from/to agent nodes
@@ -416,7 +448,89 @@ class GraphMemory:
         except Exception:
             pass  # non-fatal — graph memory failure never blocks the main flow
 
+        # Mirror structural nodes/edges to the global graph
+        if mirror_to_global and self._global_store is not None:
+            try:
+                self._mirror_to_global(episode_type, data, ts)
+                self._global_store.save()
+            except Exception:
+                pass  # global mirror failure never blocks the project flow
+
         return episode_id
+
+    def _mirror_to_global(self, episode_type: str, data: dict, ts: str) -> None:
+        """
+        Write cross-project-relevant nodes into the global graph.
+        Only structural entities are mirrored; episode-specific detail nodes are not.
+        Each mirrored node is tagged with project_id for provenance.
+        """
+        g = self._global_store
+        pid = self.project_id
+
+        def _ensure_agent(aid: str) -> None:
+            if not g.has_node(aid):
+                g.add_node(aid, "agent", label=aid)
+            # Always update project affiliation attribute
+            if _NX_AVAILABLE and g._g is not None:
+                if aid in g._g:
+                    existing = g._g.nodes[aid].get("projects", "")
+                    projects = set(existing.split(",")) if existing else set()
+                    projects.add(pid)
+                    g._g.nodes[aid]["projects"] = ",".join(sorted(projects))
+
+        def _ensure_project() -> None:
+            if not g.has_node(pid):
+                g.add_node(pid, "project", label=pid)
+
+        def _ensure_phase(phase: str) -> None:
+            node_id = f"{pid}:{phase}"
+            if not g.has_node(node_id):
+                g.add_node(node_id, "phase", label=f"{pid}:{phase}", project=pid)
+            _ensure_project()
+            if not any(
+                True for u, v, _ in (g._g.edges(data=True) if _NX_AVAILABLE and g._g else [])
+                if u == pid and v == node_id
+            ):
+                g.add_edge(pid, node_id, "completed", timestamp=ts)
+
+        if episode_type == "handoff":
+            from_agent = data.get("from_agent", "")
+            to_agent = data.get("to_agent", "")
+            phase = data.get("phase", "")
+            if from_agent:
+                _ensure_agent(from_agent)
+            if to_agent:
+                _ensure_agent(to_agent)
+            if from_agent and to_agent:
+                g.add_edge(from_agent, to_agent, "handoff_to",
+                           project=pid, phase=phase, timestamp=ts)
+            if phase:
+                _ensure_phase(phase)
+
+        elif episode_type == "phase":
+            phase = data.get("phase", "")
+            if phase:
+                _ensure_phase(phase)
+
+        elif episode_type == "artifact":
+            created_by = data.get("created_by", "")
+            name = data.get("name", "")
+            if created_by:
+                _ensure_agent(created_by)
+            if name:
+                artifact_id = f"{pid}:artifact:{name[:40]}"
+                if not g.has_node(artifact_id):
+                    g.add_node(artifact_id, "artifact",
+                               label=f"artifact:{name[:40]}", project=pid)
+                if created_by:
+                    g.add_edge(created_by, artifact_id, "produced",
+                               project=pid, timestamp=ts)
+
+        elif episode_type == "decision":
+            made_by = data.get("made_by", "")
+            if made_by:
+                _ensure_agent(made_by)
+            _ensure_project()
 
     # ------------------------------------------------------------------
     # Episode handlers
@@ -560,6 +674,76 @@ class EpisodeWriter:
             "project_id": project_id,
         })
 
+    @classmethod
+    def replay_from_state(cls, project_id: str, shared_state: dict) -> int:
+        """
+        Back-populate a project's graph memory from its shared_state dict.
+        Replays handoffs, phase transitions, and artifacts from the historical record.
+        Returns the number of episodes written.
+
+        This is used to retroactively build graph memory for projects that were
+        completed before graph memory was introduced, or that lost their graph file.
+        """
+        writer = cls(project_id)
+        gm = writer._gm
+        count = 0
+
+        wf = shared_state.get("workflow", {})
+        artifacts_section = shared_state.get("artifacts", {})
+        pd = shared_state.get("project_definition", {})
+        ci = shared_state.get("core_identity", {})
+
+        # Project node
+        gm._ensure_project_node(project_id)
+        count += 1
+
+        # Replay handoffs
+        for h in wf.get("handoff_history", []):
+            from_agent = h.get("from_agent", "")
+            to_agent = h.get("to_agent", "")
+            phase = h.get("phase", "")
+            task = h.get("task_description", "")
+            ts = h.get("timestamp", datetime.now(timezone.utc).isoformat())
+            if from_agent and to_agent:
+                gm.write_episode("handoff", {
+                    "from_agent": from_agent,
+                    "to_agent": to_agent,
+                    "phase": phase,
+                    "task_description": task,
+                }, mirror_to_global=True)
+                count += 1
+
+        # Replay phase transitions
+        for phase in wf.get("completed_phases", []):
+            gm.write_episode("phase", {
+                "phase": phase,
+                "project_id": project_id,
+            }, mirror_to_global=True)
+            count += 1
+
+        # Replay known artifacts
+        for doc in artifacts_section.get("documents", []):
+            name = doc.get("name", "")
+            created_by = doc.get("created_by", "")
+            if name:
+                gm.write_episode("artifact", {
+                    "name": name,
+                    "created_by": created_by or "scribe_agent",
+                }, mirror_to_global=True)
+                count += 1
+
+        # Add project goal as a decision node for cross-project context
+        goal = pd.get("project_goal", "") or pd.get("clarified_specification", {})
+        if isinstance(goal, str) and goal:
+            gm.write_episode("decision", {
+                "made_by": "master_orchestrator",
+                "description": goal[:80],
+                "decision_id": f"{project_id}:goal",
+            }, mirror_to_global=True)
+            count += 1
+
+        return count
+
 
 # ---------------------------------------------------------------------------
 # CLI
@@ -572,7 +756,7 @@ def main() -> int:
     )
     sub = parser.add_subparsers(dest="command")
 
-    s = sub.add_parser("stats", help="Show graph statistics")
+    s = sub.add_parser("stats", help="Show graph statistics for a project")
     s.add_argument("--project-id", required=True)
 
     q = sub.add_parser("query", help="Query graph for agent context")
@@ -583,6 +767,15 @@ def main() -> int:
     ep = sub.add_parser("episodes", help="List recent episodes (nodes)")
     ep.add_argument("--project-id", required=True)
     ep.add_argument("--limit", type=int, default=20)
+
+    gs = sub.add_parser("global-stats", help="Show cross-project global graph statistics")
+
+    gq = sub.add_parser("global-query", help="Query the global graph for an agent")
+    gq.add_argument("--agent", required=True)
+    gq.add_argument("--context", default="")
+
+    rp = sub.add_parser("replay", help="Back-populate graph memory from a project's shared_state.yaml")
+    rp.add_argument("--project-id", required=True)
 
     ns = parser.parse_args()
 
@@ -607,6 +800,34 @@ def main() -> int:
             nodes = list(getattr(store, "_nodes", {}).items())[-ns.limit:]
         for nid, attrs in nodes:
             print(f"  {nid}: {attrs.get('entity_type', '?')} — {attrs.get('label', '')}")
+        return 0
+
+    if ns.command == "global-stats":
+        store = GraphStore(GLOBAL_PROJECT_ID)
+        out = {
+            "graph_path": str(store.graph_path),
+            "node_count": store.node_count(),
+            "edge_count": store.edge_count(),
+            "networkx_available": _NX_AVAILABLE,
+        }
+        print(json.dumps(out, indent=2))
+        return 0
+
+    if ns.command == "global-query":
+        gm = GraphMemory(GLOBAL_PROJECT_ID)
+        result = gm.query(ns.agent, ns.context)
+        print(json.dumps(result, indent=2))
+        return 0
+
+    if ns.command == "replay":
+        state_path = ROOT / "projects" / ns.project_id / "shared_state.yaml"
+        if not state_path.exists():
+            print(f"ERROR: {state_path} not found", file=sys.stderr)
+            return 1
+        with state_path.open(encoding="utf-8") as f:
+            state = yaml.safe_load(f) or {}
+        n = EpisodeWriter.replay_from_state(ns.project_id, state)
+        print(json.dumps({"project_id": ns.project_id, "episodes_written": n}, indent=2))
         return 0
 
     parser.print_help()

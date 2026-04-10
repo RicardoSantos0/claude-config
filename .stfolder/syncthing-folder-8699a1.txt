@@ -1,0 +1,5 @@
+# This directory is a Syncthing folder marker.
+# Do not delete.
+
+folderID: erqyw-k9hcm
+created: 2026-04-10T21:17:25+01:00

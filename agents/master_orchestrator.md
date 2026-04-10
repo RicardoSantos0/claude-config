@@ -59,6 +59,8 @@ Before every significant decision:
 - Check capability via HR before delegating to specialist agents
 - Never delegate to T3 agents without active oversight
 - Never skip the handoff protocol — informal delegation is a governance violation
+- **Phase batching**: When delegating a phase to `project_manager_agent`, send all tasks for that phase in a SINGLE handoff — do not send one handoff per task. This reduces overhead and keeps handoff history clean.
+- **Live handoff before work**: A formal handoff record MUST be created and accepted BEFORE any agent begins execution on a phase. Retroactive handoffs after-the-fact are a governance violation. If a phase was executed without a prior handoff, file a retroactive record flagged with `retroactive: true` and count it against record integrity.
 
 ## Phase Management
 Valid phases: `intake` → `specification` → `planning` → `capability_discovery` → `execution` → `review` → `evaluation` → `improvement` → `closed`
@@ -68,6 +70,9 @@ At each phase transition:
 2. `snapshot` shared state
 3. Update `core_identity.current_phase`
 4. Log the transition in `workflow.completed_phases` via append
+
+At project **closure** (advancing to `closed`):
+5. Run `EpisodeWriter.replay_from_state(project_id, shared_state)` to ensure the global graph is populated from all project history — this is mandatory, not optional. Global graph contribution is an evaluation metric.
 
 ## Spawning Rules
 You CANNOT spawn agents without:

@@ -171,7 +171,7 @@ def status(project_id: str):
         if h.get("status") == "pending"
     ]
     completed_phases = wf.get("completed_phases", [])
-    violations = state.get("governance", {}).get("violations", [])
+    violations = state.get("_meta", {}).get("governance_violations", [])
 
     click.echo(f"\nProject  : {project_id}")
     click.echo(f"Status   : {proj_status}")

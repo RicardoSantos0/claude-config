@@ -697,6 +697,119 @@ class MetricsEngine:
             ),
         )
 
+    def score_record_integrity(
+        self,
+        handoff_history: list,
+    ) -> MetricResult:
+        """
+        Measures governance trail hygiene.
+
+        A retroactive handoff (payload.retroactive == True) means the formal record
+        was written after the fact rather than in real-time. This is not a failure —
+        the work was done — but it indicates a gap in live governance tracking.
+
+        Score:
+          - 0% retroactive → 100 (perfect real-time trail)
+          - 30% retroactive → 82 (acceptable; common after large execution blocks)
+          - 50% retroactive → 60 (notable gap)
+          - 100% retroactive → 0 (no live governance trail at all)
+        Linear: score = 100 - (retroactive_ratio * 200), capped [0, 100].
+        """
+        total = len(handoff_history)
+        if total == 0:
+            return MetricResult(
+                metric="record_integrity",
+                score=100.0,
+                evidence="No handoffs recorded",
+                findings="No handoffs to assess.",
+            )
+
+        retroactive = sum(
+            1 for h in handoff_history
+            if h.get("payload", {}).get("retroactive") is True
+        )
+        ratio = retroactive / total
+        score = max(0.0, min(100.0, 100.0 - ratio * 200.0))
+
+        if retroactive == 0:
+            findings = "All handoffs recorded in real-time. Perfect governance trail."
+        else:
+            findings = (
+                f"{retroactive}/{total} handoffs ({ratio*100:.0f}%) recorded retroactively. "
+                "Retroactive records are honest corrections, not violations, "
+                "but indicate that live handoff tracking was bypassed during execution."
+            )
+
+        return MetricResult(
+            metric="record_integrity",
+            score=round(score, 1),
+            evidence=f"total_handoffs={total}, retroactive={retroactive}, ratio={ratio:.2f}",
+            findings=findings,
+            exemplary=retroactive == 0,
+            breakdown={"total": total, "retroactive": retroactive, "live": total - retroactive},
+        )
+
+    def score_global_graph_contribution(
+        self,
+        project_id: str,
+    ) -> MetricResult:
+        """
+        Measures how richly this project contributed to the cross-project global graph.
+        Agents querying for context benefit from projects that are well-represented
+        in the global graph.
+
+        Score:
+          - >= 20 global nodes contributed → 100
+          - 10 nodes → ~75
+          - 0 nodes → 0
+        Linear: score = min(100, contributed_nodes * 5).
+        """
+        try:
+            from core.graph_memory import GraphStore, GLOBAL_PROJECT_ID
+            global_store = GraphStore(GLOBAL_PROJECT_ID)
+
+            # Count nodes tagged with this project_id in the global graph
+            contributed = 0
+            if global_store._g is not None:
+                for _nid, attrs in global_store._g.nodes(data=True):
+                    if attrs.get("project") == project_id or project_id in str(attrs.get("projects", "")):
+                        contributed += 1
+                # Also count edges contributed (project-tagged edges)
+                edge_contributed = sum(
+                    1 for _u, _v, edata in global_store._g.edges(data=True)
+                    if edata.get("project") == project_id
+                )
+                contributed += edge_contributed // 2  # edges count half
+            else:
+                for _nid, attrs in getattr(global_store, "_nodes", {}).items():
+                    if attrs.get("project") == project_id or project_id in str(attrs.get("projects", "")):
+                        contributed += 1
+
+            # Also count the project node itself
+            if global_store.has_node(project_id):
+                contributed += 1
+
+        except Exception:
+            contributed = 0
+
+        score = min(100.0, contributed * 5.0)
+
+        if contributed == 0:
+            findings = "Project has not yet contributed to the global graph. Run replay to back-populate."
+        elif contributed < 5:
+            findings = f"Minimal global graph presence ({contributed} nodes/edges). Consider richer episode recording."
+        else:
+            findings = f"Project contributed {contributed} nodes/edges to the global graph."
+
+        return MetricResult(
+            metric="global_graph_contribution",
+            score=round(score, 1),
+            evidence=f"contributed_entries={contributed}",
+            findings=findings,
+            exemplary=contributed >= 20,
+            breakdown={"contributed_entries": contributed},
+        )
+
     # ------------------------------------------------------------------
     # Aggregate scoring
     # ------------------------------------------------------------------
@@ -773,6 +886,8 @@ class MetricsEngine:
             self.score_documentation_completeness(project_dir),
             self.score_phase_efficiency(handoff_history),
             self.score_decision_quality(decision_log),
+            self.score_record_integrity(handoff_history),
+            self.score_global_graph_contribution(project_id),
         ]
 
     def evaluate_agent(
@@ -979,7 +1094,7 @@ def main_cli(args=None) -> int:
         )
         print(f"\nProject metrics for {ns.project_id}:")
         for m in metrics:
-            star = " ★" if m.exemplary else ""
+            star = " *" if m.exemplary else ""
             print(f"  {m.metric:40} {m.score:6.1f}{star}")
             print(f"    {m.findings}")
         avg = engine.aggregate_project_score(metrics)
@@ -991,7 +1106,7 @@ def main_cli(args=None) -> int:
         result = engine.evaluate_agent(ns.agent_id, state, board_data)
         print(f"\nAgent evaluation: {ns.agent_id}")
         for m in result.metrics:
-            star = " ★" if m.exemplary else ""
+            star = " *" if m.exemplary else ""
             print(f"  {m.metric:40} {m.score:6.1f}{star}")
         print(f"\n  Overall score   : {result.overall_score:.1f}")
         print(f"  Strengths       : {', '.join(result.strengths) or 'none'}")
@@ -1020,7 +1135,7 @@ def main_cli(args=None) -> int:
         print(f"Overall project score: {report.overall_project_score:.1f}")
         print("\nProject metrics:")
         for m in report.project_metrics:
-            star = " ★" if m.exemplary else ""
+            star = " *" if m.exemplary else ""
             print(f"  {m.metric:40} {m.score:6.1f}{star}")
         print("\nAgent evaluations:")
         for ae in report.agent_evaluations:

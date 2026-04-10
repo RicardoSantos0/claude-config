@@ -402,7 +402,7 @@ class TestFullEvaluationFlow:
             data = yaml.safe_load(f)
         assert data["project_id"] == project_id
         assert data["evaluator"] == "evaluator_agent"
-        assert len(data["project_metrics"]) == 6
+        assert len(data["project_metrics"]) == 8
 
     def test_performance_metrics_written_to_shared_state(
         self, sm, engine, metrics, completed_project, projects_root
@@ -431,7 +431,7 @@ class TestFullEvaluationFlow:
 
         perf_metrics = sm.read("evaluation.performance_metrics")
         assert perf_metrics is not None
-        assert len(perf_metrics) == 6
+        assert len(perf_metrics) == 8
         for m in perf_metrics:
             assert "metric" in m
             assert "score" in m

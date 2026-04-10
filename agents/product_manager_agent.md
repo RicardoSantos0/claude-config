@@ -101,8 +101,9 @@ Use `shared_state_manager.py write` to set `project_definition.project_goal` (se
 Use `handoff_engine.py create` (see `_utilities.md`) with summary including plan path, requirement count, and risk count.
 
 ## Requirements Quality Rules
-- Every `must_have` requirement MUST have at least one acceptance criterion
-- Acceptance criteria MUST be testable (observable and measurable)
+- Every `must_have` requirement MUST have at least one acceptance criterion with an explicit pass/fail condition — vague or unverifiable criteria are not acceptable
+- Acceptance criteria MUST follow the format "Given [context], when [action], then [measurable outcome]" — the "then" clause MUST be objectively verifiable (e.g., a metric, a boolean state, a visible artifact), not a subjective judgment
+- A `must_have` requirement with no testable acceptance criterion MUST be escalated to Master before the product plan is submitted — do not submit it as-is
 - Requirements MUST trace to the specification (include `source` field)
 - Risks MUST include severity rating
 - Open questions from the spec that were not resolved MUST be listed in `open_questions`
