@@ -24,22 +24,11 @@ All commands run from the system root where `system_config.yaml` lives.
 ### Step 1 — Receive Brief
 When Master sends you a handoff with a raw brief:
 1. Read the handoff to get `project_id` and `original_brief`
-2. Accept the handoff:
-```bash
-uv run python mas/core/handoff_engine.py accept --handoff-id {handoff_id} --project-id {project_id}
-```
-3. Store the raw brief in shared state:
-```bash
-uv run python mas/core/shared_state_manager.py write \
-  --project-id {project_id} \
-  --section project_definition \
-  --field original_brief \
-  --value "{original_brief}" \
-  --agent inquirer_agent
-```
+2. Accept the handoff via `handoff_engine.py accept` (see `_utilities.md`)
+3. Store the raw brief via `shared_state_manager.py write` to `project_definition.original_brief` (see `_utilities.md`)
 
 ### Step 2 — Analyze Completeness
-Run the intake checker to score the current specification:
+Run the intake checker (see `_utilities.md` → Intake Commands):
 ```bash
 uv run python mas/core/intake_checker.py analyze --spec-json '{current_spec_as_json}'
 ```
@@ -79,35 +68,15 @@ Apply the answers to the current spec and re-analyze:
 - Otherwise, go back to Step 3
 
 ### Step 6 — Write Final Specification
-Write the clarified specification to disk:
+Write via intake checker (see `_utilities.md` → Intake Commands):
 ```bash
-uv run python mas/core/intake_checker.py write-spec \
-  --project-id {project_id} \
-  --spec-json '{final_spec_as_json}'
+uv run python mas/core/intake_checker.py write-spec --project-id {project_id} --spec-json '{final_spec_as_json}'
 ```
-This writes to `projects/{project_id}/intake/clarified_spec.yaml`.
 
-Also update shared state:
-```bash
-uv run python mas/core/shared_state_manager.py write \
-  --project-id {project_id} \
-  --section project_definition \
-  --field clarified_specification \
-  --value-json '{final_spec_as_json}' \
-  --agent inquirer_agent
-```
+Also update shared state via `shared_state_manager.py write` to `project_definition.clarified_specification` (see `_utilities.md`).
 
 ### Step 7 — Handoff to Master
-Create a formal handoff with the specification results:
-```bash
-uv run python mas/core/handoff_engine.py create \
-  --project-id {project_id} \
-  --from inquirer_agent \
-  --to master_orchestrator \
-  --phase intake \
-  --task "Deliver clarified specification" \
-  --summary "Specification complete. Score: {score}. Ready: {ready}. Rounds used: {n}. Spec at: projects/{project_id}/intake/clarified_spec.yaml"
-```
+Create a return handoff via `handoff_engine.py create` (see `_utilities.md`) with summary including score, readiness, and spec path.
 
 ## Q&A Rules
 - Maximum **3 rounds** of questions per intake
@@ -135,8 +104,5 @@ uv run python mas/core/handoff_engine.py create \
 - Handoff before writing the clarified spec to disk
 
 ## Reading Your Current Task
-When invoked, check what handoff is pending:
-```bash
-uv run python mas/core/handoff_engine.py pending --project-id {project_id} --to-agent inquirer_agent
-```
-Read the payload, extract the project_id and original_brief, then proceed through the intake lifecycle.
+When invoked, check pending handoffs via `handoff_engine.py pending --to-agent inquirer_agent` (see `_utilities.md`).
+Read the payload, extract project_id and original_brief, then proceed through the intake lifecycle.

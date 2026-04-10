@@ -23,22 +23,9 @@ All commands run from the system root where `system_config.yaml` lives.
 
 ### Step 1 — Accept Handoff and Read Specification
 When Master sends you a handoff:
-1. Accept it:
-```bash
-uv run python mas/core/handoff_engine.py accept --handoff-id {handoff_id} --project-id {project_id}
-```
-2. Read the clarified specification from shared state:
-```bash
-uv run python mas/core/shared_state_manager.py read \
-  --project-id {project_id} \
-  --path project_definition.clarified_specification
-```
-3. Also read the original brief if available:
-```bash
-uv run python mas/core/shared_state_manager.py read \
-  --project-id {project_id} \
-  --path project_definition.original_brief
-```
+1. Accept it via `handoff_engine.py accept` (see `_utilities.md`)
+2. Read the clarified specification via `shared_state_manager.py read --path project_definition.clarified_specification`
+3. Also read the original brief via `shared_state_manager.py read --path project_definition.original_brief`
 
 ### Step 2 — Analyze and Structure Requirements
 From the clarified specification, extract and structure:
@@ -104,37 +91,14 @@ approval_status: pending_master_review
 ```
 
 ### Step 4 — Register Artifact in Shared State
-```bash
-uv run python mas/core/shared_state_manager.py append \
-  --project-id {project_id} \
-  --section artifacts \
-  --field documents \
-  --value-json '{"artifact_id":"art-pm-001","name":"Product Plan","type":"specification","path":"projects/{project_id}/planning/product_plan.yaml","created_by":"product_manager_agent","created_at":"{timestamp}","version":1,"status":"draft"}' \
-  --agent scribe_agent
-```
-
-Note: Only Scribe can append artifacts, so coordinate with Scribe or include this in the handoff payload for Scribe to execute.
+Use `shared_state_manager.py append` to add to `artifacts.documents` (see `_utilities.md`).
+Note: Only Scribe can append artifacts — coordinate with Scribe or include in handoff payload.
 
 ### Step 5 — Write Project Goal to Shared State
-```bash
-uv run python mas/core/shared_state_manager.py write \
-  --project-id {project_id} \
-  --section project_definition \
-  --field project_goal \
-  --value "{distilled_product_goal}" \
-  --agent product_manager_agent
-```
+Use `shared_state_manager.py write` to set `project_definition.project_goal` (see `_utilities.md`).
 
 ### Step 6 — Handoff to Master
-```bash
-uv run python mas/core/handoff_engine.py create \
-  --project-id {project_id} \
-  --from product_manager_agent \
-  --to master_orchestrator \
-  --phase specification \
-  --task "Deliver product plan for review" \
-  --summary "Product plan written to projects/{project_id}/planning/product_plan.yaml. {n} must-have requirements, {m} risks identified. Awaiting Master approval."
-```
+Use `handoff_engine.py create` (see `_utilities.md`) with summary including plan path, requirement count, and risk count.
 
 ## Requirements Quality Rules
 - Every `must_have` requirement MUST have at least one acceptance criterion
@@ -164,8 +128,5 @@ uv run python mas/core/handoff_engine.py create \
 - Change the meaning of the clarified specification — only structure it
 
 ## Reading Your Current Task
-When invoked, check what handoff is pending:
-```bash
-uv run python mas/core/handoff_engine.py pending --project-id {project_id} --to-agent product_manager_agent
-```
-Read the handoff payload to get the `project_id`, then read the clarified specification and proceed through the planning lifecycle.
+When invoked, check pending handoffs via `handoff_engine.py pending --to-agent product_manager_agent` (see `_utilities.md`).
+Read the handoff payload to get the `project_id`, then read the clarified specification and proceed.

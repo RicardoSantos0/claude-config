@@ -17,9 +17,11 @@ handoff_protocol:
     handoff_id:
       type: "string"
       format: "ho-{project_id}-{sequence}"
+      example: "ho-proj-20260410-001-session-scheduler-001"
       required: true
     project_id:
       type: "string"
+      format: "proj-{YYYYMMDD}-{sequence}-{slug}"
       required: true
     timestamp:
       type: "datetime_iso8601"

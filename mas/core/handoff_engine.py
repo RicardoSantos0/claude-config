@@ -7,16 +7,16 @@ Usage as library:
     from core.handoff_engine import HandoffEngine
     from core.shared_state_manager import SharedStateManager
     engine = HandoffEngine()
-    sm = SharedStateManager("proj-001")
+    sm = SharedStateManager("proj-20260410-001-session-scheduler")
     handoff = engine.create(sm, from_agent="master_orchestrator",
                             to_agent="scribe_agent", ...)
 
 Usage as CLI:
-    uv run python core/handoff_engine.py create --project-id proj-001 --from master_orchestrator --to scribe_agent --phase intake --task "Initialize project folder" --summary "Starting project"
-    uv run python core/handoff_engine.py accept --handoff-id ho-proj-001-001 --project-id proj-001
-    uv run python core/handoff_engine.py reject --handoff-id ho-proj-001-001 --project-id proj-001 --reason "Missing required fields"
-    uv run python core/handoff_engine.py pending --project-id proj-001
-    uv run python core/handoff_engine.py show --handoff-id ho-proj-001-001 --project-id proj-001
+    uv run python core/handoff_engine.py create --project-id proj-20260410-001-session-scheduler --from master_orchestrator --to scribe_agent --phase intake --task "Initialize project folder" --summary "Starting project"
+    uv run python core/handoff_engine.py accept --handoff-id ho-proj-20260410-001-session-scheduler-001 --project-id proj-20260410-001-session-scheduler
+    uv run python core/handoff_engine.py reject --handoff-id ho-proj-20260410-001-session-scheduler-001 --project-id proj-20260410-001-session-scheduler --reason "Missing required fields"
+    uv run python core/handoff_engine.py pending --project-id proj-20260410-001-session-scheduler
+    uv run python core/handoff_engine.py show --handoff-id ho-proj-20260410-001-session-scheduler-001 --project-id proj-20260410-001-session-scheduler
 """
 
 import sys
@@ -133,15 +133,18 @@ class HandoffEngine:
     def validate(self, handoff: dict) -> tuple[bool, list[str]]:
         """
         Validate a handoff has all required fields.
+        Accepts both expanded and compact format.
         Returns (is_valid, list_of_errors).
         """
+        # Expand if compact
+        h = self.expand(handoff)
         errors = []
         for key in ("handoff_id", "project_id", "from_agent", "to_agent",
                     "authorized_by", "phase", "task_description", "payload"):
-            if not handoff.get(key):
+            if not h.get(key):
                 errors.append(f"Missing required field: {key}")
 
-        payload = handoff.get("payload", {})
+        payload = h.get("payload", {})
         for key in REQUIRED_PAYLOAD_KEYS:
             if key not in payload:
                 errors.append(f"Missing payload field: {key}")
@@ -152,13 +155,27 @@ class HandoffEngine:
 
     def _update_handoff_in_state(self, sm: SharedStateManager,
                                   handoff_id: str, updates: dict) -> bool:
-        """Find the handoff in history and update its acceptance record."""
+        """Find the handoff in history and update its acceptance record.
+        Handles both expanded (handoff_id) and compact (id) keys."""
         state = sm.load()
         history = state.get("workflow", {}).get("handoff_history", [])
         found = False
         for h in history:
-            if h.get("handoff_id") == handoff_id:
-                h["acceptance"].update(updates)
+            hid = h.get("handoff_id") or h.get("id")
+            if hid == handoff_id:
+                # Handle both compact and expanded acceptance format
+                if "acceptance" in h:
+                    h["acceptance"].update(updates)
+                else:
+                    # Compact format: update acc, rej, fq, aat directly
+                    if "status" in updates:
+                        h["acc"] = updates["status"]
+                    if updates.get("rejection_reason"):
+                        h["rej"] = updates["rejection_reason"]
+                    if updates.get("follow_up_questions"):
+                        h["fq"] = updates["follow_up_questions"]
+                    if updates.get("accepted_at"):
+                        h["aat"] = updates["accepted_at"]
                 found = True
                 break
         if not found:
@@ -216,20 +233,24 @@ class HandoffEngine:
     # --- QUERY ---
 
     def get(self, sm: SharedStateManager, handoff_id: str) -> Optional[dict]:
-        """Get a specific handoff by ID."""
+        """Get a specific handoff by ID. Returns expanded format."""
         state = sm.load()
         for h in state.get("workflow", {}).get("handoff_history", []):
-            if h.get("handoff_id") == handoff_id:
-                return h
+            hid = h.get("handoff_id") or h.get("id")
+            if hid == handoff_id:
+                return self.expand(h)
         return None
 
     def get_pending(self, sm: SharedStateManager,
                     to_agent: Optional[str] = None) -> list[dict]:
-        """Get all pending handoffs, optionally filtered by recipient."""
+        """Get all pending handoffs, optionally filtered by recipient. Returns expanded format."""
         state = sm.load()
         history = state.get("workflow", {}).get("handoff_history", [])
-        pending = [h for h in history
-                   if h.get("acceptance", {}).get("status") == "pending"]
+        pending = []
+        for h in history:
+            acc = h.get("acceptance", {}).get("status") if "acceptance" in h else h.get("acc")
+            if acc == "pending":
+                pending.append(self.expand(h))
         if to_agent:
             pending = [h for h in pending if h.get("to_agent") == to_agent]
         return pending
@@ -238,6 +259,115 @@ class HandoffEngine:
         """Get all handoffs for the project."""
         state = sm.load()
         return state.get("workflow", {}).get("handoff_history", [])
+
+    # --- COMPACT WIRE FORMAT ---
+    # Reduces token count for inter-agent storage.
+    # CLI output and CHECKPOINT.md always use expand() for humans.
+
+    # Expanded key → compact key
+    _COMPACT_MAP = {
+        "handoff_id": "id",
+        "project_id": "pid",
+        "timestamp": "ts",
+        "from_agent": "from",
+        "to_agent": "to",
+        "authorized_by": "auth",
+        "phase": "ph",
+        "task_description": "task",
+    }
+    _PAYLOAD_COMPACT_MAP = {
+        "summary": "s",
+        "artifacts_produced": "art",
+        "decisions_made": "dec",
+        "open_questions": "oq",
+        "constraints_for_next": "con",
+        "shared_state_fields_modified": "mod",
+    }
+    _EXPAND_MAP = {v: k for k, v in _COMPACT_MAP.items()}
+    _PAYLOAD_EXPAND_MAP = {v: k for k, v in _PAYLOAD_COMPACT_MAP.items()}
+
+    @classmethod
+    def compact(cls, handoff: dict) -> dict:
+        """Convert an expanded handoff dict to compact wire format.
+        Omits empty lists, null values, and zero-token entries."""
+        c: dict = {}
+        for full_key, short_key in cls._COMPACT_MAP.items():
+            if full_key in handoff and handoff[full_key] is not None:
+                c[short_key] = handoff[full_key]
+
+        # Payload — omit empty lists
+        payload = handoff.get("payload", {})
+        p: dict = {}
+        for full_key, short_key in cls._PAYLOAD_COMPACT_MAP.items():
+            val = payload.get(full_key)
+            if val is not None and val != "" and val != []:
+                p[short_key] = val
+        # Include any extra payload keys not in the standard map
+        for k, v in payload.items():
+            if k not in cls._PAYLOAD_COMPACT_MAP and v is not None and v != "" and v != []:
+                p[k] = v
+        if p:
+            c["p"] = p
+
+        # Token usage — compact to list [prompt, completion, total], omit if all zero
+        tok = handoff.get("token_usage", {})
+        tok_vals = [tok.get("prompt_tokens", 0), tok.get("completion_tokens", 0), tok.get("total_tokens", 0)]
+        if any(t != 0 for t in tok_vals):
+            c["tok"] = tok_vals
+
+        # Acceptance — compact: just status, plus non-null fields
+        acc = handoff.get("acceptance", {})
+        acc_status = acc.get("status", "pending")
+        c["acc"] = acc_status
+        if acc.get("rejection_reason"):
+            c["rej"] = acc["rejection_reason"]
+        if acc.get("follow_up_questions"):
+            c["fq"] = acc["follow_up_questions"]
+        if acc.get("accepted_at"):
+            c["aat"] = acc["accepted_at"]
+
+        return c
+
+    @classmethod
+    def expand(cls, compact_handoff: dict) -> dict:
+        """Convert a compact wire-format dict back to full expanded format.
+        Also handles already-expanded dicts gracefully (passthrough)."""
+        # Detect if already expanded
+        if "handoff_id" in compact_handoff:
+            return compact_handoff
+
+        h: dict = {}
+        for short_key, full_key in cls._EXPAND_MAP.items():
+            if short_key in compact_handoff:
+                h[full_key] = compact_handoff[short_key]
+
+        # Payload
+        cp = compact_handoff.get("p", {})
+        payload: dict = {}
+        for short_key, full_key in cls._PAYLOAD_EXPAND_MAP.items():
+            payload[full_key] = cp.get(short_key, [] if full_key != "summary" else "")
+        # Extra payload keys
+        for k, v in cp.items():
+            if k not in cls._PAYLOAD_EXPAND_MAP:
+                payload[k] = v
+        h["payload"] = payload
+
+        # Token usage
+        tok = compact_handoff.get("tok", [0, 0, 0])
+        if isinstance(tok, list) and len(tok) == 3:
+            h["token_usage"] = {"prompt_tokens": tok[0], "completion_tokens": tok[1], "total_tokens": tok[2]}
+        else:
+            h["token_usage"] = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+
+        # Acceptance
+        h["acceptance"] = {
+            "status": compact_handoff.get("acc", "pending"),
+            "rejection_reason": compact_handoff.get("rej"),
+            "follow_up_questions": compact_handoff.get("fq"),
+            "accepted_at": compact_handoff.get("aat"),
+        }
+
+        return h
 
 
 # --- CLI ---

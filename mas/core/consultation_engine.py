@@ -387,6 +387,126 @@ class ConsultationEngine:
     def get_all_consultants() -> list[str]:
         return list(ALL_CONSULTANTS)
 
+    # ------------------------------------------------------------------
+    # Compact wire format
+    # ------------------------------------------------------------------
+
+    # Risk level abbreviations: none→n, low→l, medium→m, high→h
+    _RISK_COMPACT = {"none": "n", "low": "l", "medium": "m", "high": "h"}
+    _RISK_EXPAND = {v: k for k, v in _RISK_COMPACT.items()}
+
+    _REQ_COMPACT_MAP = {
+        "request_id": "rid",
+        "project_id": "pid",
+        "timestamp": "ts",
+        "requested_by": "by",
+        "question": "q",
+        "context": "ctx",
+        "decision_type": "dt",
+        "mandatory": "mand",
+        "consultants_selected": "sel",
+        "domain_context": "dom",
+        "follow_up_round": "fur",
+        "follow_up_question": "fuq",
+        "status": "st",
+    }
+    _REQ_EXPAND_MAP = {v: k for k, v in _REQ_COMPACT_MAP.items()}
+
+    _RESP_COMPACT_MAP = {
+        "response_text": "r",
+        "word_count": "wc",
+        "risk_level": "rl",
+        "key_concerns": "kc",
+        "recommendation": "rec",
+        "responded_at": "rat",
+        "truncated": "tr",
+    }
+    _RESP_EXPAND_MAP = {v: k for k, v in _RESP_COMPACT_MAP.items()}
+
+    @classmethod
+    def compact_response(cls, resp: dict) -> dict:
+        """Compact a single consultation response dict. Omit empty/default fields."""
+        c: dict = {}
+        for full, short in cls._RESP_COMPACT_MAP.items():
+            val = resp.get(full)
+            if val is None or val == [] or val == "" or val == 0:
+                continue
+            if full == "risk_level":
+                c[short] = cls._RISK_COMPACT.get(val, val)
+            elif full == "truncated" and not val:
+                continue  # omit false
+            else:
+                c[short] = val
+        return c
+
+    @classmethod
+    def expand_response(cls, compact_resp: dict) -> dict:
+        """Expand a compact response back to full format."""
+        if "response_text" in compact_resp:
+            return compact_resp  # already expanded
+        r: dict = {}
+        for short, full in cls._RESP_EXPAND_MAP.items():
+            if short in compact_resp:
+                val = compact_resp[short]
+                if full == "risk_level":
+                    val = cls._RISK_EXPAND.get(val, val)
+                r[full] = val
+            else:
+                # Defaults
+                if full == "key_concerns":
+                    r[full] = []
+                elif full == "truncated":
+                    r[full] = False
+                elif full in ("word_count",):
+                    r[full] = 0
+                else:
+                    r[full] = ""
+        return r
+
+    @classmethod
+    def compact_request(cls, req_data: dict) -> dict:
+        """Compact a consultation request dict. Omit empty/null/default fields."""
+        c: dict = {}
+        for full, short in cls._REQ_COMPACT_MAP.items():
+            val = req_data.get(full)
+            if val is None or val == "" or val == [] or val == {}:
+                continue
+            if full == "mandatory" and not val:
+                continue  # omit false
+            if full == "follow_up_round" and val == 0:
+                continue
+            c[short] = val
+        # Compact responses
+        responses = req_data.get("responses", {})
+        if responses:
+            c["resp"] = {cid: cls.compact_response(r) for cid, r in responses.items()}
+        return c
+
+    @classmethod
+    def expand_request(cls, compact_req: dict) -> dict:
+        """Expand a compact request back to full format."""
+        if "request_id" in compact_req:
+            return compact_req  # already expanded
+        r: dict = {}
+        for short, full in cls._REQ_EXPAND_MAP.items():
+            if short in compact_req:
+                r[full] = compact_req[short]
+            else:
+                if full in ("context",):
+                    r[full] = {}
+                elif full in ("consultants_selected",):
+                    r[full] = []
+                elif full == "mandatory":
+                    r[full] = False
+                elif full == "follow_up_round":
+                    r[full] = 0
+                else:
+                    r[full] = ""
+        # Expand responses
+        compact_resp = compact_req.get("resp", {})
+        r["responses"] = {cid: cls.expand_response(cr) for cid, cr in compact_resp.items()}
+        return r
+
 
 # ---------------------------------------------------------------------------
 # CLI

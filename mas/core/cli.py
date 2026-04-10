@@ -12,6 +12,7 @@ Commands
   roster    Show the capability registry summary
 """
 
+import re
 import sys
 from pathlib import Path
 from datetime import datetime, timezone
@@ -21,6 +22,11 @@ import yaml
 
 ROOT = Path(__file__).parent.parent
 
+# Max slug length (lowercase alphanum + hyphens)
+_MAX_SLUG_LEN = 40
+_SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$")
+_FULL_ID_RE = re.compile(r"^proj-\d{8}-\d{3}-.+$")
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -29,6 +35,38 @@ ROOT = Path(__file__).parent.parent
 def _get_projects_dir() -> Path:
     from core.config import get_projects_dir
     return get_projects_dir()
+
+
+def _slugify(text: str) -> str:
+    """Turn free-form text into a URL-safe slug (max _MAX_SLUG_LEN chars)."""
+    s = text.lower().strip()
+    s = re.sub(r"[^a-z0-9]+", "-", s)
+    s = s.strip("-")
+    return s[:_MAX_SLUG_LEN]
+
+
+def _next_sequence(projects_dir: Path, date_str: str) -> int:
+    """Scan existing project dirs for today's date prefix and return max+1."""
+    prefix = f"proj-{date_str}-"
+    max_seq = 0
+    if projects_dir.exists():
+        for d in projects_dir.iterdir():
+            if d.is_dir() and d.name.startswith(prefix):
+                # Extract sequence: proj-YYYYMMDD-NNN-slug → NNN
+                parts = d.name.split("-", 3)  # ['proj', 'YYYYMMDD', 'NNN', 'slug...']
+                if len(parts) >= 3:
+                    try:
+                        max_seq = max(max_seq, int(parts[2]))
+                    except ValueError:
+                        pass
+    return max_seq + 1
+
+
+def _generate_project_id(slug: str) -> str:
+    """Generate proj-YYYYMMDD-NNN-slug from a slug."""
+    date_str = datetime.now(timezone.utc).strftime("%Y%m%d")
+    seq = _next_sequence(_get_projects_dir(), date_str)
+    return f"proj-{date_str}-{seq:03d}-{slug}"
 
 
 def _require_project(project_id: str) -> Path:
@@ -61,15 +99,33 @@ def main():
 # ---------------------------------------------------------------------------
 
 @main.command()
-@click.argument("project_id")
+@click.argument("name_or_id")
 @click.option("--request-id", default=None,
               help="Optional request ID (auto-generated if omitted)")
-def init(project_id: str, request_id: str):
+def init(name_or_id: str, request_id: str):
     """Initialize a new project and its shared state.
 
-    Example: mas init proj-20260409-001
+    NAME_OR_ID can be either a human-readable slug (e.g. 'website-redesign')
+    or a full project ID (e.g. 'proj-20260410-001-website-redesign').
+
+    If a slug is provided, the system generates the full project ID
+    with today's date and next available sequence number.
+
+    Examples:
+        mas init session-scheduler
+        mas init proj-20260410-001-session-scheduler
     """
     from core.shared_state_manager import SharedStateManager
+
+    # Determine project_id: if it looks like a full ID, use as-is; else generate
+    if _FULL_ID_RE.match(name_or_id):
+        project_id = name_or_id
+    else:
+        slug = _slugify(name_or_id)
+        if not slug:
+            click.echo("[error] Invalid slug — must contain at least one alphanumeric character.", err=True)
+            sys.exit(1)
+        project_id = _generate_project_id(slug)
 
     if request_id is None:
         ts = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
@@ -82,6 +138,7 @@ def init(project_id: str, request_id: str):
 
     sm.initialize(request_id=request_id)
     click.echo(f"[ok] Project initialized: {sm.project_dir}")
+    click.echo(f"     Project ID  : {project_id}")
     click.echo(f"     State file  : {sm.state_path}")
     click.echo(f"     Request ID  : {request_id}")
 

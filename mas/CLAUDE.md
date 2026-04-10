@@ -13,7 +13,7 @@ All `uv run` commands must be run from the **repo root** (the directory containi
 
 ```bash
 # Project lifecycle
-uv run mas init    <project-id>     # Initialize new project + shared state
+uv run mas init    <slug-or-id>      # Initialize new project (e.g. 'session-scheduler')
 uv run mas status  <project-id>     # Current phase, owner, pending handoffs
 uv run mas state   <project-id>     # Full shared state dump
 uv run mas pending <project-id>     # Unresolved handoffs
@@ -26,6 +26,22 @@ uv run pytest mas/tests/unit/       # Unit tests only
 uv run pytest mas/tests/integration/# Integration tests only
 uv run pytest mas/tests/integration/test_full_lifecycle.py  # End-to-end lifecycle test
 ```
+
+---
+
+## Project Naming Convention
+
+Project IDs follow the format: `proj-{YYYYMMDD}-{NNN}-{slug}`
+
+- **Date**: UTC date of creation (auto-generated)
+- **Sequence**: 3-digit, zero-padded, auto-incremented per day
+- **Slug**: human-readable identifier (lowercase, hyphens, max 40 chars)
+
+Examples:
+- `mas init session-scheduler` → `proj-20260410-001-session-scheduler`
+- `mas init proj-20260410-001-my-project` → accepted as-is
+
+Folder name matches project ID: `mas/projects/proj-20260410-001-session-scheduler/`
 
 ---
 

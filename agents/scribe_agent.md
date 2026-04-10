@@ -73,46 +73,21 @@ decision_log:
 
 6. **Initialize the consultation log** at `projects/{project_id}/consultation/consultation_log.yaml`
 
-7. **Register the project folder in shared state** — append a document record:
-```bash
-uv run python mas/core/shared_state_manager.py append \
-  --project-id {project_id} \
-  --section artifacts \
-  --field documents \
-  --value-json '{"artifact_id":"art-001","name":"Project Folder","type":"specification","path":"projects/{project_id}/","created_by":"scribe_agent","created_at":"{timestamp}","version":1,"status":"approved"}' \
-  --agent scribe_agent
-```
+7. **Register the project folder in shared state:**
+→ Use `shared_state_manager.py append` (see `_utilities.md`) to append a document record to `artifacts.documents`.
 
-8. **Accept the handoff** from Master (using the handoff_id provided):
-```bash
-uv run python mas/core/handoff_engine.py accept --handoff-id {handoff_id} --project-id {project_id}
-```
+8. **Accept the handoff** from Master:
+→ Use `handoff_engine.py accept` (see `_utilities.md`).
 
 9. **Create a return handoff** to Master confirming initialization is complete.
 
 ## Recording Decisions
 When recording a decision from a handoff:
 1. Append to `projects/{project_id}/decisions/decision_log.yaml`
-2. Append to shared state decision_log via:
-```bash
-uv run python mas/core/shared_state_manager.py append \
-  --project-id {project_id} \
-  --section decisions \
-  --field decision_log \
-  --value-json '{decision_record_as_json}' \
-  --agent scribe_agent
-```
+2. Use `shared_state_manager.py append` to add to `decisions.decision_log` (see `_utilities.md`)
 
 ## Recording Artifacts
-When an agent produces an artifact, register it in shared state:
-```bash
-uv run python mas/core/shared_state_manager.py append \
-  --project-id {project_id} \
-  --section artifacts \
-  --field documents \
-  --value-json '{artifact_reference_as_json}' \
-  --agent scribe_agent
-```
+When an agent produces an artifact, use `shared_state_manager.py append` to add to `artifacts.documents` (see `_utilities.md`).
 
 ## Phase Summaries
 At each phase transition, create a phase summary file:
@@ -135,9 +110,5 @@ When Master sends a close directive:
 - Flag any missing required documentation before phase transitions
 
 ## Reading Your Current Task
-When invoked, first check what handoff is pending for you:
-```bash
-uv run python mas/core/handoff_engine.py pending --project-id {project_id} --to-agent scribe_agent
-```
-
-Then read the handoff payload to understand your task, and proceed accordingly.
+When invoked, check pending handoffs for you via `handoff_engine.py pending --to-agent scribe_agent` (see `_utilities.md`).
+Then read the handoff payload and proceed accordingly.

@@ -21,32 +21,16 @@ All `uv run` commands must be run from the `claude-config` repo root — the dir
 Find it with: `git -C "$(dirname $(which uv))" rev-parse --show-toplevel 2>/dev/null` or locate `pyproject.toml` manually.
 The MAS stores all project data under `mas/projects/` relative to that root.
 
-## Core Utilities (call via Bash)
-```bash
-# Read current project state
-uv run python mas/core/shared_state_manager.py read --project-id {project_id} --path core_identity.current_phase
+## Core Utilities
+→ See `_utilities.md` for all CLI commands (handoff, state, snapshot, approve).
 
-# Advance phase
-uv run python mas/core/shared_state_manager.py write --project-id {project_id} --section core_identity --field current_phase --value {new_phase} --agent master_orchestrator
-
-# Create a handoff
-uv run python mas/core/handoff_engine.py create --project-id {project_id} --from master_orchestrator --to {agent} --phase {phase} --task "{task}" --summary "{summary}"
-
-# Accept a handoff result
-uv run python mas/core/handoff_engine.py accept --handoff-id {handoff_id} --project-id {project_id}
-
-# List pending handoffs
-uv run python mas/core/handoff_engine.py pending --project-id {project_id}
-
-# Approve a field (make immutable)
-uv run python mas/core/shared_state_manager.py approve --project-id {project_id} --section {section} --field {field} --agent master_orchestrator
-
-# Snapshot state at phase boundary
-uv run python mas/core/shared_state_manager.py snapshot --project-id {project_id} --phase {phase}
-
-# Show full state
-uv run python mas/core/shared_state_manager.py show --project-id {project_id}
-```
+Key patterns for Master:
+- `handoff_engine.py create` — delegate work
+- `handoff_engine.py accept` — accept returned work
+- `shared_state_manager.py write` — advance phase, update fields you own
+- `shared_state_manager.py snapshot` — save state at phase boundaries
+- `shared_state_manager.py approve` — lock immutable fields
+- `shared_state_manager.py show` — inspect full state
 
 ## Decision Framework
 Before every significant decision:
@@ -113,13 +97,12 @@ Max 3 spawns per project. Spawned agents start at T3_provisional.
 
 ## Starting a New Project
 When a user gives you a project brief:
-1. Generate a project ID: `proj-{YYYYMMDD}-{NNN}` (e.g., `proj-20260409-001`)
-2. Generate a request ID: `req-{YYYYMMDD}-{NNN}`
-3. Initialize state: `uv run python mas/core/shared_state_manager.py init --project-id {id} --request-id {req_id}`
-4. Create handoff to Scribe to initialize project folder
-5. Accept Scribe's confirmation
-6. Create handoff to Inquirer with the raw brief
-7. Continue through lifecycle phases
+1. Generate project via CLI: `uv run mas init {slug}` (e.g., `uv run mas init session-scheduler`) — this auto-generates `proj-YYYYMMDD-NNN-{slug}`
+2. Generate a request ID: `req-{YYYYMMDD}{HHMMSS}`
+3. Create handoff to Scribe to initialize project folder
+4. Accept Scribe's confirmation
+5. Create handoff to Inquirer with the raw brief
+6. Continue through lifecycle phases
 
 ## Resuming a Project
 If given a project ID, read its state first:

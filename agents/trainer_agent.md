@@ -19,79 +19,26 @@ Close the improvement loop. After every evaluation cycle, you read what went wro
 ## System Root
 All commands run from the system root where `system_config.yaml` lives.
 
-## Core Utilities (call via Bash)
+## Core Utilities
 
+→ **Handoff & Shared State commands**: see `_utilities.md`
+
+### Training Commands (Trainer-specific)
 ```bash
-# --- TRAINING ENGINE ---
-
-# Analyze a single project's evaluation report and produce proposals
-uv run python mas/core/training_engine.py analyze \
-  --project-id {project_id}
-
-# View training backlog
-uv run python mas/core/training_engine.py backlog
-
-# View backlog filtered by status
-uv run python mas/core/training_engine.py backlog --status pending
-
-# (After Master approves) Mark proposal as approved
-uv run python mas/core/training_engine.py approve \
-  --proposal-id {proposal_id} \
-  --authorized-by master_orchestrator
-
-# (After Master decides) Reject a proposal
-uv run python mas/core/training_engine.py reject \
-  --proposal-id {proposal_id} \
-  --reason "{reason}" \
-  --authorized-by master_orchestrator
-
-# --- SHARED STATE ---
-
-# Append improvement proposal to shared state
-uv run python mas/core/shared_state_manager.py append \
-  --project-id {project_id} \
-  --section evaluation \
-  --field improvement_proposals \
-  --value '{...proposal JSON...}' \
-  --agent trainer_agent
-
-# Read evaluation findings
-uv run python mas/core/shared_state_manager.py read \
-  --project-id {project_id} \
-  --path evaluation.quality_findings
-
-# --- HANDOFFS ---
-
-# Accept handoff from Master
-uv run python mas/core/handoff_engine.py accept \
-  --handoff-id {handoff_id} --project-id {project_id}
-
-# Return proposals to Master
-uv run python mas/core/handoff_engine.py create \
-  --project-id {project_id} \
-  --from trainer_agent \
-  --to master_orchestrator \
-  --phase improvement \
-  --task "Deliver training brief" \
-  --summary "{summary}"
+uv run python mas/core/training_engine.py analyze --project-id {project_id}
+uv run python mas/core/training_engine.py backlog [--status pending]
+uv run python mas/core/training_engine.py approve --proposal-id {id} --authorized-by master_orchestrator
+uv run python mas/core/training_engine.py reject --proposal-id {id} --reason "..." --authorized-by master_orchestrator
 ```
 
 ## Training Lifecycle
 
 ### Step 1 — Accept Handoff
-```bash
-uv run python mas/core/handoff_engine.py accept \
-  --handoff-id {handoff_id} --project-id {project_id}
-```
+Accept the handoff (see `_utilities.md` → Handoff Commands).
 
-Read the evaluation report and quality findings:
-```bash
-uv run python mas/core/shared_state_manager.py read \
-  --project-id {project_id} --path evaluation.quality_findings
-
-uv run python mas/core/shared_state_manager.py read \
-  --project-id {project_id} --path evaluation.performance_metrics
-```
+Read evaluation findings (see `_utilities.md` → Shared State `read`):
+- path: `evaluation.quality_findings`
+- path: `evaluation.performance_metrics`
 
 ### Step 2 — Analyze Evaluation Report
 
@@ -124,39 +71,16 @@ submit it to Master yet. Instead, keep it in the backlog for the next cycle.
 
 ### Step 4 — Write Proposals to Shared State
 
-For each proposal with sufficient evidence:
-```bash
-uv run python mas/core/shared_state_manager.py append \
-  --project-id {project_id} \
-  --section evaluation \
-  --field improvement_proposals \
-  --value '{
-    "proposal_id": "{proposal_id}",
-    "proposal_type": "{type}",
-    "priority": {priority},
-    "target_agent": "{agent_id}",
-    "target_artifact": "{path}",
-    "description": "{description}",
-    "recommended_change": "{change}",
-    "evidence": ["{report_id}"],
-    "tradeoffs": "{tradeoffs}",
-    "systemic": false,
-    "status": "pending"
-  }' \
-  --agent trainer_agent
-```
+For each proposal with sufficient evidence, use `_utilities.md` → `append` to write to `evaluation.improvement_proposals`.
+
+Each proposal must include:
 
 ### Step 5 — Return to Master
 
-```bash
-uv run python mas/core/handoff_engine.py create \
-  --project-id {project_id} \
-  --from trainer_agent \
-  --to master_orchestrator \
-  --phase improvement \
-  --task "Deliver training brief" \
-  --summary "Training analysis complete. {N} proposal(s) produced. {S} systemic. Training brief at: projects/{project_id}/training/training_brief.yaml. Backlog updated."
-```
+Send the training brief via handoff (see `_utilities.md` → `create`):
+- from: `trainer_agent`, to: `master_orchestrator`, phase: `improvement`
+- task: `Deliver training brief`
+- Summary must include: proposal count, systemic count, training brief path
 
 Include in payload:
 - `training_brief_path` — path to the brief

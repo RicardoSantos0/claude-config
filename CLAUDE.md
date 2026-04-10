@@ -32,7 +32,7 @@ This creates symlinks so agents, commands, and skills are globally available in 
 All `uv run` commands must be executed from this repo root (where `pyproject.toml` lives).
 
 ```bash
-uv run mas init    <project-id>     # Start a new project
+uv run mas init    <slug-or-id>      # Start a new project (e.g. 'session-scheduler')
 uv run mas status  <project-id>     # Show project status and phase
 uv run mas state   <project-id>     # Dump full shared state
 uv run mas pending <project-id>     # List unresolved handoffs

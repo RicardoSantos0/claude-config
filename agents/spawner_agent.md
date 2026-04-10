@@ -19,48 +19,25 @@ Design new agents when — and only when — a verified capability gap exists an
 ## System Root
 All commands run from the system root where `system_config.yaml` lives.
 
-## Core Utilities (call via Bash)
+## Core Utilities
 
+→ **Handoff commands**: see `_utilities.md`
+
+### Spawn Commands (Spawner-specific)
 ```bash
-# --- SPAWN POLICY ---
-
-# Validate a spawn request against all policy rules
-uv run python mas/core/spawn_policy.py validate \
-  --project-id {project_id} \
-  --request-file projects/{project_id}/hr/{request_id}.yaml \
-  --cert-file projects/{project_id}/hr/{cert_id}.yaml
-
-# View spawn history for a project
+uv run python mas/core/spawn_policy.py validate --project-id {project_id} --request-file {path} --cert-file {path}
 uv run python mas/core/spawn_policy.py history --project-id {project_id}
+```
 
-# --- CAPABILITY REGISTRY (read-only checks) ---
-
-# Check if gap certificate exists and is Master-approved
+### Capability Registry (read-only checks)
+```bash
 uv run python mas/core/capability_registry.py show --type certs
-
-# --- HANDOFFS ---
-
-# Accept handoff from Master
-uv run python mas/core/handoff_engine.py accept \
-  --handoff-id {handoff_id} --project-id {project_id}
-
-# Return package to Master for review
-uv run python mas/core/handoff_engine.py create \
-  --project-id {project_id} \
-  --from spawner_agent \
-  --to master_orchestrator \
-  --phase {phase} \
-  --task "Deliver draft agent package" \
-  --summary "{summary}"
 ```
 
 ## Spawn Lifecycle
 
 ### Step 1 — Accept Handoff
-```bash
-uv run python mas/core/handoff_engine.py accept \
-  --handoff-id {handoff_id} --project-id {project_id}
-```
+Accept the handoff (see `_utilities.md` → Handoff Commands).
 
 Read the spawn request attached to the handoff. Verify it contains:
 - `gap_certificate_id` pointing to an approved certificate
@@ -139,15 +116,10 @@ Use `core/spawn_policy.py` to generate the package skeleton, then refine each fi
 
 ### Step 5 — Return Package to Master
 
-```bash
-uv run python mas/core/handoff_engine.py create \
-  --project-id {project_id} \
-  --from spawner_agent \
-  --to master_orchestrator \
-  --phase {phase} \
-  --task "Deliver draft agent package" \
-  --summary "Draft agent package ready for review. Agent ID: {agent_id}. Package at: projects/{project_id}/spawner/packages/{agent_id}/. Human review required before activation."
-```
+Send the draft package via handoff (see `_utilities.md` → `create`):
+- from: `spawner_agent`, to: `master_orchestrator`, phase: current phase
+- task: `Deliver draft agent package`
+- Summary must include: agent ID, package path, human review required
 
 Include in payload:
 - `agent_id` — the designed agent's ID

@@ -9,11 +9,11 @@ Called automatically after:
 
 Usage as library:
     from core.checkpoint_writer import CheckpointWriter
-    cw = CheckpointWriter("proj-20260410-001")
+    cw = CheckpointWriter("proj-20260410-001-session-scheduler")
     cw.write()
 
 Usage as CLI:
-    uv run python mas/core/checkpoint_writer.py --project-id proj-20260410-001
+    uv run python mas/core/checkpoint_writer.py --project-id proj-20260410-001-session-scheduler
 """
 
 from __future__ import annotations

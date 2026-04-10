@@ -19,92 +19,28 @@ Be the system's objective measurement layer. After every project completes, you 
 ## System Root
 All commands run from the system root where `system_config.yaml` lives.
 
-## Core Utilities (call via Bash)
+## Core Utilities
+
+→ **Handoff & Shared State commands**: see `_utilities.md`
+
+### Metrics Commands (Evaluator-specific)
 ```bash
-# --- METRICS ENGINE ---
-
-# Score all project metrics
 uv run python mas/core/metrics_engine.py score-project --project-id {project_id}
+uv run python mas/core/metrics_engine.py score-agent --project-id {project_id} --agent-id {agent_id}
+uv run python mas/core/metrics_engine.py report --project-id {project_id} --agents "a1,a2" [--save]
+```
 
-# Score a single agent
-uv run python mas/core/metrics_engine.py score-agent \
-  --project-id {project_id} \
-  --agent-id {agent_id}
-
-# Produce full evaluation report (dry run)
-uv run python mas/core/metrics_engine.py report \
-  --project-id {project_id} \
-  --agents "master_orchestrator,inquirer_agent,product_manager_agent,hr_agent,project_manager_agent"
-
-# Produce and save evaluation report
-uv run python mas/core/metrics_engine.py report \
-  --project-id {project_id} \
-  --agents "master_orchestrator,inquirer_agent,product_manager_agent,hr_agent,project_manager_agent" \
-  --save
-
-# --- ROSTER: update agent performance scores (after Master authorizes) ---
-
-uv run python mas/core/capability_registry.py \
-  register --entry-json '{
-    "agent_id": "{agent_id}",
-    "performance_score": {score}
-  }' --authorized-by master_orchestrator
-
-# --- SHARED STATE ---
-
-# Write performance metrics to evaluation section
-uv run python mas/core/shared_state_manager.py append \
-  --project-id {project_id} \
-  --section evaluation \
-  --field performance_metrics \
-  --value '{...metric record JSON...}' \
-  --agent evaluator_agent
-
-# Write quality findings
-uv run python mas/core/shared_state_manager.py append \
-  --project-id {project_id} \
-  --section evaluation \
-  --field quality_findings \
-  --value '{...finding JSON...}' \
-  --agent evaluator_agent
-
-# Read project state
-uv run python mas/core/shared_state_manager.py read \
-  --project-id {project_id} \
-  --path {path}
-
-# Show full state
-uv run python mas/core/shared_state_manager.py show --project-id {project_id}
-
-# --- HANDOFFS ---
-
-# Accept handoff from Master
-uv run python mas/core/handoff_engine.py accept \
-  --handoff-id {handoff_id} --project-id {project_id}
-
-# Return evaluation report to Master
-uv run python mas/core/handoff_engine.py create \
-  --project-id {project_id} \
-  --from evaluator_agent \
-  --to master_orchestrator \
-  --phase evaluation \
-  --task "Deliver evaluation report" \
-  --summary "{summary}"
+### Roster Update (after Master authorizes)
+```bash
+uv run python mas/core/capability_registry.py register --entry-json '{"agent_id":"{id}","performance_score":{score}}' --authorized-by master_orchestrator
 ```
 
 ## Evaluation Lifecycle
 
 ### Step 1 — Accept Handoff
 When Master sends you an evaluation request:
-```bash
-uv run python mas/core/handoff_engine.py accept \
-  --handoff-id {handoff_id} --project-id {project_id}
-```
-
-Read the full project state:
-```bash
-uv run python mas/core/shared_state_manager.py show --project-id {project_id}
-```
+1. Accept the handoff (see `_utilities.md` → Handoff Commands)
+2. Read the full project state (see `_utilities.md` → `show`)
 
 ### Step 2 — Collect Project Data
 Gather all available evidence:
@@ -166,49 +102,16 @@ Review the report for:
 - Missing documents that signal process gaps
 
 ### Step 6 — Write Findings to Shared State
-Write key findings:
-```bash
-# For each metric result
-uv run python mas/core/shared_state_manager.py append \
-  --project-id {project_id} \
-  --section evaluation \
-  --field performance_metrics \
-  --value '{
-    "metric": "{metric_name}",
-    "score": {score},
-    "agent_id": "project",
-    "evidence": "{evidence}",
-    "timestamp": "{now}"
-  }' \
-  --agent evaluator_agent
+Use `_utilities.md` → `append` to write to `evaluation.performance_metrics` and `evaluation.quality_findings`.
 
-# For each significant finding
-uv run python mas/core/shared_state_manager.py append \
-  --project-id {project_id} \
-  --section evaluation \
-  --field quality_findings \
-  --value '{
-    "finding_id": "qf-{seq}",
-    "category": "performance|documentation|governance|scope",
-    "description": "{description}",
-    "severity": "low|medium|high",
-    "related_agent": "{agent_id or null}",
-    "evidence": "{evidence}"
-  }' \
-  --agent evaluator_agent
-```
+For each metric result, include: `metric`, `score`, `agent_id`, `evidence`, `timestamp`.
+For each finding, include: `finding_id`, `category` (performance|documentation|governance|scope), `description`, `severity`, `related_agent`, `evidence`.
 
 ### Step 7 — Return to Master
-Send the completed evaluation back:
-```bash
-uv run python mas/core/handoff_engine.py create \
-  --project-id {project_id} \
-  --from evaluator_agent \
-  --to master_orchestrator \
-  --phase evaluation \
-  --task "Deliver evaluation report" \
-  --summary "Evaluation complete. Overall project score: {score:.1f}/100. {N_agents} agents evaluated. {N_exemplary} exemplary. {N_probation} flagged for probation review. Report at: projects/{project_id}/evaluation/evaluation_report.yaml"
-```
+Send the completed evaluation via handoff (see `_utilities.md` → `create`):
+- from: `evaluator_agent`, to: `master_orchestrator`, phase: `evaluation`
+- task: `Deliver evaluation report`
+- Summary must include: overall score, agent count, exemplary count, probation flags, report path
 
 Include in your handoff payload:
 - `report_id` — the evaluation report ID

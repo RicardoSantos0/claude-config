@@ -124,6 +124,51 @@ def _project_state(state: dict, agent_id: str) -> dict:
     return projected
 
 
+def _strip_empty(obj: Any) -> Any:
+    """Recursively remove None values, empty strings, empty lists, and empty dicts."""
+    if isinstance(obj, dict):
+        cleaned = {}
+        for k, v in obj.items():
+            v2 = _strip_empty(v)
+            if v2 is not None and v2 != "" and v2 != [] and v2 != {}:
+                cleaned[k] = v2
+        return cleaned or None
+    if isinstance(obj, list):
+        cleaned = [_strip_empty(i) for i in obj if _strip_empty(i) is not None]
+        return cleaned or None
+    return obj
+
+
+def _compact_projection(projected: dict) -> dict:
+    """
+    Produce a lean version of the projected state for token efficiency.
+    - Removes _meta section entirely (timestamps not useful in prompts)
+    - Strips None/empty values recursively
+    - Trims handoff_history to last 2 entries
+    - Trims consultation_requests to last active entry
+    """
+    compact = dict(projected)
+
+    # Drop _meta — agents don't need timestamps in prompts
+    compact.pop("_meta", None)
+
+    # Trim handoff history to most recent 2
+    if "workflow" in compact and isinstance(compact["workflow"], dict):
+        history = compact["workflow"].get("handoff_history")
+        if isinstance(history, list) and len(history) > 2:
+            compact["workflow"] = dict(compact["workflow"])
+            compact["workflow"]["handoff_history"] = history[-2:]
+
+    # Trim consultation requests to last 1
+    if "consultation" in compact and isinstance(compact["consultation"], dict):
+        reqs = compact["consultation"].get("consultation_requests")
+        if isinstance(reqs, list) and len(reqs) > 1:
+            compact["consultation"] = dict(compact["consultation"])
+            compact["consultation"]["consultation_requests"] = reqs[-1:]
+
+    return _strip_empty(compact) or {}
+
+
 def _fill_placeholders(template: str, context: dict) -> str:
     """Replace {placeholder} markers with values from context."""
     def replacer(match):
@@ -172,39 +217,40 @@ class PromptAssembler:
         """
         template = self.load_template(agent_id)
         projected = _project_state(state, agent_id)
+        compact = _compact_projection(projected)
 
         context = {
             "injected_project_id": state.get("core_identity", {}).get("project_id", ""),
             "injected_current_phase": state.get("core_identity", {}).get("current_phase", ""),
-            "injected_shared_state": yaml.dump(projected, default_flow_style=False,
+            "injected_shared_state": yaml.dump(compact, default_flow_style=False,
                                                allow_unicode=True, sort_keys=False),
         }
 
         # Add section-specific convenience keys
-        if "workflow" in projected:
+        if "workflow" in compact:
             context["injected_pending_items"] = yaml.dump(
-                projected["workflow"].get("pending_assignments", []),
+                compact["workflow"].get("pending_assignments", []),
                 default_flow_style=False, allow_unicode=True,
             )
             context["injected_recent_handoffs"] = yaml.dump(
-                projected["workflow"].get("handoff_history", [])[-5:],
+                compact["workflow"].get("handoff_history", [])[-2:],
                 default_flow_style=False, allow_unicode=True,
             )
 
         if "consultation" in projected:
             context["injected_active_consultation"] = yaml.dump(
-                projected["consultation"].get("consultation_requests", [])[-1:],
+                compact["consultation"].get("consultation_requests", [])[-1:],
                 default_flow_style=False, allow_unicode=True,
             )
 
-        if "project_definition" in projected:
-            spec = projected["project_definition"].get("clarified_specification")
+        if "project_definition" in compact:
+            spec = compact["project_definition"].get("clarified_specification")
             context["injected_clarified_specification"] = (
                 yaml.dump(spec, default_flow_style=False, allow_unicode=True)
                 if spec else "(not yet available)"
             )
             context["injected_original_brief"] = (
-                projected["project_definition"].get("original_brief") or "(not yet available)"
+                compact["project_definition"].get("original_brief") or "(not yet available)"
             )
 
         if extra_context:

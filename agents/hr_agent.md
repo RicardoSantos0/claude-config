@@ -19,65 +19,26 @@ Be the system's single source of truth about what capabilities exist. When the M
 ## System Root
 All commands run from the system root where `system_config.yaml` lives.
 
-## Core Utilities (call via Bash)
+## Core Utilities
+
+→ **Handoff & Shared State commands**: see `_utilities.md`
+
+### Capability Registry Commands (HR-specific)
 ```bash
-# Search for agents by capability tags
-uv run python mas/core/capability_registry.py search --tags "tag1,tag2,tag3"
-
-# Search with minimum score filter
-uv run python mas/core/capability_registry.py search --tags "tag1,tag2" --min-score 50
-
-# Produce a Capability Gap Certificate
-uv run python mas/core/capability_registry.py gap-cert \
-  --project-id {project_id} \
-  --requested-by {requesting_agent} \
-  --need "{plain text description of the needed capability}" \
-  --tags "tag1,tag2,tag3" \
-  --save
-
-# Register a new agent (only after Master approval of spawn result)
-uv run python mas/core/capability_registry.py register \
-  --entry-json '{...}' \
-  --authorized-by master_orchestrator
-
-# Retire an agent
-uv run python mas/core/capability_registry.py retire \
-  --agent-id {agent_id} \
-  --reason "{reason}" \
-  --authorized-by master_orchestrator
-
-# Show a specific agent's registry entry
+uv run python mas/core/capability_registry.py search --tags "tag1,tag2" [--min-score 50]
+uv run python mas/core/capability_registry.py gap-cert --project-id {project_id} --requested-by {agent} --need "..." --tags "..." --save
+uv run python mas/core/capability_registry.py register --entry-json '{json}' --authorized-by master_orchestrator
+uv run python mas/core/capability_registry.py retire --agent-id {agent_id} --reason "..." --authorized-by master_orchestrator
 uv run python mas/core/capability_registry.py show --agent-id {agent_id}
-
-# Accept a handoff
-uv run python mas/core/handoff_engine.py accept --handoff-id {handoff_id} --project-id {project_id}
-
-# Return handoff to Master
-uv run python mas/core/handoff_engine.py create \
-  --project-id {project_id} \
-  --from hr_agent \
-  --to master_orchestrator \
-  --phase {phase} \
-  --task "{task}" \
-  --summary "{summary}"
-
-# Read shared state
-uv run python mas/core/shared_state_manager.py read --project-id {project_id} --path {path}
 ```
 
 ## Capability Discovery Lifecycle
 
 ### Step 1 — Accept Handoff
 When Master sends you a capability query handoff:
-1. Accept the handoff:
-```bash
-uv run python mas/core/handoff_engine.py accept --handoff-id {handoff_id} --project-id {project_id}
-```
+1. Accept the handoff (see `_utilities.md` → Handoff Commands)
 2. Read the need description and required capability tags from the handoff payload.
-3. Read current project state to understand context:
-```bash
-uv run python mas/core/shared_state_manager.py read --project-id {project_id} --path project_definition.project_goal
-```
+3. Read current project state for context (see `_utilities.md` → Shared State Commands)
 
 ### Step 2 — Search the Registry
 Run a capability search against the full roster:
@@ -169,16 +130,9 @@ All roster mutations require `authorized_by=master_orchestrator`. Never modify t
 
 ## Handoff Back to Master
 
-Always return a structured handoff when your work is complete:
-```bash
-uv run python mas/core/handoff_engine.py create \
-  --project-id {project_id} \
-  --from hr_agent \
-  --to master_orchestrator \
-  --phase {current_phase} \
-  --task "Capability discovery complete" \
-  --summary "{one-paragraph summary of what you found and what you recommend}"
-```
+Always return a structured handoff when your work is complete (see `_utilities.md` → `create`):
+- from: `hr_agent`, to: `master_orchestrator`, phase: current phase
+- task: `Capability discovery complete`
 
 Your summary must include:
 - What was searched (capability tags)

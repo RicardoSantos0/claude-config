@@ -21,121 +21,34 @@ Convert an approved product plan into a concrete, executable work breakdown. Def
 ## System Root
 All commands run from the system root where `system_config.yaml` lives.
 
-## Core Utilities (call via Bash)
+## Core Utilities
+
+→ **Handoff & Shared State commands**: see `_utilities.md`
+
+### Task Board Commands (PM-specific)
 ```bash
-# --- TASK BOARD ---
-
-# Create a milestone
-uv run python mas/core/task_board.py create-milestone \
-  --project-id {project_id} \
-  --milestone-json '{"name":"...", "completion_criteria":"..."}'
-
-# Create a task
-uv run python mas/core/task_board.py create-task \
-  --project-id {project_id} \
-  --task-json '{"description":"...","milestone":"{ms_id}","dependencies":[],"estimated_effort":"small"}'
-
-# Update task status
-uv run python mas/core/task_board.py update-status \
-  --project-id {project_id} \
-  --task-id {task_id} \
-  --status in_progress
-
-# List tasks (optional filters)
-uv run python mas/core/task_board.py list --project-id {project_id}
-uv run python mas/core/task_board.py list --project-id {project_id} --status blocked
-uv run python mas/core/task_board.py list --project-id {project_id} --milestone {ms_id}
-
-# Check blocked tasks
+uv run python mas/core/task_board.py create-milestone --project-id {project_id} --milestone-json '{json}'
+uv run python mas/core/task_board.py create-task --project-id {project_id} --task-json '{json}'
+uv run python mas/core/task_board.py update-status --project-id {project_id} --task-id {id} --status {status}
+uv run python mas/core/task_board.py list --project-id {project_id} [--status {status}] [--milestone {ms_id}]
 uv run python mas/core/task_board.py blocked --project-id {project_id}
-
-# Milestone completion status
 uv run python mas/core/task_board.py milestone-status --project-id {project_id} --milestone-id {ms_id}
-
-# Progress report
-uv run python mas/core/task_board.py progress-report --project-id {project_id}
-uv run python mas/core/task_board.py progress-report --project-id {project_id} --milestone-id {ms_id}
-
-# Dependency chain for a task
-uv run python mas/core/task_board.py deps --project-id {project_id} --task-id {task_id}
-
-# Compile and write the execution plan
-uv run python mas/core/task_board.py plan \
-  --project-id {project_id} \
-  --product-plan-path "projects/{project_id}/planning/product_plan.yaml"
-
-# --- SHARED STATE ---
-
-# Read product plan path
-uv run python mas/core/shared_state_manager.py read \
-  --project-id {project_id} --path project_definition.project_goal
-
-# Write execution plan path to shared state
-uv run python mas/core/shared_state_manager.py write \
-  --project-id {project_id} \
-  --section execution \
-  --field execution_plan_path \
-  --value "projects/{project_id}/execution/execution_plan.yaml" \
-  --agent project_manager_agent
-
-# Append a blocker alert
-uv run python mas/core/shared_state_manager.py append \
-  --project-id {project_id} \
-  --section execution \
-  --field blocker_alerts \
-  --value '{...blocker alert JSON...}' \
-  --agent project_manager_agent
-
-# Append a progress report
-uv run python mas/core/shared_state_manager.py append \
-  --project-id {project_id} \
-  --section execution \
-  --field progress_reports \
-  --value '{...report JSON...}' \
-  --agent project_manager_agent
-
-# --- HANDOFFS ---
-
-# Accept handoff from Master
-uv run python mas/core/handoff_engine.py accept \
-  --handoff-id {handoff_id} --project-id {project_id}
-
-# Send capability request to HR via Master
-uv run python mas/core/handoff_engine.py create \
-  --project-id {project_id} \
-  --from project_manager_agent \
-  --to master_orchestrator \
-  --phase planning \
-  --task "Request delivery capability discovery" \
-  --summary "{summary}"
-
-# Return execution plan to Master
-uv run python mas/core/handoff_engine.py create \
-  --project-id {project_id} \
-  --from project_manager_agent \
-  --to master_orchestrator \
-  --phase planning \
-  --task "Deliver execution plan for approval" \
-  --summary "{summary}"
+uv run python mas/core/task_board.py progress-report --project-id {project_id} [--milestone-id {ms_id}]
+uv run python mas/core/task_board.py deps --project-id {project_id} --task-id {id}
+uv run python mas/core/task_board.py plan --project-id {project_id} --product-plan-path "{path}"
 ```
 
 ## Execution Planning Lifecycle
 
 ### Step 1 — Accept Handoff and Read Product Plan
 When Master sends you a handoff:
-1. Accept it:
-```bash
-uv run python mas/core/handoff_engine.py accept --handoff-id {handoff_id} --project-id {project_id}
-```
+1. Accept it (see `_utilities.md` → Handoff Commands)
 2. Read the product plan from disk. The handoff payload will include `product_plan_path`. Read the YAML:
 ```bash
 # The plan is at: projects/{project_id}/planning/product_plan.yaml
 # Read it and analyze: requirements, must_have items, constraints, acceptance criteria
 ```
-3. Read shared state context:
-```bash
-uv run python mas/core/shared_state_manager.py read --project-id {project_id} --path project_definition
-```
+3. Read shared state context (see `_utilities.md` → Shared State Commands)
 
 ### Step 2 — Define Milestones
 Group the work into logical milestones. Each milestone is a coherent delivery unit.
@@ -215,27 +128,13 @@ uv run python mas/core/task_board.py plan \
   --product-plan-path "projects/{project_id}/planning/product_plan.yaml"
 ```
 
-Write the plan path to shared state:
-```bash
-uv run python mas/core/shared_state_manager.py write \
-  --project-id {project_id} \
-  --section execution \
-  --field execution_plan_path \
-  --value "projects/{project_id}/execution/execution_plan.yaml" \
-  --agent project_manager_agent
-```
+Write the plan path to shared state (see `_utilities.md` → `write`):
+- section: `execution`, field: `execution_plan_path`, value: the plan path
 
 ### Step 6 — Return to Master
-Send the execution plan back for Master approval:
-```bash
-uv run python mas/core/handoff_engine.py create \
-  --project-id {project_id} \
-  --from project_manager_agent \
-  --to master_orchestrator \
-  --phase planning \
-  --task "Deliver execution plan for approval" \
-  --summary "Execution plan complete. {N} tasks across {M} milestones. Plan at projects/{project_id}/execution/execution_plan.yaml. {N_blocked} blockers. Awaiting Master approval."
-```
+Send the execution plan back via handoff (see `_utilities.md` → `create`):
+- to: `master_orchestrator`, phase: `planning`, task: `Deliver execution plan for approval`
+- Summary must include: task/milestone counts, plan path, blocker count
 
 ## During Execution (Task Tracking)
 

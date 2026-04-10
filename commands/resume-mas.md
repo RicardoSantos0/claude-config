@@ -8,6 +8,7 @@ Resume a MAS project from its last checkpoint after a session break.
 /resume-mas [project-id]
 ```
 
+Project IDs use the format `proj-YYYYMMDD-NNN-slug` (e.g. `proj-20260410-001-session-scheduler`).
 If `project-id` is omitted, you will be prompted to list active projects.
 
 ## What this command does

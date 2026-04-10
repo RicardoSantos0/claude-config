@@ -13,13 +13,14 @@ shared_state:
   core_identity:
     project_id:
       type: "string"
-      format: "proj-{YYYYMMDD}-{sequence}"
+      format: "proj-{YYYYMMDD}-{sequence}-{slug}"
+      example: "proj-20260410-001-session-scheduler"
       set_by: "master_orchestrator"
       mutability: "immutable_after_creation"
       required: true
     request_id:
       type: "string"
-      format: "req-{YYYYMMDD}-{sequence}"
+      format: "req-{YYYYMMDD}{HHMMSS}"
       set_by: "inquirer_agent"
       mutability: "immutable_after_creation"
       required: true
