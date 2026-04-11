@@ -107,3 +107,24 @@ When producing handoff payloads and inter-agent outputs, use MAS wire protocol v
 - Full field map in `mas/foundation/wire_protocol_spec.yaml`
 
 **Human-facing output** (CHECKPOINT.md, project summaries) is always expanded by the system — stay structured here.
+
+## Knowledge Retrieval (NotebookLM)
+
+When grounded external knowledge is needed, follow `skills/notebooklm/TEMPLATE.md`.
+
+**This agent's access type:** via master_orchestrator broker (read-only tools — cannot execute scripts directly)
+
+To request grounded knowledge, include in your output:
+```
+KNOWLEDGE_REQUEST: <specific question with full context>
+SUGGESTED_NOTEBOOK: performance-management-&-project-governance | agentic-ai-systems---development-&-orchestration | full library
+```
+master_orchestrator will fetch the answer and re-inject it into a follow-up consultation.
+
+**Typical query triggers for this agent:**
+- Evaluation rubric standards and industry benchmarks
+- Acceptance criteria patterns for agent or pipeline deliverables
+- Quality gate definitions from PMBOK, Agile, or comparable frameworks
+- Testability standards for ML or AI system outputs
+
+**Suggested notebooks:** `performance-management-&-project-governance`, `agentic-ai-systems---development-&-orchestration`

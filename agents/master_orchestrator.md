@@ -139,3 +139,26 @@ When producing handoff payloads and inter-agent outputs, use MAS wire protocol v
 - Full field map in `mas/foundation/wire_protocol_spec.yaml`
 
 **Human-facing output** (CHECKPOINT.md, project summaries) is always expanded by the system — stay structured here.
+
+## Knowledge Retrieval (NotebookLM)
+
+When grounded external knowledge is needed, or when brokering for a consultant that issued a KNOWLEDGE_REQUEST, follow `skills/notebooklm/TEMPLATE.md`.
+
+**This agent's access type:** direct (has execute access) + broker for read-only consultants
+
+```bash
+cd C:/Users/ricar/Documents/claude-config/skills/notebooklm
+PYTHONIOENCODING=utf-8 ".venv/Scripts/python.exe" scripts/ask_question.py \
+  --question "<question with full context>" \
+  --notebook-id "<id from notebooks.yaml or omit for full library>"
+```
+
+**Brokering for consultants:** When a consultant output contains a `KNOWLEDGE_REQUEST` block, fetch the answer using the above command and re-inject it into the next consultation request as a `grounded_context` field in the payload.
+
+**Typical query triggers for this agent:**
+- Architectural decisions involving agent design, orchestration, or governance patterns
+- Validating a phase transition decision against published project management standards
+- Grounding a spawn decision or capability gap assessment in prior art
+- Answering a consultant KNOWLEDGE_REQUEST before re-issuing consultation
+
+**Suggested notebooks:** `ai-agents-&-multi-agent-systems`, `performance-management-&-project-governance`

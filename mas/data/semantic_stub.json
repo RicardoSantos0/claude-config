@@ -1,0 +1,5 @@
+{
+  "version": "stub-1.0",
+  "note": "Semantic vector search not implemented. Upgrade path: replace with ChromaDB or pgvector.",
+  "entries": []
+}

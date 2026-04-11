@@ -170,3 +170,24 @@ When producing handoff payloads and inter-agent outputs, use MAS wire protocol v
 - Full field map in `mas/foundation/wire_protocol_spec.yaml`
 
 **Human-facing output** (CHECKPOINT.md, project summaries) is always expanded by the system — stay structured here.
+
+## Knowledge Retrieval (NotebookLM)
+
+When grounded external knowledge is needed during evaluation, follow `skills/notebooklm/TEMPLATE.md`.
+
+**This agent's access type:** direct (has execute access)
+
+```bash
+cd C:/Users/ricar/Documents/claude-config/skills/notebooklm
+PYTHONIOENCODING=utf-8 ".venv/Scripts/python.exe" scripts/ask_question.py \
+  --question "<question with full context>" \
+  --notebook-id "<id from notebooks.yaml or omit for full library>"
+```
+
+**Typical query triggers for this agent:**
+- Industry benchmarks for evaluation metrics (what score thresholds are standard)
+- Published evaluation rubrics for agent or ML pipeline quality
+- Grounding a low/high score judgment in documented evidence
+- Identifying whether a detected pattern is a known systemic issue in the literature
+
+**Suggested notebooks:** `performance-management-&-project-governance`, `agentic-ai-systems---development-&-orchestration`, `ai-agents-&-multi-agent-systems`

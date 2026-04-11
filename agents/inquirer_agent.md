@@ -112,3 +112,23 @@ Create a return handoff via `handoff_engine.py create` (see `_utilities.md`) wit
 ## Reading Your Current Task
 When invoked, check pending handoffs via `handoff_engine.py pending --to-agent inquirer_agent` (see `_utilities.md`).
 Read the payload, extract project_id and original_brief, then proceed through the intake lifecycle.
+
+## Knowledge Retrieval (NotebookLM)
+
+When grounded external knowledge is needed during intake, follow `skills/notebooklm/TEMPLATE.md`.
+
+**This agent's access type:** direct (has execute access)
+
+```bash
+cd C:/Users/ricar/Documents/claude-config/skills/notebooklm
+PYTHONIOENCODING=utf-8 ".venv/Scripts/python.exe" scripts/ask_question.py \
+  --question "<question with full context>" \
+  --notebook-id "<id from notebooks.yaml or omit for full library>"
+```
+
+**Typical query triggers for this agent:**
+- Clarifying what "success criteria" means in a specific domain before writing the spec
+- Checking whether a stated constraint is standard practice or unusual
+- Grounding ambiguous scope terms in published definitions
+
+**Suggested notebooks:** `performance-management-&-project-governance`, `ai-agents-&-multi-agent-systems`
