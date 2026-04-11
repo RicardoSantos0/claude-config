@@ -169,4 +169,131 @@ proposals:
   - proj-20260410-003-infarmed-workflow-opt
   rejected_by: master_orchestrator
   rejected_at: '2026-04-11T11:56:55.710556+00:00'
-last_updated: '2026-04-11T11:44:23.441840+00:00'
+- proposal_id: prop-0515a6a5
+  proposal_type: repeated_quality_issue
+  priority: 3
+  target_agent: system
+  target_artifact: policies/
+  description: 'Metric ''global_graph_contribution'' scored 5.0/100 (below threshold
+    70.0). Evidence: contributed_entries=1'
+  recommended_change: 'Investigate and address low score for metric ''global_graph_contribution''
+    (score: 5.0).'
+  evidence:
+  - eval-proj-20260411-001-agent-knowledge-and-flow-opt-20260411T21261
+  tradeoffs: No known tradeoffs for this metric.
+  minimum_evidence_met: true
+  systemic: false
+  status: approved
+  rejection_reason: ''
+  original_proposal_id: ''
+  created_at: '2026-04-11T21:26:43.807824+00:00'
+  project_ids:
+  - proj-20260411-001-agent-knowledge-and-flow-opt
+  approved_by: master_orchestrator
+  approved_at: '2026-04-11T21:27:58.978615+00:00'
+- proposal_id: prop-c3e0b259
+  proposal_type: governance_failure
+  priority: 4
+  target_agent: system
+  target_artifact: policies/governance_policy.yaml
+  description: 'Systemic finding: bottlenecks'
+  recommended_change: Review governance policy and update to address systemic pattern.
+  evidence:
+  - eval-proj-20260411-001-agent-knowledge-and-flow-opt-20260411T21261
+  tradeoffs: Policy changes may slow workflow if overly restrictive.
+  minimum_evidence_met: true
+  systemic: true
+  status: rejected
+  rejection_reason: 'False positive: P4 systemic governance_failure fired on label
+    name without real evidence. Eval shows 0 violations, score 86.0.'
+  original_proposal_id: ''
+  created_at: '2026-04-11T21:26:43.807824+00:00'
+  project_ids:
+  - proj-20260411-001-agent-knowledge-and-flow-opt
+  rejected_by: master_orchestrator
+  rejected_at: '2026-04-11T21:27:55.454365+00:00'
+- proposal_id: prop-7ffb91aa
+  proposal_type: governance_failure
+  priority: 4
+  target_agent: system
+  target_artifact: policies/governance_policy.yaml
+  description: 'Systemic finding: drift_detected'
+  recommended_change: Review governance policy and update to address systemic pattern.
+  evidence:
+  - eval-proj-20260411-001-agent-knowledge-and-flow-opt-20260411T21261
+  tradeoffs: Policy changes may slow workflow if overly restrictive.
+  minimum_evidence_met: true
+  systemic: true
+  status: rejected
+  rejection_reason: 'False positive: P4 systemic governance_failure fired on label
+    name without real evidence. Eval shows 0 violations, score 86.0.'
+  original_proposal_id: ''
+  created_at: '2026-04-11T21:26:43.807824+00:00'
+  project_ids:
+  - proj-20260411-001-agent-knowledge-and-flow-opt
+  rejected_by: master_orchestrator
+  rejected_at: '2026-04-11T21:27:55.613318+00:00'
+- proposal_id: prop-402b84ef
+  proposal_type: governance_failure
+  priority: 4
+  target_agent: system
+  target_artifact: policies/governance_policy.yaml
+  description: 'Systemic finding: pattern_issues'
+  recommended_change: Review governance policy and update to address systemic pattern.
+  evidence:
+  - eval-proj-20260411-001-agent-knowledge-and-flow-opt-20260411T21261
+  tradeoffs: Policy changes may slow workflow if overly restrictive.
+  minimum_evidence_met: true
+  systemic: true
+  status: rejected
+  rejection_reason: 'False positive: P4 systemic governance_failure fired on label
+    name without real evidence. Eval shows 0 violations, score 86.0.'
+  original_proposal_id: ''
+  created_at: '2026-04-11T21:26:43.807824+00:00'
+  project_ids:
+  - proj-20260411-001-agent-knowledge-and-flow-opt
+  rejected_by: master_orchestrator
+  rejected_at: '2026-04-11T21:27:55.771856+00:00'
+- proposal_id: prop-6b723283
+  proposal_type: governance_failure
+  priority: 4
+  target_agent: system
+  target_artifact: policies/governance_policy.yaml
+  description: 'Systemic finding: total_violations'
+  recommended_change: Review governance policy and update to address systemic pattern.
+  evidence:
+  - eval-proj-20260411-001-agent-knowledge-and-flow-opt-20260411T21261
+  tradeoffs: Policy changes may slow workflow if overly restrictive.
+  minimum_evidence_met: true
+  systemic: true
+  status: rejected
+  rejection_reason: 'False positive: P4 systemic governance_failure fired on label
+    name without real evidence. Eval shows 0 violations, score 86.0.'
+  original_proposal_id: ''
+  created_at: '2026-04-11T21:26:43.807824+00:00'
+  project_ids:
+  - proj-20260411-001-agent-knowledge-and-flow-opt
+  rejected_by: master_orchestrator
+  rejected_at: '2026-04-11T21:27:55.935320+00:00'
+- proposal_id: prop-f3b3a7e9
+  proposal_type: efficiency_improvement
+  priority: 2
+  target_agent: system
+  target_artifact: policies/
+  description: 'Improvement area identified: global_graph_contribution'
+  recommended_change: Investigate and address 'global_graph_contribution' in the relevant
+    agent or policy.
+  evidence:
+  - eval-proj-20260411-001-agent-knowledge-and-flow-opt-20260411T21261
+  tradeoffs: Investigation required before recommending specific change.
+  minimum_evidence_met: true
+  systemic: false
+  status: approved
+  rejection_reason: ''
+  original_proposal_id: ''
+  created_at: '2026-04-11T21:26:43.807824+00:00'
+  project_ids:
+  - proj-20260411-001-agent-knowledge-and-flow-opt
+  approved_by: master_orchestrator
+  approved_at: '2026-04-11T21:27:59.138458+00:00'
+last_updated: '2026-04-11T21:26:43.815546+00:00'
