@@ -30,6 +30,13 @@ mas/working_state/
 # MAS data and logs (not committed)
 mas/data/
 mas/logs/
+# Ignore all YAML, DB, and log files in mas/data and mas/logs
+mas/data/*
+mas/logs/*
+# Ignore all YAML, DB, and log files at the root of mas/
+mas/*.db
+mas/*.yaml
+mas/*.log
 
 # MAS roster (committed, but large binaries excluded)
 mas/roster/**/*.bak
