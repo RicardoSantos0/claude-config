@@ -27,6 +27,10 @@ mas/projects/
 audit.log
 mas/working_state/
 
+# MAS data and logs (not committed)
+mas/data/
+mas/logs/
+
 # MAS roster (committed, but large binaries excluded)
 mas/roster/**/*.bak
 
