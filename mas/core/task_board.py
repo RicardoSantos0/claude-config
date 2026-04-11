@@ -649,7 +649,7 @@ def main_cli(args=None) -> int:
             actual_effort=ns.actual_effort,
         )
         if found:
-            print(f"[ok] {ns.task_id} → {ns.status}")
+            print(f"[ok] {ns.task_id} -> {ns.status}")
         else:
             print(f"[error] Task not found: {ns.task_id}", file=sys.stderr)
             return 1

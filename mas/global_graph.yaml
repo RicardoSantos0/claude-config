@@ -1,5 +1,5 @@
 project_id: __global__
-saved_at: '2026-04-10T22:52:23.070285+00:00'
+saved_at: '2026-04-10T23:16:55.340567+00:00'
 nodes:
 - id: master_orchestrator
   entity_type: agent
@@ -266,6 +266,29 @@ nodes:
 - id: proj-test-002
   entity_type: project
   label: proj-test-002
+- id: proj-20260410-003-infarmed-workflow-opt:intake
+  entity_type: phase
+  label: proj-20260410-003-infarmed-workflow-opt:intake
+  project: proj-20260410-003-infarmed-workflow-opt
+- id: proj-20260410-003-infarmed-workflow-opt
+  entity_type: project
+  label: proj-20260410-003-infarmed-workflow-opt
+- id: proj-20260410-003-infarmed-workflow-opt:specification
+  entity_type: phase
+  label: proj-20260410-003-infarmed-workflow-opt:specification
+  project: proj-20260410-003-infarmed-workflow-opt
+- id: proj-20260410-003-infarmed-workflow-opt:planning
+  entity_type: phase
+  label: proj-20260410-003-infarmed-workflow-opt:planning
+  project: proj-20260410-003-infarmed-workflow-opt
+- id: proj-20260410-003-infarmed-workflow-opt:capability_discovery
+  entity_type: phase
+  label: proj-20260410-003-infarmed-workflow-opt:capability_discovery
+  project: proj-20260410-003-infarmed-workflow-opt
+- id: proj-20260410-003-infarmed-workflow-opt:execution
+  entity_type: phase
+  label: proj-20260410-003-infarmed-workflow-opt:execution
+  project: proj-20260410-003-infarmed-workflow-opt
 edges:
 - source: master_orchestrator
   target: inquirer_agent
@@ -8247,3 +8270,103 @@ edges:
   target: proj-test-002:intake
   rel_type: completed
   timestamp: '2026-04-10T22:52:23.035002+00:00'
+- source: master_orchestrator
+  target: scribe_agent
+  rel_type: handoff_to
+  project: proj-20260410-003-infarmed-workflow-opt
+  phase: intake
+  timestamp: '2026-04-10T23:02:10.969441+00:00'
+- source: proj-20260410-003-infarmed-workflow-opt
+  target: proj-20260410-003-infarmed-workflow-opt:intake
+  rel_type: completed
+  timestamp: '2026-04-10T23:02:10.969441+00:00'
+- source: scribe_agent
+  target: master_orchestrator
+  rel_type: handoff_to
+  project: proj-20260410-003-infarmed-workflow-opt
+  phase: intake
+  timestamp: '2026-04-10T23:03:37.451963+00:00'
+- source: proj-20260410-003-infarmed-workflow-opt
+  target: proj-20260410-003-infarmed-workflow-opt:intake
+  rel_type: completed
+  timestamp: '2026-04-10T23:03:37.451963+00:00'
+- source: master_orchestrator
+  target: inquirer_agent
+  rel_type: handoff_to
+  project: proj-20260410-003-infarmed-workflow-opt
+  phase: specification
+  timestamp: '2026-04-10T23:03:50.101399+00:00'
+- source: proj-20260410-003-infarmed-workflow-opt
+  target: proj-20260410-003-infarmed-workflow-opt:specification
+  rel_type: completed
+  timestamp: '2026-04-10T23:03:50.101399+00:00'
+- source: inquirer_agent
+  target: master_orchestrator
+  rel_type: handoff_to
+  project: proj-20260410-003-infarmed-workflow-opt
+  phase: specification
+  timestamp: '2026-04-10T23:06:00.805643+00:00'
+- source: proj-20260410-003-infarmed-workflow-opt
+  target: proj-20260410-003-infarmed-workflow-opt:specification
+  rel_type: completed
+  timestamp: '2026-04-10T23:06:00.805643+00:00'
+- source: master_orchestrator
+  target: product_manager_agent
+  rel_type: handoff_to
+  project: proj-20260410-003-infarmed-workflow-opt
+  phase: planning
+  timestamp: '2026-04-10T23:06:09.162095+00:00'
+- source: proj-20260410-003-infarmed-workflow-opt
+  target: proj-20260410-003-infarmed-workflow-opt:planning
+  rel_type: completed
+  timestamp: '2026-04-10T23:06:09.162095+00:00'
+- source: product_manager_agent
+  target: master_orchestrator
+  rel_type: handoff_to
+  project: proj-20260410-003-infarmed-workflow-opt
+  phase: planning
+  timestamp: '2026-04-10T23:07:02.193196+00:00'
+- source: proj-20260410-003-infarmed-workflow-opt
+  target: proj-20260410-003-infarmed-workflow-opt:planning
+  rel_type: completed
+  timestamp: '2026-04-10T23:07:02.193196+00:00'
+- source: master_orchestrator
+  target: hr_agent
+  rel_type: handoff_to
+  project: proj-20260410-003-infarmed-workflow-opt
+  phase: capability_discovery
+  timestamp: '2026-04-10T23:12:17.221063+00:00'
+- source: proj-20260410-003-infarmed-workflow-opt
+  target: proj-20260410-003-infarmed-workflow-opt:capability_discovery
+  rel_type: completed
+  timestamp: '2026-04-10T23:12:17.221063+00:00'
+- source: hr_agent
+  target: master_orchestrator
+  rel_type: handoff_to
+  project: proj-20260410-003-infarmed-workflow-opt
+  phase: capability_discovery
+  timestamp: '2026-04-10T23:12:48.609597+00:00'
+- source: proj-20260410-003-infarmed-workflow-opt
+  target: proj-20260410-003-infarmed-workflow-opt:capability_discovery
+  rel_type: completed
+  timestamp: '2026-04-10T23:12:48.609597+00:00'
+- source: master_orchestrator
+  target: project_manager_agent
+  rel_type: handoff_to
+  project: proj-20260410-003-infarmed-workflow-opt
+  phase: execution
+  timestamp: '2026-04-10T23:12:58.634057+00:00'
+- source: proj-20260410-003-infarmed-workflow-opt
+  target: proj-20260410-003-infarmed-workflow-opt:execution
+  rel_type: completed
+  timestamp: '2026-04-10T23:12:58.634057+00:00'
+- source: project_manager_agent
+  target: master_orchestrator
+  rel_type: handoff_to
+  project: proj-20260410-003-infarmed-workflow-opt
+  phase: execution
+  timestamp: '2026-04-10T23:16:55.335684+00:00'
+- source: proj-20260410-003-infarmed-workflow-opt
+  target: proj-20260410-003-infarmed-workflow-opt:execution
+  rel_type: completed
+  timestamp: '2026-04-10T23:16:55.335684+00:00'

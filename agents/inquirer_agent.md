@@ -73,10 +73,16 @@ Write via intake checker (see `_utilities.md` → Intake Commands):
 uv run python mas/core/intake_checker.py write-spec --project-id {project_id} --spec-json '{final_spec_as_json}'
 ```
 
-Also update shared state via `shared_state_manager.py write` to `project_definition.clarified_specification` (see `_utilities.md`).
+Also update shared state via `shared_state_manager.py write` (see `_utilities.md`) to **both** fields:
+1. `project_definition.clarified_specification` — the full spec object
+2. `project_definition.success_criteria` — the list of success criteria strings extracted from the spec (so downstream evaluators can measure goal_achievement)
+
+If `success_criteria` is present in the final spec (even as a single string), write it as a list to `project_definition.success_criteria`.
 
 ### Step 7 — Handoff to Master
-Create a return handoff via `handoff_engine.py create` (see `_utilities.md`) with summary including score, readiness, and spec path.
+Create a return handoff via `handoff_engine.py create` (see `_utilities.md`) with:
+- Summary including score, readiness, and spec path
+- `shared_state_fields_modified` listing `project_definition.clarified_specification` **and** `project_definition.success_criteria`
 
 ## Q&A Rules
 - Maximum **3 rounds** of questions per intake

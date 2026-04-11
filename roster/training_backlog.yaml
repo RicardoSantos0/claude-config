@@ -13,7 +13,7 @@ proposals:
   tradeoffs: No known tradeoffs for this metric.
   minimum_evidence_met: true
   systemic: false
-  status: approved
+  status: applied
   rejection_reason: ''
   original_proposal_id: ''
   created_at: '2026-04-11T11:44:23.438840+00:00'
@@ -21,6 +21,7 @@ proposals:
   - proj-20260410-003-infarmed-workflow-opt
   approved_by: master_orchestrator
   approved_at: '2026-04-11T11:57:20.098816+00:00'
+  applied_at: '2026-04-11T12:00:02.733451+00:00'
 - proposal_id: prop-90b0980f
   proposal_type: repeated_quality_issue
   priority: 3
@@ -169,4 +170,4 @@ proposals:
   - proj-20260410-003-infarmed-workflow-opt
   rejected_by: master_orchestrator
   rejected_at: '2026-04-11T11:56:55.710556+00:00'
-last_updated: '2026-04-11T11:44:23.441840+00:00'
+last_updated: '2026-04-11T11:57:57.612683+00:00'

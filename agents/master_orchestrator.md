@@ -71,6 +71,9 @@ At each phase transition:
 3. Update `core_identity.current_phase`
 4. Log the transition in `workflow.completed_phases` via append
 
+At the **review** phase (before handing to evaluator):
+5. **Spawn opportunity review** (required — see `evaluation_policy.yaml`): Assess whether any capability gap covered by a fallback (HR gap note, Claude Code substitution) warrants a formal spawn proposal. Record the assessment — spawn, defer, or no-action — with rationale and alternatives_considered in the decision log. Never skip this step even if the answer is "no-action".
+
 At project **closure** (advancing to `closed`):
 5. Run `EpisodeWriter.replay_from_state(project_id, shared_state)` to ensure the global graph is populated from all project history — this is mandatory, not optional. Global graph contribution is an evaluation metric.
 

@@ -48,6 +48,30 @@ evaluation_policy:
     probation_threshold: 60  # Average score below this → probation flag
     exemplary_threshold: 90  # Score above this → flag output as exemplary
 
+  # --- SPAWN OPPORTUNITY REVIEW ---
+  # At project review/evaluation, Master MUST assess whether capability gaps
+  # discovered during execution warrant a formal spawn proposal. This applies
+  # even when Claude Code covered the gap — recurring gaps erode efficiency and
+  # consistency across projects. A specialized agent will always outperform a
+  # general-purpose executor for focused, repeated work.
+  spawn_opportunity_review:
+    when: "review phase — before evaluation handoff"
+    trigger_conditions:
+      - "HR issued a gap certificate or gap note during capability_discovery"
+      - "A required capability was covered by Claude Code as a fallback (not a formal agent)"
+      - "The same capability gap appeared in a prior project"
+      - "The work performed was specialized enough that a domain-focused agent would reduce context overhead"
+    assessment_questions:
+      - "Is this capability likely to be needed in future projects?"
+      - "Would a specialized agent deliver more consistent, focused output than a general executor?"
+      - "Is the scope of the capability narrow enough to fit a well-defined agent definition?"
+      - "Does the spawning policy (max 3/project, 1/phase) allow a spawn here?"
+    outcomes:
+      spawn_proposal: "Forward gap cert to spawner_agent if all trigger conditions and policy allow"
+      defer: "Log the gap and threshold — trainer_agent may surface it after 2+ recurrences"
+      no_action: "Document reasoning — gap was project-specific and unlikely to recur"
+    record_in: "decisions.decision_log with rationale and alternatives_considered"
+
   # --- TOKEN TRACKING ---
   token_tracking:
     enabled: true

@@ -1,0 +1,11 @@
+[00:25:03] INFO  Log file: logs\run_20260411_002503.log
+[00:25:03] INFO  START [DRY RUN] new-data=20241114_DadosRecebidos.xlsx
+[00:25:03] INFO  STEP Merge provisional dispensation
+[00:25:03] INFO  DRY  C:\Users\ricar\Documents\claude-config\.venv\Scripts\python.exe merge_dispensa_provisoria.py data\raw\Dispensa_Prov_Emb data\raw\dados_treino_disp_prov.xlsx data\raw\dados_treino_disp_prov.xlsx
+[00:25:03] INFO  STEP Inference
+[00:25:03] INFO  DRY  C:\Users\ricar\Documents\claude-config\.venv\Scripts\python.exe run_inference.py --old_data data\raw\dados_treino_disp_prov.xlsx --new_data E:\Side Projects\Infarmed_Teste\dados\20241114_DadosRecebidos.xlsx --out_combined ./predictions/combined_predictions.xlsx --out_all ./predictions/all_predictions.xlsx
+[00:25:03] INFO  STEP Update historical data
+[00:25:03] INFO  DRY  C:\Users\ricar\Documents\claude-config\.venv\Scripts\python.exe update_data.py --old_data data\raw\dados_treino_disp_prov.xlsx --new_data E:\Side Projects\Infarmed_Teste\dados\20241114_DadosRecebidos.xlsx --overwrite
+[00:25:03] INFO  SKIP performance_tracker.py (add in M3)
+[00:25:03] INFO  SKIP drift_detector.py (add in M3)
+[00:25:03] INFO  DONE Pipeline complete in 0.0s

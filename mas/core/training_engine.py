@@ -56,7 +56,7 @@ PRIORITY_SCORES: dict[str, int] = {
 LOW_THRESHOLD = 70.0
 SYSTEMIC_MIN_REPORTS = 2   # need this many reports showing same issue
 
-PROPOSAL_STATUSES = {"pending", "approved", "rejected", "applied"}
+PROPOSAL_STATUSES = {"pending", "approved", "rejected", "applied", "deferred"}
 
 
 # ---------------------------------------------------------------------------
