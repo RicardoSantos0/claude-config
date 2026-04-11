@@ -1,5 +1,5 @@
 project_id: __global__
-saved_at: '2026-04-11T17:26:18.788702+00:00'
+saved_at: '2026-04-11T21:31:45.541843+00:00'
 nodes:
 - id: master_orchestrator
   entity_type: agent
@@ -289,6 +289,86 @@ nodes:
   entity_type: phase
   label: proj-20260410-003-infarmed-workflow-opt:execution
   project: proj-20260410-003-infarmed-workflow-opt
+- id: proj-20260411-001-agent-knowledge-and-flow-opt
+  entity_type: project
+  label: proj-20260411-001-agent-knowledge-and-flow-opt
+- id: unknown
+  entity_type: agent
+  label: unknown
+- id: ep-decision-2026-04-11-212551
+  entity_type: decision
+  label: 'decision:'
+  timestamp: '2026-04-11T21:25:51.642795+00:00'
+- id: ep-artifact-2026-04-11-212551
+  entity_type: artifact
+  label: 'artifact:'
+  timestamp: '2026-04-11T21:25:51.873633+00:00'
+- id: ep-artifact-2026-04-11-212552
+  entity_type: artifact
+  label: 'artifact:'
+  timestamp: '2026-04-11T21:25:52.333133+00:00'
+- id: ep-finding-2026-04-11-212552
+  entity_type: finding
+  label: 'finding:req-003 target was 30% reduction. Actual: 95.6% in summary mode,
+    99.1% in reanch'
+  timestamp: '2026-04-11T21:25:52.793843+00:00'
+- id: ep-decision-2026-04-11-212849
+  entity_type: decision
+  label: 'decision:'
+  timestamp: '2026-04-11T21:28:49.929713+00:00'
+- id: ep-decision-2026-04-11-212850
+  entity_type: decision
+  label: 'decision:'
+  timestamp: '2026-04-11T21:28:50.407468+00:00'
+- id: ep-artifact-2026-04-11-212850
+  entity_type: artifact
+  label: artifact:log_helpers.py
+  timestamp: '2026-04-11T21:28:50.879281+00:00'
+- id: ep-finding-2026-04-11-212851
+  entity_type: finding
+  label: 'finding:'
+  timestamp: '2026-04-11T21:28:51.346411+00:00'
+- id: proj-20260411-001-agent-knowledge-and-flow-opt:decision:No dedicated librarian
+    agent
+  entity_type: decision
+  label: decision:No dedicated librarian agent
+  project: proj-20260411-001-agent-knowledge-and-flow-opt
+- id: proj-20260411-001-agent-knowledge-and-flow-opt:decision:Tiered storage SQLite
+    episodic YAML sema
+  entity_type: decision
+  label: decision:Tiered storage SQLite episodic YAML sema
+  project: proj-20260411-001-agent-knowledge-and-flow-opt
+- id: proj-20260411-001-agent-knowledge-and-flow-opt:decision:Token baseline project-over-project
+    tren
+  entity_type: decision
+  label: decision:Token baseline project-over-project tren
+  project: proj-20260411-001-agent-knowledge-and-flow-opt
+- id: proj-20260411-001-agent-knowledge-and-flow-opt:artifact:context_compressor.py
+  entity_type: artifact
+  label: artifact:context_compressor.py
+  project: proj-20260411-001-agent-knowledge-and-flow-opt
+- id: proj-20260411-001-agent-knowledge-and-flow-opt:artifact:log_helpers.py
+  entity_type: artifact
+  label: artifact:log_helpers.py
+  project: proj-20260411-001-agent-knowledge-and-flow-opt
+- id: proj-20260411-001-agent-knowledge-and-flow-opt:artifact:handoff_helpers.py
+  entity_type: artifact
+  label: artifact:handoff_helpers.py
+  project: proj-20260411-001-agent-knowledge-and-flow-opt
+- id: proj-20260411-001-agent-knowledge-and-flow-opt:artifact:notebooks.yaml
+  entity_type: artifact
+  label: artifact:notebooks.yaml
+  project: proj-20260411-001-agent-knowledge-and-flow-opt
+- id: 'proj-20260411-001-agent-knowledge-and-flow-opt:finding:NotebookLM broker pattern
+    for read-only '
+  entity_type: finding
+  label: 'finding:NotebookLM broker pattern for read-only '
+  project: proj-20260411-001-agent-knowledge-and-flow-opt
+- id: proj-20260411-001-agent-knowledge-and-flow-opt:finding:Context compression exceeds
+    target by 3x
+  entity_type: finding
+  label: finding:Context compression exceeds target by 3x
+  project: proj-20260411-001-agent-knowledge-and-flow-opt
 edges:
 - source: master_orchestrator
   target: inquirer_agent
@@ -14100,3 +14180,93 @@ edges:
   target: proj-test-002:intake
   rel_type: completed
   timestamp: '2026-04-11T17:26:18.741152+00:00'
+- source: unknown
+  target: ep-decision-2026-04-11-212551
+  rel_type: decided
+  timestamp: '2026-04-11T21:25:51.407542+00:00'
+- source: unknown
+  target: ep-decision-2026-04-11-212551
+  rel_type: decided
+  timestamp: '2026-04-11T21:25:51.642795+00:00'
+- source: unknown
+  target: ep-artifact-2026-04-11-212551
+  rel_type: produced
+  timestamp: '2026-04-11T21:25:51.873633+00:00'
+- source: unknown
+  target: ep-artifact-2026-04-11-212552
+  rel_type: produced
+  timestamp: '2026-04-11T21:25:52.102955+00:00'
+- source: unknown
+  target: ep-artifact-2026-04-11-212552
+  rel_type: produced
+  timestamp: '2026-04-11T21:25:52.333133+00:00'
+- source: master_orchestrator
+  target: ep-decision-2026-04-11-212849
+  rel_type: decided
+  timestamp: '2026-04-11T21:28:49.929713+00:00'
+- source: master_orchestrator
+  target: ep-decision-2026-04-11-212850
+  rel_type: decided
+  timestamp: '2026-04-11T21:28:50.168033+00:00'
+- source: master_orchestrator
+  target: ep-decision-2026-04-11-212850
+  rel_type: decided
+  timestamp: '2026-04-11T21:28:50.407468+00:00'
+- source: master_orchestrator
+  target: ep-artifact-2026-04-11-212850
+  rel_type: produced
+  timestamp: '2026-04-11T21:28:50.643015+00:00'
+- source: master_orchestrator
+  target: ep-artifact-2026-04-11-212850
+  rel_type: produced
+  timestamp: '2026-04-11T21:28:50.879281+00:00'
+- source: master_orchestrator
+  target: proj-20260411-001-agent-knowledge-and-flow-opt:decision:No dedicated librarian
+    agent
+  rel_type: decided
+  project: proj-20260411-001-agent-knowledge-and-flow-opt
+  timestamp: '2026-04-11T21:31:43.650151+00:00'
+- source: master_orchestrator
+  target: proj-20260411-001-agent-knowledge-and-flow-opt:decision:Tiered storage SQLite
+    episodic YAML sema
+  rel_type: decided
+  project: proj-20260411-001-agent-knowledge-and-flow-opt
+  timestamp: '2026-04-11T21:31:43.883288+00:00'
+- source: master_orchestrator
+  target: proj-20260411-001-agent-knowledge-and-flow-opt:decision:Token baseline project-over-project
+    tren
+  rel_type: decided
+  project: proj-20260411-001-agent-knowledge-and-flow-opt
+  timestamp: '2026-04-11T21:31:44.116922+00:00'
+- source: master_orchestrator
+  target: proj-20260411-001-agent-knowledge-and-flow-opt:artifact:context_compressor.py
+  rel_type: produced
+  project: proj-20260411-001-agent-knowledge-and-flow-opt
+  timestamp: '2026-04-11T21:31:44.349386+00:00'
+- source: master_orchestrator
+  target: proj-20260411-001-agent-knowledge-and-flow-opt:artifact:log_helpers.py
+  rel_type: produced
+  project: proj-20260411-001-agent-knowledge-and-flow-opt
+  timestamp: '2026-04-11T21:31:44.587872+00:00'
+- source: master_orchestrator
+  target: proj-20260411-001-agent-knowledge-and-flow-opt:artifact:handoff_helpers.py
+  rel_type: produced
+  project: proj-20260411-001-agent-knowledge-and-flow-opt
+  timestamp: '2026-04-11T21:31:44.824606+00:00'
+- source: master_orchestrator
+  target: proj-20260411-001-agent-knowledge-and-flow-opt:artifact:notebooks.yaml
+  rel_type: produced
+  project: proj-20260411-001-agent-knowledge-and-flow-opt
+  timestamp: '2026-04-11T21:31:45.064145+00:00'
+- source: evaluator_agent
+  target: 'proj-20260411-001-agent-knowledge-and-flow-opt:finding:NotebookLM broker
+    pattern for read-only '
+  rel_type: related_to
+  project: proj-20260411-001-agent-knowledge-and-flow-opt
+  timestamp: '2026-04-11T21:31:45.300915+00:00'
+- source: evaluator_agent
+  target: proj-20260411-001-agent-knowledge-and-flow-opt:finding:Context compression
+    exceeds target by 3x
+  rel_type: related_to
+  project: proj-20260411-001-agent-knowledge-and-flow-opt
+  timestamp: '2026-04-11T21:31:45.539843+00:00'

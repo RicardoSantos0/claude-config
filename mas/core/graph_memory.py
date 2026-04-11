@@ -528,9 +528,33 @@ class GraphMemory:
 
         elif episode_type == "decision":
             made_by = data.get("made_by", "")
+            label = data.get("label", data.get("decision", ""))
             if made_by:
                 _ensure_agent(made_by)
             _ensure_project()
+            if label:
+                dec_id = f"{pid}:decision:{label[:40]}"
+                if not g.has_node(dec_id):
+                    g.add_node(dec_id, "decision",
+                               label=f"decision:{label[:40]}", project=pid)
+                if made_by:
+                    g.add_edge(made_by, dec_id, "decided",
+                               project=pid, timestamp=ts)
+
+        elif episode_type == "finding":
+            agent = data.get("agent", "")
+            label = data.get("label", data.get("description", ""))
+            if agent:
+                _ensure_agent(agent)
+            _ensure_project()
+            if label:
+                find_id = f"{pid}:finding:{label[:40]}"
+                if not g.has_node(find_id):
+                    g.add_node(find_id, "finding",
+                               label=f"finding:{label[:40]}", project=pid)
+                if agent:
+                    g.add_edge(agent, find_id, "found",
+                               project=pid, timestamp=ts)
 
     # ------------------------------------------------------------------
     # Episode handlers
