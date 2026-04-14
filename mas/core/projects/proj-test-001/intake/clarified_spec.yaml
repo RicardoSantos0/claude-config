@@ -1,0 +1,24 @@
+project_id: proj-test-001
+created_at: '2026-04-14T15:41:32.177150+00:00'
+created_by: inquirer_agent
+quality_score: 1.0
+ready_for_handoff: true
+specification:
+  project_goal: Build a reporting dashboard for the sales team
+  problem_statement: Sales team lacks visibility into pipeline metrics
+  scope:
+    inclusions:
+    - Dashboard UI
+    - Salesforce integration
+    exclusions:
+    - Mobile app
+  constraints: Must use existing AWS infrastructure
+  success_criteria: Dashboard used by >80% of sales team within 30 days
+  expected_outputs:
+  - Deployed web dashboard
+  stakeholders: VP Sales, Sales Ops team
+  dependencies: Salesforce CRM API, AWS account
+  timeline_expectations: Launch before Q3 planning cycle (end of July)
+  quality_expectations: Production-ready, >90% uptime SLA
+  prior_art: Previous attempt with Tableau abandoned due to licensing costs
+unresolved: []

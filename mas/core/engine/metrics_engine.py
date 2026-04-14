@@ -42,7 +42,7 @@ from core.utils.token_counter import TokenCounter
 
 _token_counter = TokenCounter()
 
-ROOT = Path(__file__).parent.parent
+ROOT = Path(__file__).parent.parent.parent
 
 EXEMPLARY_THRESHOLD = 90.0    # Agent score above this → flagged exemplary
 PROBATION_THRESHOLD = 60.0    # Agent score below this → recommend probation

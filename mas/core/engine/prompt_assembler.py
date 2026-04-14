@@ -15,7 +15,7 @@ from core.utils.token_counter import TokenCounter
 
 _token_counter = TokenCounter()
 
-ROOT = Path(__file__).parent.parent
+ROOT = Path(__file__).parent.parent.parent
 AGENTS_DIR = ROOT / "agents"
 
 # Maps agent_id → list of state paths the agent may read

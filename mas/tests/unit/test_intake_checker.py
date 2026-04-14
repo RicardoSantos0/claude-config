@@ -306,7 +306,7 @@ class TestFileIO:
         ) if False else None  # avoid real disk write — use monkeypatch below
 
     def test_record_qa_writes_to_correct_path(self, checker, tmp_path, monkeypatch):
-        import core.intake_checker as ic
+        import core.engine.intake_checker as ic
         monkeypatch.setattr(ic, "ROOT", tmp_path)
         path = checker.record_qa("proj-test-001", 1,
                                  [{"field": "project_goal", "question": "Q?",
@@ -316,7 +316,7 @@ class TestFileIO:
         assert path.name == "clarification_qa.yaml"
 
     def test_record_qa_accumulates_rounds(self, checker, tmp_path, monkeypatch):
-        import core.intake_checker as ic
+        import core.engine.intake_checker as ic
         monkeypatch.setattr(ic, "ROOT", tmp_path)
         entry = [{"field": "project_goal", "question": "Q?",
                   "answer": "A!", "resolved": True}]
@@ -329,7 +329,7 @@ class TestFileIO:
         assert len(data["rounds"]) == 2
 
     def test_write_spec_creates_file(self, checker, tmp_path, monkeypatch, complete_spec):
-        import core.intake_checker as ic
+        import core.engine.intake_checker as ic
         monkeypatch.setattr(ic, "ROOT", tmp_path)
         result = checker.analyze(complete_spec)
         path = checker.write_spec("proj-test-001", complete_spec, result)
@@ -337,7 +337,7 @@ class TestFileIO:
         assert path.name == "clarified_spec.yaml"
 
     def test_write_spec_includes_score(self, checker, tmp_path, monkeypatch, complete_spec):
-        import core.intake_checker as ic
+        import core.engine.intake_checker as ic
         import yaml
         monkeypatch.setattr(ic, "ROOT", tmp_path)
         result = checker.analyze(complete_spec)

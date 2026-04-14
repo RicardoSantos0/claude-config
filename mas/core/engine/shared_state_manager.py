@@ -29,7 +29,7 @@ from typing import Any
 
 import yaml
 
-ROOT = Path(__file__).parent.parent
+ROOT = Path(__file__).parent.parent.parent
 
 from core.access_control import (
     ACCESS_CONTROL, is_authorized, get_mode, get_mutability,

@@ -293,7 +293,7 @@ class TestWireComplianceProposal:
     def test_wire_proposal_minimum_evidence_not_met_below_10(self, engine):
         """minimum_evidence_met is False when wire_total is 5-9."""
         state = _make_state(wire_compliant=1, wire_total=7, compliance_rate=0.14)
-        with patch("core.training_engine.MetricsEngine", return_value=self._mock_me_all_high()):
+        with patch("core.engine.training_engine.MetricsEngine", return_value=self._mock_me_all_high()):
             proposals = engine.generate_communication_proposals(state, "proj-test-001")
         assert len(proposals) == 1
         assert proposals[0].minimum_evidence_met is False

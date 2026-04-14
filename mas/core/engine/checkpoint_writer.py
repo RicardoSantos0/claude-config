@@ -32,7 +32,7 @@ try:
 except ImportError:
     _wire_decoder = None  # type: ignore
 
-ROOT = Path(__file__).parent.parent   # mas/
+ROOT = Path(__file__).parent.parent.parent   # mas/
 
 
 def _fmt_ts(ts: str | None) -> str:

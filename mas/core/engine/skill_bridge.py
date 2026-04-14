@@ -21,7 +21,7 @@ try:
 except ImportError:
     _tc = None  # type: ignore
 
-ROOT = Path(__file__).parent.parent        # mas/
+ROOT = Path(__file__).parent.parent.parent  # mas/
 REPO_ROOT = ROOT.parent                    # claude-config/
 SKILLS_DIR = REPO_ROOT / "skills"
 
@@ -306,7 +306,9 @@ def main() -> int:
             print(f"  {s.name:<30} {s.description[:60]}")
     elif ns.command == "check":
         ok = bridge.is_skill_authorized(ns.agent, ns.skill)
-        print("yes" if ok else "no")
+        status = "AUTHORIZED" if ok else "DENIED"
+        print(f"[{status}] agent='{ns.agent}' skill='{ns.skill}'")
+        return 0 if ok else 1
 
     return 0
 

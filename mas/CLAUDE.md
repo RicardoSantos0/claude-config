@@ -156,14 +156,14 @@ mas/
 Drop a Markdown file in `mas/domains/{domain_name}.md`.
 The `domain_expert` consultant will inject it automatically when `decision_type` matches.
 
-Current domains: `software_engineering` · `data_science` · `content_creation` · `research` . `learning_analytics`
+Current domains: `software_engineering` · `data_science` · `content_creation` · `research` · `learning_analytics`
 
 ---
 
 ## Running Tests
 
 ```bash
-uv run pytest                          # All 590 tests
+uv run pytest                          # All 937 tests
 uv run pytest -x                       # Stop on first failure
 uv run pytest -v mas/tests/unit/       # Verbose unit tests
 uv run pytest mas/tests/integration/test_full_lifecycle.py -v  # E2E lifecycle

@@ -4,6 +4,56 @@ All notable changes to this repository are documented here.
 
 ---
 
+## [2026-04-14] Post-restructuring migration fixes
+
+### Engine Subpackage Migration
+
+Completed migration of all MAS core modules from `mas/core/*.py` to `mas/core/engine/*.py`
+after the `95da5c6` folder restructuring commit left several files truncated or incomplete.
+
+**Files restored / completed:**
+
+- `mas/core/engine/training_engine.py` — restored 396 missing lines:
+  `get_by_status`, all `_metric_to_*` helpers, `generate_communication_proposals`,
+  module-level helpers `_proposal_to_dict` / `_count_by` / `_save_backlog`, and CLI
+- `mas/core/engine/consultation_engine.py` — restored 225 missing lines:
+  compact wire format class methods (`compact_request/response`, `expand_request/response`)
+  and CLI (`create`, `show`, `check-risk` sub-commands)
+- `mas/core/engine/metrics_engine.py` — merged two divergent versions:
+  added `score_phase_efficiency`, `score_decision_quality` (new implementations),
+  plus all agent-level scoring (`score_task_completion_rate`, `score_handoff_quality`,
+  `score_boundary_adherence`), communication metrics (`score_token_efficiency`, etc.),
+  and aggregate / evaluate / produce_report / save_report methods
+- `mas/core/engine/skill_bridge.py` — fixed `ROOT` path depth (was `parent.parent`,
+  now `parent.parent.parent`); fixed `check` CLI to output `AUTHORIZED`/`DENIED`
+  with correct exit codes
+- `mas/core/engine/graph_memory.py` — fixed `ROOT` path depth
+- `mas/core/engine/consultation_engine.py` — fixed `DOMAINS_DIR` path depth
+
+**Config / utils fixes:**
+
+- `mas/core/utils/config.py` — added missing functions re-exported by `core.config`:
+  `get_model_for_agent`, `get_api_key`, `get_projects_dir`, `get_governance_mode`, `get_defaults`
+- `mas/core/wire_protocol.py` — added `__main__` entry-point so `python -m core.wire_protocol` works
+- `mas/core/capability_registry.py` — added `__main__` entry-point
+
+**Test fixes (stale patch targets after restructuring):**
+
+- `mas/tests/integration/test_comms_metrics_flow.py` — updated 3 patch targets from
+  `core.training_engine.MetricsEngine` → `core.engine.training_engine.MetricsEngine`
+- `mas/tests/unit/test_training_engine_comms.py` — updated 1 patch target (same)
+- `mas/tests/unit/test_intake_checker.py` — updated 4 monkeypatch targets from
+  `core.intake_checker` → `core.engine.intake_checker`
+
+**Agent utilities:**
+
+- `agents/_utilities.md` — updated all CLI paths from `mas/core/*.py` to
+  `mas/core/engine/*.py` (canonical location); added Consultation and Graph Memory sections
+
+**Result:** 937 tests pass (0 failures), up from 583 pre-migration.
+
+---
+
 ## [2026-04-11] proj-20260411-001-agent-knowledge-and-flow-opt
 
 ### Agent Knowledge Retrieval (NotebookLM integration — 8 agents)
