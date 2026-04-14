@@ -1056,7 +1056,7 @@ class TestFullProjectLifecycle:
             spawned_request, registry_data, project_dir,
             gap_cert=gap_cert, phase="execution",
         )
-        from core.spawn_policy import DENY
+        from core.engine.spawn_policy import DENY
         assert result.decision == DENY
         violation_codes = [v.code for v in result.all_violations]
         assert any("recursive" in c.lower() or "t2" in c.lower() or "tier" in c.lower()

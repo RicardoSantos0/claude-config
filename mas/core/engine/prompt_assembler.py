@@ -294,7 +294,7 @@ class PromptAssembler:
         Requires graph to have ≥ 5 nodes to be useful.
         """
         try:
-            from core.graph_memory import GraphMemory
+            from core.engine.graph_memory import GraphMemory
             project_id = state.get("core_identity", {}).get("project_id", "")
             if not project_id:
                 return ""
