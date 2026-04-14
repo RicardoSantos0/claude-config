@@ -31,8 +31,8 @@ import yaml
 ROOT = Path(__file__).parent.parent.parent
 
 from .shared_state_manager import SharedStateManager
-from core.audit_logger import get_logger
-from core.checkpoint_writer import CheckpointWriter
+from core.engine.audit_logger import get_logger
+from core.engine.checkpoint_writer import CheckpointWriter
 from core.wire_protocol import WireValidator as _WireValidator
 
 _wire_validator = _WireValidator()
@@ -146,7 +146,7 @@ class HandoffEngine:
 
         # Record handoff episode in graph memory (non-fatal)
         try:
-            from core.graph_memory import EpisodeWriter as _EpisodeWriter
+            from core.engine.graph_memory import EpisodeWriter as _EpisodeWriter
             _EpisodeWriter(sm.project_id).record_handoff(handoff)
         except Exception:
             pass

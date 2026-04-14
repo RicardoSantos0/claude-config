@@ -31,12 +31,12 @@ import yaml
 
 ROOT = Path(__file__).parent.parent.parent
 
-from core.access_control import (
+from core.engine.access_control import (
     ACCESS_CONTROL, is_authorized, get_mode, get_mutability,
     requires_append_only, is_immutable, is_immutable_after_approval,
     SYSTEM, ANY_AGENT,
 )
-from core.audit_logger import AuditLogger, get_logger
+from core.engine.audit_logger import AuditLogger, get_logger
 
 
 @dataclass
@@ -248,7 +248,7 @@ class SharedStateManager:
         # 6. Checkpoint after phase transitions
         if field_path == "core_identity.current_phase":
             try:
-                from core.checkpoint_writer import CheckpointWriter
+                from core.engine.checkpoint_writer import CheckpointWriter
                 CheckpointWriter(self.project_id).write()
             except Exception:
                 pass  # checkpoint failure must never block state writes
