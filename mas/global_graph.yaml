@@ -1,5 +1,5 @@
 project_id: __global__
-saved_at: '2026-04-14T21:43:09.915960+00:00'
+saved_at: '2026-04-14T21:56:30.576578+00:00'
 nodes:
 - id: master_orchestrator
   entity_type: agent
@@ -215,6 +215,29 @@ nodes:
 - id: proj-sqlite-test-001
   entity_type: project
   label: proj-sqlite-test-001
+- id: proj-20260414-001-true-mas-integration:intake
+  entity_type: phase
+  label: proj-20260414-001-true-mas-integration:intake
+  project: proj-20260414-001-true-mas-integration
+- id: proj-20260414-001-true-mas-integration
+  entity_type: project
+  label: proj-20260414-001-true-mas-integration
+- id: proj-20260414-001-true-mas-integration:specification
+  entity_type: phase
+  label: proj-20260414-001-true-mas-integration:specification
+  project: proj-20260414-001-true-mas-integration
+- id: proj-20260414-001-true-mas-integration:planning
+  entity_type: phase
+  label: proj-20260414-001-true-mas-integration:planning
+  project: proj-20260414-001-true-mas-integration
+- id: proj-20260414-001-true-mas-integration:capability_discovery
+  entity_type: phase
+  label: proj-20260414-001-true-mas-integration:capability_discovery
+  project: proj-20260414-001-true-mas-integration
+- id: proj-20260414-001-true-mas-integration:execution
+  entity_type: phase
+  label: proj-20260414-001-true-mas-integration:execution
+  project: proj-20260414-001-true-mas-integration
 edges:
 - source: master_orchestrator
   target: scribe_agent
@@ -5446,3 +5469,103 @@ edges:
   target: proj-test-002:intake
   rel_type: completed
   timestamp: '2026-04-14T21:43:09.854183+00:00'
+- source: master_orchestrator
+  target: inquirer_agent
+  rel_type: handoff_to
+  project: proj-20260414-001-true-mas-integration
+  phase: intake
+  timestamp: '2026-04-14T21:47:57.921795+00:00'
+- source: proj-20260414-001-true-mas-integration
+  target: proj-20260414-001-true-mas-integration:intake
+  rel_type: completed
+  timestamp: '2026-04-14T21:47:57.921795+00:00'
+- source: inquirer_agent
+  target: master_orchestrator
+  rel_type: handoff_to
+  project: proj-20260414-001-true-mas-integration
+  phase: intake
+  timestamp: '2026-04-14T21:47:58.351424+00:00'
+- source: proj-20260414-001-true-mas-integration
+  target: proj-20260414-001-true-mas-integration:intake
+  rel_type: completed
+  timestamp: '2026-04-14T21:47:58.351424+00:00'
+- source: master_orchestrator
+  target: product_manager_agent
+  rel_type: handoff_to
+  project: proj-20260414-001-true-mas-integration
+  phase: specification
+  timestamp: '2026-04-14T21:53:07.855447+00:00'
+- source: proj-20260414-001-true-mas-integration
+  target: proj-20260414-001-true-mas-integration:specification
+  rel_type: completed
+  timestamp: '2026-04-14T21:53:07.855447+00:00'
+- source: product_manager_agent
+  target: master_orchestrator
+  rel_type: handoff_to
+  project: proj-20260414-001-true-mas-integration
+  phase: specification
+  timestamp: '2026-04-14T21:53:08.195461+00:00'
+- source: proj-20260414-001-true-mas-integration
+  target: proj-20260414-001-true-mas-integration:specification
+  rel_type: completed
+  timestamp: '2026-04-14T21:53:08.195461+00:00'
+- source: master_orchestrator
+  target: project_manager_agent
+  rel_type: handoff_to
+  project: proj-20260414-001-true-mas-integration
+  phase: planning
+  timestamp: '2026-04-14T21:53:56.382354+00:00'
+- source: proj-20260414-001-true-mas-integration
+  target: proj-20260414-001-true-mas-integration:planning
+  rel_type: completed
+  timestamp: '2026-04-14T21:53:56.382354+00:00'
+- source: project_manager_agent
+  target: master_orchestrator
+  rel_type: handoff_to
+  project: proj-20260414-001-true-mas-integration
+  phase: planning
+  timestamp: '2026-04-14T21:54:50.813423+00:00'
+- source: proj-20260414-001-true-mas-integration
+  target: proj-20260414-001-true-mas-integration:planning
+  rel_type: completed
+  timestamp: '2026-04-14T21:54:50.813423+00:00'
+- source: master_orchestrator
+  target: hr_agent
+  rel_type: handoff_to
+  project: proj-20260414-001-true-mas-integration
+  phase: capability_discovery
+  timestamp: '2026-04-14T21:55:07.474379+00:00'
+- source: proj-20260414-001-true-mas-integration
+  target: proj-20260414-001-true-mas-integration:capability_discovery
+  rel_type: completed
+  timestamp: '2026-04-14T21:55:07.474379+00:00'
+- source: master_orchestrator
+  target: hr_agent
+  rel_type: handoff_to
+  project: proj-20260414-001-true-mas-integration
+  phase: capability_discovery
+  timestamp: '2026-04-14T21:55:30.177317+00:00'
+- source: proj-20260414-001-true-mas-integration
+  target: proj-20260414-001-true-mas-integration:capability_discovery
+  rel_type: completed
+  timestamp: '2026-04-14T21:55:30.177317+00:00'
+- source: hr_agent
+  target: master_orchestrator
+  rel_type: handoff_to
+  project: proj-20260414-001-true-mas-integration
+  phase: capability_discovery
+  timestamp: '2026-04-14T21:55:30.720867+00:00'
+- source: proj-20260414-001-true-mas-integration
+  target: proj-20260414-001-true-mas-integration:capability_discovery
+  rel_type: completed
+  timestamp: '2026-04-14T21:55:30.720867+00:00'
+- source: master_orchestrator
+  target: evaluator_agent
+  rel_type: handoff_to
+  project: proj-20260414-001-true-mas-integration
+  phase: execution
+  timestamp: '2026-04-14T21:56:30.571181+00:00'
+- source: proj-20260414-001-true-mas-integration
+  target: proj-20260414-001-true-mas-integration:execution
+  rel_type: completed
+  timestamp: '2026-04-14T21:56:30.571181+00:00'
