@@ -14,7 +14,7 @@ These tests verify the governance boundary behavior, not functional correctness
 
 import pytest
 from pathlib import Path
-from core.skill_bridge import SkillBridge, SKILL_ACCESS
+from core.engine.skill_bridge import SkillBridge, SKILL_ACCESS
 
 
 # ---------------------------------------------------------------------------
@@ -93,7 +93,7 @@ class TestUnauthorizedNotGovernanceViolation:
         Skill access denial must not write to shared_state governance_violations.
         The skill bridge is a tool layer — not a state governance boundary.
         """
-        import core.skill_bridge as sb_mod
+        import core.engine.skill_bridge as sb_mod
         monkeypatch.setattr(sb_mod, "ROOT", tmp_path)
         bridge = SkillBridge(skills_dir=skills_dir)
 
@@ -109,7 +109,7 @@ class TestUnauthorizedNotGovernanceViolation:
 
     def test_audit_log_written_for_denial(self, tmp_path, skills_dir, monkeypatch):
         """Denied invocations ARE logged in skill_audit_log.yaml, not shared_state."""
-        import core.skill_bridge as sb_mod
+        import core.engine.skill_bridge as sb_mod
         monkeypatch.setattr(sb_mod, "ROOT", tmp_path)
         bridge = SkillBridge(skills_dir=skills_dir)
 

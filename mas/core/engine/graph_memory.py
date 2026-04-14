@@ -54,7 +54,7 @@ try:
 except ImportError:
     _tc = None  # type: ignore
 
-ROOT = Path(__file__).parent.parent   # mas/
+ROOT = Path(__file__).parent.parent.parent   # mas/
 
 # Special sentinel: the cross-project global graph stored at mas/global_graph.yaml
 GLOBAL_PROJECT_ID = "__global__"

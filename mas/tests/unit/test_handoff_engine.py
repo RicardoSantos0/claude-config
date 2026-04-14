@@ -2,8 +2,8 @@
 Unit Tests — HandoffEngine
 """
 import pytest
-from core.shared_state_manager import SharedStateManager
-from core.handoff_engine import HandoffEngine, REQUIRED_PAYLOAD_KEYS
+from core.engine.shared_state_manager import SharedStateManager
+from core.engine.handoff_engine import HandoffEngine, REQUIRED_PAYLOAD_KEYS
 
 
 @pytest.fixture

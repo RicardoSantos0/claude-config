@@ -14,11 +14,11 @@ import pytest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-from core.shared_state_manager import SharedStateManager
-from core.handoff_engine import HandoffEngine
-from core.wire_protocol import encode, WireValidator
-from core.training_engine import TrainingEngine, LOW_THRESHOLD
-from core.metrics_engine import MetricsEngine
+from core.engine.shared_state_manager import SharedStateManager
+from core.engine.handoff_engine import HandoffEngine
+from core.utils.wire_protocol import encode, WireValidator
+from core.engine.training_engine import TrainingEngine, LOW_THRESHOLD
+from core.engine.metrics_engine import MetricsEngine
 
 
 # ---------------------------------------------------------------------------
@@ -27,8 +27,8 @@ from core.metrics_engine import MetricsEngine
 
 @pytest.fixture(autouse=True)
 def patch_roots(tmp_path, monkeypatch):
-    import core.shared_state_manager as ssm_mod
-    import core.checkpoint_writer as cw_mod
+    import core.engine.shared_state_manager as ssm_mod
+    import core.engine.checkpoint_writer as cw_mod
     monkeypatch.setattr(ssm_mod, "ROOT", tmp_path)
     monkeypatch.setattr(cw_mod, "ROOT", tmp_path)
     return tmp_path
@@ -152,7 +152,7 @@ class TestTrainingEngineCommunicationProposals:
         mock_me.score_context_injection_efficiency.return_value = self._make_low_score_result(40.0)
         mock_me.score_consultation_overhead.return_value = self._make_low_score_result(40.0)
 
-        with patch("core.training_engine.MetricsEngine", return_value=mock_me):
+        with patch("core.engine.training_engine.MetricsEngine", return_value=mock_me):
             proposals = te.generate_communication_proposals(state, "proj-comms-flow-001")
 
         assert len(proposals) == 4
@@ -168,7 +168,7 @@ class TestTrainingEngineCommunicationProposals:
         mock_me.score_context_injection_efficiency.return_value = self._make_low_score_result(95.0)
         mock_me.score_consultation_overhead.return_value = self._make_low_score_result(95.0)
 
-        with patch("core.training_engine.MetricsEngine", return_value=mock_me):
+        with patch("core.engine.training_engine.MetricsEngine", return_value=mock_me):
             proposals = te.generate_communication_proposals(state, "proj-comms-flow-001")
 
         assert len(proposals) == 0
@@ -187,7 +187,7 @@ class TestTrainingEngineCommunicationProposals:
                    "score_context_injection_efficiency", "score_consultation_overhead"]:
             getattr(mock_me, fn).return_value = self._make_low_score_result(90.0)
 
-        with patch("core.training_engine.MetricsEngine", return_value=mock_me):
+        with patch("core.engine.training_engine.MetricsEngine", return_value=mock_me):
             proposals = te_engine.generate_communication_proposals(state, "proj-comms-flow-001")
 
         assert len(proposals) == 1

@@ -29,16 +29,16 @@ import yaml
 from pathlib import Path
 from datetime import datetime, timezone
 
-from core.shared_state_manager import SharedStateManager
-from core.handoff_engine import HandoffEngine
+from core.engine.shared_state_manager import SharedStateManager
+from core.engine.handoff_engine import HandoffEngine
 from core.intake_checker import IntakeChecker
-from core.capability_registry import CapabilityRegistry
-from core.task_board import TaskBoard
-from core.metrics_engine import MetricsEngine
+from core.engine.capability_registry import CapabilityRegistry
+from core.engine.task_board import TaskBoard
+from core.engine.metrics_engine import MetricsEngine
 from core.spawn_policy import SpawnPolicyEngine, build_agent_package, record_spawn, DRAFT
-from core.training_engine import TrainingEngine
-from core.consultation_engine import ConsultationEngine, ALL_CONSULTANTS
-import core.training_engine as te
+from core.engine.training_engine import TrainingEngine
+from core.engine.consultation_engine import ConsultationEngine, ALL_CONSULTANTS
+import core.engine.training_engine as te
 
 
 # ---------------------------------------------------------------------------

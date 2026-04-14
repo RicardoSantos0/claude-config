@@ -17,7 +17,7 @@ import pytest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from core.prompt_assembler import (
+from core.engine.prompt_assembler import (
     PromptAssembler, _project_state, _compact_projection, STATE_PROJECTIONS
 )
 
@@ -279,7 +279,7 @@ class TestTokenCount:
 class TestGraphContext:
     def test_graph_context_empty_for_sparse_graph(self, assembler, tmp_path, monkeypatch):
         """Graph with < 5 nodes → no graph context injected into prompt."""
-        import core.graph_memory as gm_mod
+        import core.engine.graph_memory as gm_mod
         monkeypatch.setattr(gm_mod, "ROOT", tmp_path)
 
         state = _make_state(project_id="proj-gc-sparse-001")
@@ -289,10 +289,10 @@ class TestGraphContext:
 
     def test_graph_context_injected_when_dense(self, assembler, tmp_path, monkeypatch):
         """Graph with ≥ 5 nodes → facts injected into prompt."""
-        import core.graph_memory as gm_mod
+        import core.engine.graph_memory as gm_mod
         monkeypatch.setattr(gm_mod, "ROOT", tmp_path)
 
-        from core.graph_memory import GraphMemory
+        from core.engine.graph_memory import GraphMemory
         gm = GraphMemory("proj-gc-dense-001")
         # Add 6 handoff episodes to populate graph
         for i in range(6):
@@ -309,11 +309,11 @@ class TestGraphContext:
 
     def test_graph_context_never_raises(self, assembler, tmp_path, monkeypatch):
         """Even if GraphMemory raises internally, _graph_context returns '' silently."""
-        import core.graph_memory as gm_mod
+        import core.engine.graph_memory as gm_mod
         monkeypatch.setattr(gm_mod, "ROOT", tmp_path)
 
         # Populate graph so node_count >= 5
-        from core.graph_memory import GraphMemory
+        from core.engine.graph_memory import GraphMemory
         gm = GraphMemory("proj-gc-raise-001")
         for i in range(6):
             gm.write_episode("handoff", {

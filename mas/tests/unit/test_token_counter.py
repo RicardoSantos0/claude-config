@@ -13,7 +13,7 @@ Tests cover:
 import math
 import pytest
 
-from core.token_counter import TokenCounter, count, count_messages, count_dict
+from core.utils.token_counter import TokenCounter, count, count_messages, count_dict
 
 
 # ---------------------------------------------------------------------------
@@ -207,7 +207,7 @@ class TestCLI:
     def test_cli_basic(self):
         import subprocess, sys
         result = subprocess.run(
-            [sys.executable, "-m", "core.token_counter", "hello world"],
+            [sys.executable, "-m", "core.utils.token_counter", "hello world"],
             capture_output=True, text=True,
             cwd=str(__import__("pathlib").Path(__file__).parent.parent.parent)
         )

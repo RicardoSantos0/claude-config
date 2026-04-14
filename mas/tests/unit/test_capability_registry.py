@@ -5,7 +5,7 @@ Tests scoring, search, roster mutations, gap certificates, version history.
 import pytest
 import yaml
 from pathlib import Path
-from core.capability_registry import (
+from core.engine.capability_registry import (
     CapabilityRegistry,
     MatchResult,
     GapCertificate,

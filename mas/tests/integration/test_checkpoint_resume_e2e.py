@@ -12,12 +12,12 @@ from pathlib import Path
 import pytest
 import yaml
 
-import core.shared_state_manager as ssm_mod
-import core.checkpoint_writer as cw_mod
+import core.engine.shared_state_manager as ssm_mod
+import core.engine.checkpoint_writer as cw_mod
 
-from core.shared_state_manager import SharedStateManager
-from core.handoff_engine import HandoffEngine
-from core.checkpoint_writer import CheckpointWriter
+from core.engine.shared_state_manager import SharedStateManager
+from core.engine.handoff_engine import HandoffEngine
+from core.engine.checkpoint_writer import CheckpointWriter
 
 
 # ---------------------------------------------------------------------------
@@ -200,7 +200,7 @@ class TestCheckpointNonFatal:
         sm.initialize(request_id="req-nonfatal-001")
 
         # Monkeypatch CheckpointWriter.write to raise
-        import core.checkpoint_writer as cw_module
+        import core.engine.checkpoint_writer as cw_module
         original_write = cw_module.CheckpointWriter.write
 
         def bad_write(self):
@@ -226,7 +226,7 @@ class TestCheckpointNonFatal:
         sm = SharedStateManager(project_id)
         sm.initialize(request_id="req-nonfatal-002")
 
-        import core.checkpoint_writer as cw_module
+        import core.engine.checkpoint_writer as cw_module
 
         def bad_write(self):
             raise OSError("no space left")

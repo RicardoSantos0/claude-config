@@ -156,7 +156,7 @@ mas/
 Drop a Markdown file in `mas/domains/{domain_name}.md`.
 The `domain_expert` consultant will inject it automatically when `decision_type` matches.
 
-Current domains: `software_engineering` · `data_science` · `content_creation` · `research`
+Current domains: `software_engineering` · `data_science` · `content_creation` · `research` . `learning_analytics`
 
 ---
 

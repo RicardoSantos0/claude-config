@@ -6,8 +6,8 @@ Scribe accepts → Scribe creates project folder → Scribe returns handoff.
 """
 import pytest
 from pathlib import Path
-from core.shared_state_manager import SharedStateManager
-from core.handoff_engine import HandoffEngine
+from core.engine.shared_state_manager import SharedStateManager
+from core.engine.handoff_engine import HandoffEngine
 
 
 @pytest.fixture

@@ -1,0 +1,47 @@
+project_id: proj-resume-test-006
+saved_at: '2026-04-14T15:37:41.458424+00:00'
+nodes:
+- id: master_orchestrator
+  entity_type: agent
+  label: master_orchestrator
+- id: product_manager_agent
+  entity_type: agent
+  label: product_manager_agent
+- id: specification
+  entity_type: phase
+  label: specification
+- id: ep-handoff-2026-04-14-153638
+  entity_type: handoff
+  label: "handoff:master_orchestrator\u2192product_manager_agent:specification"
+  task: Write product plan
+  timestamp: '2026-04-14T15:36:38.075715+00:00'
+- id: ep-handoff-2026-04-14-153741
+  entity_type: handoff
+  label: "handoff:master_orchestrator\u2192product_manager_agent:specification"
+  task: Write product plan
+  timestamp: '2026-04-14T15:37:41.458035+00:00'
+edges:
+- source: master_orchestrator
+  target: ep-handoff-2026-04-14-153638
+  rel_type: handoff_to
+  timestamp: '2026-04-14T15:36:38.075715+00:00'
+- source: ep-handoff-2026-04-14-153638
+  target: product_manager_agent
+  rel_type: handoff_to
+  timestamp: '2026-04-14T15:36:38.075715+00:00'
+- source: ep-handoff-2026-04-14-153638
+  target: specification
+  rel_type: completed
+  timestamp: '2026-04-14T15:36:38.075715+00:00'
+- source: master_orchestrator
+  target: ep-handoff-2026-04-14-153741
+  rel_type: handoff_to
+  timestamp: '2026-04-14T15:37:41.458035+00:00'
+- source: ep-handoff-2026-04-14-153741
+  target: product_manager_agent
+  rel_type: handoff_to
+  timestamp: '2026-04-14T15:37:41.458035+00:00'
+- source: ep-handoff-2026-04-14-153741
+  target: specification
+  rel_type: completed
+  timestamp: '2026-04-14T15:37:41.458035+00:00'

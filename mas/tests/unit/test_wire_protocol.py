@@ -15,7 +15,7 @@ Tests cover:
 """
 
 import pytest
-from core.wire_protocol import (
+from core.utils.wire_protocol import (
     WireEncoder, WireDecoder, WireValidator,
     encode, decode, validate, is_wire_format, encode_decode_roundtrip,
     STATUS_CODES, WIRE_VERSION,

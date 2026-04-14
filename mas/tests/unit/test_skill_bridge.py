@@ -18,7 +18,7 @@ Tests cover:
 import pytest
 import json
 from pathlib import Path
-from core.skill_bridge import SkillBridge, SKILL_ACCESS
+from core.engine.skill_bridge import SkillBridge, SKILL_ACCESS
 
 
 # ---------------------------------------------------------------------------
@@ -232,7 +232,7 @@ class TestInvocation:
 class TestAuditLog:
     def _bridge_with_real_root(self, tmp_path, skills_dir) -> SkillBridge:
         """Bridge with ROOT pointing to tmp_path so audit log writes somewhere real."""
-        import core.skill_bridge as sb_mod
+        import core.engine.skill_bridge as sb_mod
         bridge = SkillBridge(skills_dir=skills_dir)
         # Monkey-patch ROOT for the audit path
         original_root = sb_mod.ROOT
@@ -241,7 +241,7 @@ class TestAuditLog:
         sb_mod.ROOT = original_root
 
     def test_write_and_read_audit_entry(self, tmp_path, skills_dir, monkeypatch):
-        import core.skill_bridge as sb_mod
+        import core.engine.skill_bridge as sb_mod
         monkeypatch.setattr(sb_mod, "ROOT", tmp_path)
         bridge = SkillBridge(skills_dir=skills_dir)
 
@@ -260,7 +260,7 @@ class TestAuditLog:
         assert log[0]["outcome"] == "ok"
 
     def test_multiple_entries_accumulate(self, tmp_path, skills_dir, monkeypatch):
-        import core.skill_bridge as sb_mod
+        import core.engine.skill_bridge as sb_mod
         monkeypatch.setattr(sb_mod, "ROOT", tmp_path)
         bridge = SkillBridge(skills_dir=skills_dir)
 
@@ -279,7 +279,7 @@ class TestAuditLog:
         assert len(log) == 3
 
     def test_empty_log_for_unknown_project(self, tmp_path, skills_dir, monkeypatch):
-        import core.skill_bridge as sb_mod
+        import core.engine.skill_bridge as sb_mod
         monkeypatch.setattr(sb_mod, "ROOT", tmp_path)
         bridge = SkillBridge(skills_dir=skills_dir)
         assert bridge.get_audit_log("proj-no-such-project") == []
@@ -326,7 +326,7 @@ class TestCLI:
     def test_discover_cli(self, skills_dir):
         import subprocess, sys
         result = subprocess.run(
-            [sys.executable, "-m", "core.skill_bridge", "discover"],
+            [sys.executable, "-m", "core.engine.skill_bridge", "discover"],
             capture_output=True, text=True,
             cwd=str(Path(__file__).parent.parent.parent),
         )
@@ -336,7 +336,7 @@ class TestCLI:
     def test_check_authorized_cli(self, skills_dir):
         import subprocess, sys
         result = subprocess.run(
-            [sys.executable, "-m", "core.skill_bridge", "check",
+            [sys.executable, "-m", "core.engine.skill_bridge", "check",
              "--agent", "master_orchestrator", "--skill", "research-extract"],
             capture_output=True, text=True,
             cwd=str(Path(__file__).parent.parent.parent),
@@ -347,7 +347,7 @@ class TestCLI:
     def test_check_denied_cli(self, skills_dir):
         import subprocess, sys
         result = subprocess.run(
-            [sys.executable, "-m", "core.skill_bridge", "check",
+            [sys.executable, "-m", "core.engine.skill_bridge", "check",
              "--agent", "hr_agent", "--skill", "research-extract"],
             capture_output=True, text=True,
             cwd=str(Path(__file__).parent.parent.parent),

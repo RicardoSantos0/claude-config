@@ -16,9 +16,9 @@ Tests verify:
 """
 
 import pytest
-from core.shared_state_manager import SharedStateManager
-from core.handoff_engine import HandoffEngine
-from core.wire_protocol import validate, is_wire_format, encode
+from core.engine.shared_state_manager import SharedStateManager
+from core.engine.handoff_engine import HandoffEngine
+from core.utils.wire_protocol import validate, is_wire_format, encode
 
 
 # ---------------------------------------------------------------------------
@@ -27,8 +27,8 @@ from core.wire_protocol import validate, is_wire_format, encode
 
 @pytest.fixture(autouse=True)
 def patch_roots(tmp_path, monkeypatch):
-    import core.shared_state_manager as ssm_mod
-    import core.checkpoint_writer as cw_mod
+    import core.engine.shared_state_manager as ssm_mod
+    import core.engine.checkpoint_writer as cw_mod
     monkeypatch.setattr(ssm_mod, "ROOT", tmp_path)
     monkeypatch.setattr(cw_mod, "ROOT", tmp_path)
     return tmp_path
@@ -209,7 +209,7 @@ class TestValidatorBehavior:
 class TestComplianceNonFatal:
     def test_compliance_tracking_survives_checkpoint_error(self, tmp_path, monkeypatch):
         """Even if checkpoint writer raises, handoff and compliance tracking succeed."""
-        import core.checkpoint_writer as cw_mod
+        import core.engine.checkpoint_writer as cw_mod
 
         def bad_write(self):
             raise OSError("disk full")

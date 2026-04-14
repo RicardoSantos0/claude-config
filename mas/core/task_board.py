@@ -1,123 +1,13 @@
-"""Re-exports the implementation from core.engine.task_board."""
+"""Compatibility wrapper: task_board moved to core.engine.task_board"""
 
 from core.engine.task_board import *  # noqa: F401,F403
+
 
 if __name__ == "__main__":
     import sys
     from core.engine.task_board import main_cli
+
     sys.exit(main_cli())
-
-import sys
-import json
-import argparse
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Optional
-
-import yaml
-
-ROOT = Path(__file__).parent.parent
-
-VALID_TASK_STATUSES = {"planned", "assigned", "in_progress", "blocked", "completed", "failed"}
-VALID_MILESTONE_STATUSES = {"pending", "in_progress", "completed", "blocked"}
-VALID_EFFORT_TIERS = {"trivial", "small", "medium", "large", "extra-large"}
-OVER_EFFORT_MULTIPLIER = 2   # flag if actual > 2x typical of effort tier
-
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
-# ---------------------------------------------------------------------------
-# TaskBoard
-# ---------------------------------------------------------------------------
-
-class TaskBoard:
-    """
-    Manages tasks and milestones for a single project.
-    All data is stored in projects/{project_id}/execution/task_board.yaml.
-    """
-
-    def __init__(self, project_id: str, projects_root: Optional[Path] = None):
-        self.project_id = project_id
-        if projects_root is None:
-            from core.config import get_projects_dir
-            projects_root = get_projects_dir()
-        self.execution_dir = projects_root / project_id / "execution"
-        self.board_path = self.execution_dir / "task_board.yaml"
-        self.plan_path = self.execution_dir / "execution_plan.yaml"
-
-    # ------------------------------------------------------------------
-    # Loading and saving
-    # ------------------------------------------------------------------
-
-    def _ensure_dir(self) -> None:
-        self.execution_dir.mkdir(parents=True, exist_ok=True)
-
-    def _load(self) -> dict:
-        """Load task board from disk, initializing if absent."""
-        if not self.board_path.exists():
-            return {"tasks": [], "milestones": []}
-        with open(self.board_path, encoding="utf-8") as f:
-            data = yaml.safe_load(f) or {}
-        data.setdefault("tasks", [])
-        data.setdefault("milestones", [])
-        return data
-
-    def _save(self, data: dict) -> None:
-        self._ensure_dir()
-        with open(self.board_path, "w", encoding="utf-8") as f:
-            yaml.dump(data, f, default_flow_style=False,
-                      allow_unicode=True, sort_keys=False)
-
-    # ------------------------------------------------------------------
-    # ID generation
-    # ------------------------------------------------------------------
-
-    def _next_task_id(self, data: dict) -> str:
-        n = len(data["tasks"]) + 1
-        return f"task-{self.project_id}-{n:03d}"
-
-    def _next_milestone_id(self, data: dict) -> str:
-        n = len(data["milestones"]) + 1
-        return f"ms-{self.project_id}-{n:02d}"
-
-    # ------------------------------------------------------------------
-    # Milestones
-    # ------------------------------------------------------------------
-
-    def create_milestone(self, milestone_data: dict) -> str:
-        """
-        Create a milestone. Required: name, completion_criteria.
-        Optional: description, task_ids.
-        Returns the new milestone_id.
-        """
-        required = ["name", "completion_criteria"]
-        missing = [f for f in required if f not in milestone_data]
-        if missing:
-            raise ValueError(f"Missing required milestone fields: {missing}")
-
-        data = self._load()
-        ms_id = milestone_data.get("milestone_id") or self._next_milestone_id(data)
-
-        # Check for duplicate
-        if any(m["milestone_id"] == ms_id for m in data["milestones"]):
-            raise ValueError(f"Milestone already exists: {ms_id}")
-
-        milestone = {
-            "milestone_id": ms_id,
-            "name": milestone_data["name"],
-            "description": milestone_data.get("description", ""),
-            "task_ids": milestone_data.get("task_ids", []),
-            "completion_criteria": milestone_data["completion_criteria"],
-            "status": "pending",
-            "created_at": _now(),
-            "started_at": None,
-            "completed_at": None,
-        }
-        data["milestones"].append(milestone)
-        self._save(data)
-        return ms_id
 
     def get_milestone(self, milestone_id: str) -> Optional[dict]:
         """Return a milestone by ID, or None."""

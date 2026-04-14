@@ -4,8 +4,8 @@ Every agent must be blocked from writing fields it does not own.
 This is the most critical test suite in the system.
 """
 import pytest
-from core.shared_state_manager import SharedStateManager
-from core.access_control import ACCESS_CONTROL, CONSULTANT_AGENTS
+from core.engine.shared_state_manager import SharedStateManager
+from core.engine.access_control import ACCESS_CONTROL, CONSULTANT_AGENTS
 
 
 # All defined agents in the system
@@ -84,7 +84,7 @@ def test_authorized_write_is_permitted_or_append_only(sm, agent_id, section, fie
     Authorized agents must succeed on write, UNLESS the field is append-only
     (in which case write is denied and append must be used instead).
     """
-    from core.access_control import requires_append_only
+    from core.engine.access_control import requires_append_only
     field_path = f"{section}.{field}"
     if requires_append_only(field_path):
         # append-only fields must reject write() but accept append()

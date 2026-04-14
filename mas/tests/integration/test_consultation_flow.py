@@ -14,9 +14,9 @@ Tests Python infrastructure only — no live LLM calls.
 import pytest
 import yaml
 from pathlib import Path
-from core.shared_state_manager import SharedStateManager
-from core.handoff_engine import HandoffEngine
-from core.consultation_engine import (
+from core.engine.shared_state_manager import SharedStateManager
+from core.engine.handoff_engine import HandoffEngine
+from core.engine.consultation_engine import (
     ConsultationEngine,
     ALL_CONSULTANTS,
     MANDATORY_DECISION_TYPES,

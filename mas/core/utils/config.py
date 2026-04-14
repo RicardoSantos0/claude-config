@@ -39,3 +39,34 @@ def get_master_model() -> str:
 def get_default_model() -> str:
     config = load_config()
     return os.getenv("MAS_DEFAULT_MODEL", config["llm"]["default_model"])
+
+
+def get_model_for_agent(agent_id: str) -> str:
+    """Return the appropriate model for a given agent."""
+    if agent_id == "master_orchestrator":
+        return get_master_model()
+    return get_default_model()
+
+
+def get_api_key() -> str:
+    load_dotenv(REPO_ROOT / ".env")
+    key = os.getenv("ANTHROPIC_API_KEY", "")
+    if not key:
+        raise EnvironmentError(
+            "ANTHROPIC_API_KEY not set. Copy .env.example to .env and add your key."
+        )
+    return key
+
+
+def get_projects_dir() -> Path:
+    config = load_config()
+    return ROOT / config["paths"]["projects"]
+
+
+def get_governance_mode() -> str:
+    config = load_config()
+    return os.getenv("MAS_GOVERNANCE_MODE", config["system"]["governance_mode"])
+
+
+def get_defaults() -> dict:
+    return load_config()["defaults"]

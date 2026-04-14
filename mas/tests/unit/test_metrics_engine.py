@@ -6,7 +6,7 @@ task_completion_rate, handoff_quality, boundary_adherence, aggregation.
 """
 import pytest
 from pathlib import Path
-from core.metrics_engine import (
+from core.engine.metrics_engine import (
     MetricsEngine,
     MetricResult,
     AgentEvaluation,

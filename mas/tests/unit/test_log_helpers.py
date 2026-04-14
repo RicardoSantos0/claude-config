@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from core.log_helpers import (
+from core.utils.log_helpers import (
     make_log_entry,
     init_db,
     append_event,

@@ -2,7 +2,7 @@
 Unit Tests — MessageBus (DirectCallBus)
 """
 import pytest
-from core.message_bus import DirectCallBus, Message, MessageType, MessageResult
+from core.engine.message_bus import DirectCallBus, Message, MessageType, MessageResult
 
 
 @pytest.fixture

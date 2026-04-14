@@ -1,19 +1,19 @@
-"""Utilities subpackage — migration aliases
+"""Utils subpackage — shared utilities.
 
-Re-exports utility modules from the top-level `core` package so callers
-can begin importing from `core.utils.*` without breaking existing code.
+All modules are physically located in this package.
+Import directly from submodules, e.g.:
+
+    from core.utils.log_helpers import get_logger
+    from core.utils.token_counter import TokenCounter
+    from core.utils.wire_protocol import encode
 """
 
-from .. import access_control as access_control
-from .. import audit_logger as audit_logger
-from .. import checkpoint_writer as checkpoint_writer
-from .. import config as config
-from .. import log_helpers as log_helpers
-from .. import token_counter as token_counter
-from .. import wire_protocol as wire_protocol
-from .. import db_init as db_init
+from . import config
+from . import db_init
+from . import log_helpers
+from . import token_counter
+from . import wire_protocol
 
 __all__ = [
-    "access_control", "audit_logger", "checkpoint_writer", "config",
-    "log_helpers", "token_counter", "wire_protocol", "db_init",
+    "config", "db_init", "log_helpers", "token_counter", "wire_protocol",
 ]

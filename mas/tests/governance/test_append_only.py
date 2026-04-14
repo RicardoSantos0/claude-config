@@ -3,7 +3,7 @@ Governance Tests — Append-Only Field Enforcement
 Append-only fields must reject overwrite operations.
 """
 import pytest
-from core.shared_state_manager import SharedStateManager
+from core.engine.shared_state_manager import SharedStateManager
 
 
 @pytest.fixture

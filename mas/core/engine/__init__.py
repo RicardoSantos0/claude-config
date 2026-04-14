@@ -1,29 +1,35 @@
-"""Engine subpackage — migration aliases
+"""Engine subpackage — governed delivery engine modules.
 
-This package provides a compatibility layer so code can import
-from `core.engine.*` while we perform an incremental physical
-reorganization of modules.
+All modules are physically located in this package.
+Import directly from submodules, e.g.:
 
-Notes:
-- This is intentionally an aliasing layer — modules remain at
-  `mas/core/*.py` for now. Later we can move files into this
-  package and update imports to be relative within `core.engine`.
+    from core.engine.handoff_engine import HandoffEngine
+    from core.engine.shared_state_manager import SharedStateManager
 """
 
-from .. import handoff_engine as handoff_engine
-from .. import shared_state_manager as shared_state_manager
-from .. import task_board as task_board
-from .. import metrics_engine as metrics_engine
-from .. import consultation_engine as consultation_engine
-from .. import training_engine as training_engine
-from .. import graph_memory as graph_memory
-from .. import context_compressor as context_compressor
-from .. import skill_bridge as skill_bridge
-from .. import message_bus as message_bus
-from .. import prompt_assembler as prompt_assembler
+from . import access_control
+from . import audit_logger
+from . import capability_registry
+from . import checkpoint_writer
+from . import consultation_engine
+from . import context_compressor
+from . import graph_memory
+from . import handoff_engine
+from . import handoff_helpers
+from . import intake_checker
+from . import message_bus
+from . import metrics_engine
+from . import prompt_assembler
+from . import shared_state_manager
+from . import skill_bridge
+from . import spawn_policy
+from . import task_board
+from . import training_engine
 
 __all__ = [
-    "handoff_engine", "shared_state_manager", "task_board", "metrics_engine",
-    "consultation_engine", "training_engine", "graph_memory", "context_compressor",
-    "skill_bridge", "message_bus", "prompt_assembler",
+    "access_control", "audit_logger", "capability_registry", "checkpoint_writer",
+    "consultation_engine", "context_compressor", "graph_memory", "handoff_engine",
+    "handoff_helpers", "intake_checker", "message_bus", "metrics_engine",
+    "prompt_assembler", "shared_state_manager", "skill_bridge", "spawn_policy",
+    "task_board", "training_engine",
 ]

@@ -2,7 +2,7 @@
 
 import pytest
 
-from core.handoff_helpers import (
+from core.engine.handoff_helpers import (
     build_reanchor_payload,
     extract_delta,
     summarise_handoff_history,

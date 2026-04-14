@@ -6,7 +6,7 @@ progress reports, execution plan serialization, and blocker alerts.
 import pytest
 import yaml
 from pathlib import Path
-from core.task_board import (
+from core.engine.task_board import (
     TaskBoard,
     VALID_TASK_STATUSES,
     VALID_EFFORT_TIERS,

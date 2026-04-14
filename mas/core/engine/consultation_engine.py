@@ -59,7 +59,7 @@ MANDATORY_DECISION_TYPES: frozenset[str] = frozenset({
 # Risk levels
 RISK_LEVELS = ("none", "low", "medium", "high")
 
-DOMAINS_DIR = Path(__file__).parent.parent / "domains"
+DOMAINS_DIR = Path(__file__).parent.parent.parent / "domains"
 
 
 # ---------------------------------------------------------------------------
@@ -398,3 +398,222 @@ class ConsultationEngine:
     @staticmethod
     def get_all_consultants() -> list[str]:
         return list(ALL_CONSULTANTS)
+
+    # ------------------------------------------------------------------
+    # Compact wire format
+    # ------------------------------------------------------------------
+
+    _RISK_COMPACT = {"none": "n", "low": "l", "medium": "m", "high": "h"}
+    _RISK_EXPAND = {v: k for k, v in _RISK_COMPACT.items()}
+
+    _REQ_COMPACT_MAP = {
+        "request_id": "rid",
+        "project_id": "pid",
+        "timestamp": "ts",
+        "requested_by": "by",
+        "question": "q",
+        "context": "ctx",
+        "decision_type": "dt",
+        "mandatory": "mand",
+        "consultants_selected": "sel",
+        "domain_context": "dom",
+        "follow_up_round": "fur",
+        "follow_up_question": "fuq",
+        "status": "st",
+    }
+    _REQ_EXPAND_MAP = {v: k for k, v in _REQ_COMPACT_MAP.items()}
+
+    _RESP_COMPACT_MAP = {
+        "response_text": "r",
+        "word_count": "wc",
+        "risk_level": "rl",
+        "key_concerns": "kc",
+        "recommendation": "rec",
+        "responded_at": "rat",
+        "truncated": "tr",
+    }
+    _RESP_EXPAND_MAP = {v: k for k, v in _RESP_COMPACT_MAP.items()}
+
+    @classmethod
+    def compact_response(cls, resp: dict) -> dict:
+        """Compact a single consultation response dict. Omit empty/default fields."""
+        c: dict = {}
+        for full, short in cls._RESP_COMPACT_MAP.items():
+            val = resp.get(full)
+            if val is None or val == [] or val == "" or val == 0:
+                continue
+            if full == "risk_level":
+                c[short] = cls._RISK_COMPACT.get(val, val)
+            elif full == "truncated" and not val:
+                continue
+            else:
+                c[short] = val
+        return c
+
+    @classmethod
+    def expand_response(cls, compact_resp: dict) -> dict:
+        """Expand a compact response back to full format."""
+        if "response_text" in compact_resp:
+            return compact_resp
+        r: dict = {}
+        for short, full in cls._RESP_EXPAND_MAP.items():
+            if short in compact_resp:
+                val = compact_resp[short]
+                if full == "risk_level":
+                    val = cls._RISK_EXPAND.get(val, val)
+                r[full] = val
+            else:
+                if full == "key_concerns":
+                    r[full] = []
+                elif full == "truncated":
+                    r[full] = False
+                elif full in ("word_count",):
+                    r[full] = 0
+                else:
+                    r[full] = ""
+        return r
+
+    @classmethod
+    def compact_request(cls, req_data: dict) -> dict:
+        """Compact a consultation request dict. Omit empty/null/default fields."""
+        c: dict = {}
+        for full, short in cls._REQ_COMPACT_MAP.items():
+            val = req_data.get(full)
+            if val is None or val == "" or val == [] or val == {}:
+                continue
+            if full == "mandatory" and not val:
+                continue
+            if full == "follow_up_round" and val == 0:
+                continue
+            c[short] = val
+        responses = req_data.get("responses", {})
+        if responses:
+            c["resp"] = {cid: cls.compact_response(r) for cid, r in responses.items()}
+        return c
+
+    @classmethod
+    def expand_request(cls, compact_req: dict) -> dict:
+        """Expand a compact request back to full format."""
+        if "request_id" in compact_req:
+            return compact_req
+        r: dict = {}
+        for short, full in cls._REQ_EXPAND_MAP.items():
+            if short in compact_req:
+                r[full] = compact_req[short]
+            else:
+                if full in ("context",):
+                    r[full] = {}
+                elif full in ("consultants_selected",):
+                    r[full] = []
+                elif full == "mandatory":
+                    r[full] = False
+                elif full == "follow_up_round":
+                    r[full] = 0
+                else:
+                    r[full] = ""
+        compact_resp = compact_req.get("resp", {})
+        r["responses"] = {cid: cls.expand_response(cr) for cid, cr in compact_resp.items()}
+        return r
+
+
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
+
+def _cli_create(args: list[str]) -> None:
+    import argparse
+    p = argparse.ArgumentParser(prog="consultation_engine create")
+    p.add_argument("--project-id", required=True)
+    p.add_argument("--question", required=True)
+    p.add_argument("--decision-type", required=True)
+    p.add_argument("--projects-root", default="projects")
+    p.add_argument("--domain", default="software_engineering")
+    ns = p.parse_args(args)
+
+    engine = ConsultationEngine()
+    request = engine.create_request(
+        project_id=ns.project_id,
+        question=ns.question,
+        context={},
+        decision_type=ns.decision_type,
+        domain_context=engine.load_domain_context(ns.domain),
+    )
+
+    project_dir = Path(ns.projects_root) / ns.project_id
+    path = engine.save_request(request, project_dir)
+
+    print(f"[ok] Consultation request created: {request.request_id}")
+    print(f"  Decision type: {request.decision_type} ({'mandatory' if request.mandatory else 'recommended'})")
+    print(f"  Consultants: {', '.join(request.consultants_selected)}")
+    print(f"  Saved to: {path}")
+
+
+def _cli_show(args: list[str]) -> None:
+    import argparse
+    p = argparse.ArgumentParser(prog="consultation_engine show")
+    p.add_argument("--project-id", required=True)
+    p.add_argument("--request-id", required=True)
+    p.add_argument("--projects-root", default="projects")
+    ns = p.parse_args(args)
+
+    engine = ConsultationEngine()
+    project_dir = Path(ns.projects_root) / ns.project_id
+    data = engine.load_request(project_dir, ns.request_id)
+
+    if not data:
+        print(f"Request '{ns.request_id}' not found.")
+        sys.exit(1)
+
+    print(yaml.dump(data, default_flow_style=False, sort_keys=False))
+
+
+def _cli_check_risk(args: list[str]) -> None:
+    import argparse
+    p = argparse.ArgumentParser(prog="consultation_engine check-risk")
+    p.add_argument("--project-id", required=True)
+    p.add_argument("--request-id", required=True)
+    p.add_argument("--projects-root", default="projects")
+    ns = p.parse_args(args)
+
+    engine = ConsultationEngine()
+    project_dir = Path(ns.projects_root) / ns.project_id
+    data = engine.load_request(project_dir, ns.request_id)
+
+    if not data:
+        print(f"Request '{ns.request_id}' not found.")
+        sys.exit(1)
+
+    responses = data.get("responses", {})
+    if not responses:
+        print("No responses recorded yet.")
+        return
+
+    for cid, r in responses.items():
+        lvl = r.get("risk_level", "none")
+        print(f"  {cid}: {lvl}")
+
+    unanimous = all(r.get("risk_level") == "high" for r in responses.values())
+    print(f"\nUnanimous high-risk: {unanimous}")
+    if unanimous:
+        print("*** HUMAN ESCALATION REQUIRED — Master cannot override unanimous high-risk ***")
+
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Usage: python core/consultation_engine.py <create|show|check-risk> [options]")
+        sys.exit(1)
+
+    cmd = sys.argv[1]
+    rest = sys.argv[2:]
+
+    dispatch = {
+        "create": _cli_create,
+        "show": _cli_show,
+        "check-risk": _cli_check_risk,
+    }
+
+    if cmd not in dispatch:
+        print(f"Unknown command: {cmd}")
+        sys.exit(1)
+
+    dispatch[cmd](rest)

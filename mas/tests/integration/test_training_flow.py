@@ -15,10 +15,10 @@ import pytest
 import yaml
 from pathlib import Path
 from datetime import datetime, timezone
-from core.shared_state_manager import SharedStateManager
-from core.handoff_engine import HandoffEngine
-from core.training_engine import TrainingEngine, TrainingProposal, PRIORITY_SCORES
-import core.training_engine as te
+from core.engine.shared_state_manager import SharedStateManager
+from core.engine.handoff_engine import HandoffEngine
+from core.engine.training_engine import TrainingEngine, TrainingProposal, PRIORITY_SCORES
+import core.engine.training_engine as te
 
 
 # ---------------------------------------------------------------------------

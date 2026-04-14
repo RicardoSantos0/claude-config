@@ -79,7 +79,7 @@ def _require_project(project_id: str) -> Path:
 
 
 def _load_state(project_id: str) -> dict:
-    from core.shared_state_manager import SharedStateManager
+    from core.engine.shared_state_manager import SharedStateManager
     sm = SharedStateManager(project_id)
     return sm.load()
 
@@ -115,7 +115,7 @@ def init(name_or_id: str, request_id: str):
         mas init session-scheduler
         mas init proj-20260410-001-session-scheduler
     """
-    from core.shared_state_manager import SharedStateManager
+    from core.engine.shared_state_manager import SharedStateManager
 
     # Determine project_id: if it looks like a full ID, use as-is; else generate
     if _FULL_ID_RE.match(name_or_id):
@@ -205,7 +205,7 @@ def state(project_id: str, path: str):
     Example: mas state proj-20260409-001 project_definition.project_goal
     """
     _require_project(project_id)
-    from core.shared_state_manager import SharedStateManager
+    from core.engine.shared_state_manager import SharedStateManager
 
     sm = SharedStateManager(project_id)
     value = sm.read(path)
@@ -229,8 +229,8 @@ def pending(project_id: str):
     Example: mas pending proj-20260409-001
     """
     _require_project(project_id)
-    from core.handoff_engine import HandoffEngine
-    from core.shared_state_manager import SharedStateManager
+    from core.engine.handoff_engine import HandoffEngine
+    from core.engine.shared_state_manager import SharedStateManager
 
     sm = SharedStateManager(project_id)
     engine = HandoffEngine()

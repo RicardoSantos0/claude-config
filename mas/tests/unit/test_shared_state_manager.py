@@ -3,7 +3,7 @@ Unit Tests — SharedStateManager
 """
 import pytest
 from pathlib import Path
-from core.shared_state_manager import SharedStateManager, create_initial_state
+from core.engine.shared_state_manager import SharedStateManager, create_initial_state
 
 
 @pytest.fixture

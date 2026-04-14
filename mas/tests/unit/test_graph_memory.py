@@ -18,7 +18,7 @@ Tests cover:
 import pytest
 from pathlib import Path
 
-from core.graph_memory import (
+from core.engine.graph_memory import (
     GraphStore, GraphMemory, EpisodeWriter,
     ENTITY_TYPES, RELATIONSHIP_TYPES, MAX_INJECT_TOKENS,
 )
@@ -30,7 +30,7 @@ from core.graph_memory import (
 
 @pytest.fixture(autouse=True)
 def patch_root(tmp_path, monkeypatch):
-    import core.graph_memory as gm_mod
+    import core.engine.graph_memory as gm_mod
     monkeypatch.setattr(gm_mod, "ROOT", tmp_path)
     return tmp_path
 
@@ -323,13 +323,13 @@ class TestEpisodeWriter:
 
 class TestHandoffEngineIntegration:
     def test_handoff_creates_graph_episode(self, tmp_path, monkeypatch):
-        import core.shared_state_manager as ssm_mod
-        import core.checkpoint_writer as cw_mod
+        import core.engine.shared_state_manager as ssm_mod
+        import core.engine.checkpoint_writer as cw_mod
         monkeypatch.setattr(ssm_mod, "ROOT", tmp_path)
         monkeypatch.setattr(cw_mod, "ROOT", tmp_path)
 
-        from core.shared_state_manager import SharedStateManager
-        from core.handoff_engine import HandoffEngine
+        from core.engine.shared_state_manager import SharedStateManager
+        from core.engine.handoff_engine import HandoffEngine
 
         sm = SharedStateManager("proj-gm-integ-001")
         sm.initialize(request_id="req-gm-001")

@@ -7,7 +7,7 @@ import pytest
 import yaml
 from pathlib import Path
 
-from core.consultation_engine import (
+from core.engine.consultation_engine import (
     ConsultationEngine,
     ConsultationRequest,
     ConsultationResponse,

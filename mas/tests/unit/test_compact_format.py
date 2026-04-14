@@ -5,9 +5,9 @@ and _strip_empty / _compact_projection helpers in PromptAssembler.
 """
 import pytest
 
-from core.handoff_engine import HandoffEngine
-from core.consultation_engine import ConsultationEngine
-from core.prompt_assembler import _strip_empty, _compact_projection
+from core.engine.handoff_engine import HandoffEngine
+from core.engine.consultation_engine import ConsultationEngine
+from core.engine.prompt_assembler import _strip_empty, _compact_projection
 
 
 # ---------------------------------------------------------------------------

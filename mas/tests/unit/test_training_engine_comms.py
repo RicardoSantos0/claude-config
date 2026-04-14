@@ -18,7 +18,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 from dataclasses import dataclass
 
-from core.training_engine import (
+from core.engine.training_engine import (
     TrainingEngine,
     PRIORITY_SCORES,
     LOW_THRESHOLD,
@@ -193,14 +193,14 @@ class TestGenerateCommunicationProposals:
     def test_low_scores_produce_proposals(self, engine):
         state = _make_state()
         mock_me = self._mock_me_all_low()
-        with patch("core.training_engine.MetricsEngine", return_value=mock_me):
+        with patch("core.engine.training_engine.MetricsEngine", return_value=mock_me):
             proposals = engine.generate_communication_proposals(state, "proj-test-001")
         assert len(proposals) == 4  # one per metric
 
     def test_high_scores_produce_no_metric_proposals(self, engine):
         state = _make_state()
         mock_me = self._mock_me_all_high()
-        with patch("core.training_engine.MetricsEngine", return_value=mock_me):
+        with patch("core.engine.training_engine.MetricsEngine", return_value=mock_me):
             proposals = engine.generate_communication_proposals(state, "proj-test-001")
         # No metric proposals; wire compliance proposal depends on counts
         assert all(p.proposal_type in ("communication_waste", "context_bloat") for p in proposals)
@@ -209,7 +209,7 @@ class TestGenerateCommunicationProposals:
     def test_proposal_ids_are_unique(self, engine):
         state = _make_state()
         mock_me = self._mock_me_all_low()
-        with patch("core.training_engine.MetricsEngine", return_value=mock_me):
+        with patch("core.engine.training_engine.MetricsEngine", return_value=mock_me):
             proposals = engine.generate_communication_proposals(state, "proj-test-001")
         ids = [p.proposal_id for p in proposals]
         assert len(ids) == len(set(ids))
@@ -217,7 +217,7 @@ class TestGenerateCommunicationProposals:
     def test_proposal_types_correct(self, engine):
         state = _make_state()
         mock_me = self._mock_me_all_low()
-        with patch("core.training_engine.MetricsEngine", return_value=mock_me):
+        with patch("core.engine.training_engine.MetricsEngine", return_value=mock_me):
             proposals = engine.generate_communication_proposals(state, "proj-test-001")
         types = {p.proposal_type for p in proposals}
         assert "communication_waste" in types
@@ -226,7 +226,7 @@ class TestGenerateCommunicationProposals:
     def test_project_id_in_evidence(self, engine):
         state = _make_state()
         mock_me = self._mock_me_all_low()
-        with patch("core.training_engine.MetricsEngine", return_value=mock_me):
+        with patch("core.engine.training_engine.MetricsEngine", return_value=mock_me):
             proposals = engine.generate_communication_proposals(state, "proj-test-abc")
         for p in proposals:
             assert "proj-test-abc" in p.project_ids
@@ -239,7 +239,7 @@ class TestGenerateCommunicationProposals:
         me.score_payload_density.return_value = _mock_metric_result(40.0)
         me.score_context_injection_efficiency.return_value = _mock_metric_result(90.0)
         me.score_consultation_overhead.return_value = _mock_metric_result(90.0)
-        with patch("core.training_engine.MetricsEngine", return_value=me):
+        with patch("core.engine.training_engine.MetricsEngine", return_value=me):
             proposals = engine.generate_communication_proposals(state, "proj-test-001")
         # Only payload_density is low and did not raise
         assert len(proposals) == 1
@@ -262,7 +262,7 @@ class TestWireComplianceProposal:
     def test_wire_proposal_triggered_at_low_rate(self, engine):
         """Compliance rate < 0.5 with ≥ 5 handoffs → wire adoption proposal."""
         state = _make_state(wire_compliant=1, wire_total=5, compliance_rate=0.2)
-        with patch("core.training_engine.MetricsEngine", return_value=self._mock_me_all_high()):
+        with patch("core.engine.training_engine.MetricsEngine", return_value=self._mock_me_all_high()):
             proposals = engine.generate_communication_proposals(state, "proj-test-001")
         assert len(proposals) == 1
         assert proposals[0].proposal_type == "communication_waste"
@@ -271,21 +271,21 @@ class TestWireComplianceProposal:
     def test_wire_proposal_not_triggered_below_5_handoffs(self, engine):
         """Fewer than 5 handoffs → not enough evidence, no wire proposal."""
         state = _make_state(wire_compliant=0, wire_total=3, compliance_rate=0.0)
-        with patch("core.training_engine.MetricsEngine", return_value=self._mock_me_all_high()):
+        with patch("core.engine.training_engine.MetricsEngine", return_value=self._mock_me_all_high()):
             proposals = engine.generate_communication_proposals(state, "proj-test-001")
         assert len(proposals) == 0
 
     def test_wire_proposal_not_triggered_at_high_rate(self, engine):
         """Compliance rate ≥ 0.5 → no wire adoption proposal."""
         state = _make_state(wire_compliant=8, wire_total=10, compliance_rate=0.8)
-        with patch("core.training_engine.MetricsEngine", return_value=self._mock_me_all_high()):
+        with patch("core.engine.training_engine.MetricsEngine", return_value=self._mock_me_all_high()):
             proposals = engine.generate_communication_proposals(state, "proj-test-001")
         assert len(proposals) == 0
 
     def test_wire_proposal_minimum_evidence_met_at_10(self, engine):
         """minimum_evidence_met is True when wire_total >= 10."""
         state = _make_state(wire_compliant=2, wire_total=10, compliance_rate=0.2)
-        with patch("core.training_engine.MetricsEngine", return_value=self._mock_me_all_high()):
+        with patch("core.engine.training_engine.MetricsEngine", return_value=self._mock_me_all_high()):
             proposals = engine.generate_communication_proposals(state, "proj-test-001")
         assert len(proposals) == 1
         assert proposals[0].minimum_evidence_met is True

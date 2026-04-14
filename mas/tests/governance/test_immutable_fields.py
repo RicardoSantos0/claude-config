@@ -3,7 +3,7 @@ Governance Tests — Immutable Field Protection
 Fields marked immutable or immutable_after_approval must be protected.
 """
 import pytest
-from core.shared_state_manager import SharedStateManager
+from core.engine.shared_state_manager import SharedStateManager
 
 
 @pytest.fixture

@@ -8,7 +8,7 @@ import yaml
 from pathlib import Path
 from unittest.mock import patch
 
-from core.training_engine import (
+from core.engine.training_engine import (
     TrainingEngine,
     TrainingProposal,
     PRIORITY_SCORES,
@@ -33,7 +33,7 @@ def backlog_path(tmp_path, monkeypatch):
     """Redirect BACKLOG_FILE to tmp_path for test isolation."""
     fake_backlog = tmp_path / "roster" / "training_backlog.yaml"
     fake_backlog.parent.mkdir(parents=True)
-    import core.training_engine as te
+    import core.engine.training_engine as te
     monkeypatch.setattr(te, "BACKLOG_FILE", fake_backlog)
     return fake_backlog
 

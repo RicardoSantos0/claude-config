@@ -12,9 +12,9 @@ from pathlib import Path
 import pytest
 import yaml
 
-from core.shared_state_manager import SharedStateManager
-from core.handoff_engine import HandoffEngine
-from core.checkpoint_writer import CheckpointWriter
+from core.engine.shared_state_manager import SharedStateManager
+from core.engine.handoff_engine import HandoffEngine
+from core.engine.checkpoint_writer import CheckpointWriter
 
 
 # ---------------------------------------------------------------------------
@@ -23,9 +23,9 @@ from core.checkpoint_writer import CheckpointWriter
 
 def _bootstrap_project(tmp_path, project_id: str, request_id: str) -> SharedStateManager:
     """Initialize a real project in tmp_path."""
-    import core.shared_state_manager as ssm_mod
-    import core.checkpoint_writer as cw_mod
-    import core.handoff_engine as he_mod
+    import core.engine.shared_state_manager as ssm_mod
+    import core.engine.checkpoint_writer as cw_mod
+    import core.engine.handoff_engine as he_mod
 
     # All three modules must find projects under tmp_path
     ssm_mod.ROOT = tmp_path
@@ -44,8 +44,8 @@ def _bootstrap_project(tmp_path, project_id: str, request_id: str) -> SharedStat
 class TestCheckpointAutoWrite:
     def test_checkpoint_after_handoff_accept(self, tmp_path, monkeypatch):
         """Accepting a handoff must auto-write CHECKPOINT.md."""
-        import core.shared_state_manager as ssm_mod
-        import core.checkpoint_writer as cw_mod
+        import core.engine.shared_state_manager as ssm_mod
+        import core.engine.checkpoint_writer as cw_mod
         monkeypatch.setattr(ssm_mod, "ROOT", tmp_path)
         monkeypatch.setattr(cw_mod, "ROOT", tmp_path)
 
@@ -73,8 +73,8 @@ class TestCheckpointAutoWrite:
 
     def test_checkpoint_after_phase_transition(self, tmp_path, monkeypatch):
         """Writing current_phase must auto-write CHECKPOINT.md."""
-        import core.shared_state_manager as ssm_mod
-        import core.checkpoint_writer as cw_mod
+        import core.engine.shared_state_manager as ssm_mod
+        import core.engine.checkpoint_writer as cw_mod
         monkeypatch.setattr(ssm_mod, "ROOT", tmp_path)
         monkeypatch.setattr(cw_mod, "ROOT", tmp_path)
 
@@ -98,8 +98,8 @@ class TestResumeContextReconstruction:
         """
         After two handoffs, CHECKPOINT.md must show the last accepted handoff.
         """
-        import core.shared_state_manager as ssm_mod
-        import core.checkpoint_writer as cw_mod
+        import core.engine.shared_state_manager as ssm_mod
+        import core.engine.checkpoint_writer as cw_mod
         monkeypatch.setattr(ssm_mod, "ROOT", tmp_path)
         monkeypatch.setattr(cw_mod, "ROOT", tmp_path)
 
@@ -129,8 +129,8 @@ class TestResumeContextReconstruction:
         assert "inquirer_agent" in content
 
     def test_checkpoint_shows_completed_phases(self, tmp_path, monkeypatch):
-        import core.shared_state_manager as ssm_mod
-        import core.checkpoint_writer as cw_mod
+        import core.engine.shared_state_manager as ssm_mod
+        import core.engine.checkpoint_writer as cw_mod
         monkeypatch.setattr(ssm_mod, "ROOT", tmp_path)
         monkeypatch.setattr(cw_mod, "ROOT", tmp_path)
 
@@ -153,8 +153,8 @@ class TestResumeContextReconstruction:
 
     def test_checkpoint_overwrites_on_each_update(self, tmp_path, monkeypatch):
         """CHECKPOINT.md is always the latest state — not appended."""
-        import core.shared_state_manager as ssm_mod
-        import core.checkpoint_writer as cw_mod
+        import core.engine.shared_state_manager as ssm_mod
+        import core.engine.checkpoint_writer as cw_mod
         monkeypatch.setattr(ssm_mod, "ROOT", tmp_path)
         monkeypatch.setattr(cw_mod, "ROOT", tmp_path)
 
@@ -187,8 +187,8 @@ class TestPendingHandoffResume:
         A handoff created but not yet accepted must appear in CHECKPOINT.md
         under Pending Handoffs.
         """
-        import core.shared_state_manager as ssm_mod
-        import core.checkpoint_writer as cw_mod
+        import core.engine.shared_state_manager as ssm_mod
+        import core.engine.checkpoint_writer as cw_mod
         monkeypatch.setattr(ssm_mod, "ROOT", tmp_path)
         monkeypatch.setattr(cw_mod, "ROOT", tmp_path)
 
@@ -215,8 +215,8 @@ class TestPendingHandoffResume:
 
     def test_accepted_handoff_clears_pending(self, tmp_path, monkeypatch):
         """Once accepted, handoff no longer shows in Pending Handoffs."""
-        import core.shared_state_manager as ssm_mod
-        import core.checkpoint_writer as cw_mod
+        import core.engine.shared_state_manager as ssm_mod
+        import core.engine.checkpoint_writer as cw_mod
         monkeypatch.setattr(ssm_mod, "ROOT", tmp_path)
         monkeypatch.setattr(cw_mod, "ROOT", tmp_path)
 

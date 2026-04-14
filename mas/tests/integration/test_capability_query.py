@@ -14,9 +14,9 @@ import pytest
 import yaml
 from pathlib import Path
 from datetime import datetime, timezone
-from core.shared_state_manager import SharedStateManager
-from core.handoff_engine import HandoffEngine
-from core.capability_registry import CapabilityRegistry
+from core.engine.shared_state_manager import SharedStateManager
+from core.engine.handoff_engine import HandoffEngine
+from core.engine.capability_registry import CapabilityRegistry
 
 
 # ---------------------------------------------------------------------------

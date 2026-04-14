@@ -18,9 +18,9 @@ from pathlib import Path
 import pytest
 import yaml
 
-from core.checkpoint_writer import CheckpointWriter
-from core.shared_state_manager import SharedStateManager
-from core.handoff_engine import HandoffEngine
+from core.engine.checkpoint_writer import CheckpointWriter
+from core.engine.shared_state_manager import SharedStateManager
+from core.engine.handoff_engine import HandoffEngine
 
 
 # ---------------------------------------------------------------------------
@@ -98,7 +98,7 @@ def cw(tmp_project, monkeypatch):
     """CheckpointWriter pointed at the tmp project directory."""
     project_id, proj_dir, _ = tmp_project
     # Redirect ROOT so CheckpointWriter finds the project
-    monkeypatch.setattr("core.checkpoint_writer.ROOT", proj_dir.parent.parent)
+    monkeypatch.setattr("core.engine.checkpoint_writer.ROOT", proj_dir.parent.parent)
     return CheckpointWriter(project_id)
 
 
@@ -197,7 +197,7 @@ class TestHandoffSections:
         (proj_dir / "shared_state.yaml").write_text(
             yaml.dump(state, allow_unicode=True), encoding="utf-8"
         )
-        monkeypatch.setattr("core.checkpoint_writer.ROOT", proj_dir.parent.parent)
+        monkeypatch.setattr("core.engine.checkpoint_writer.ROOT", proj_dir.parent.parent)
         cw = CheckpointWriter(project_id)
         cw.write()
         content = (proj_dir / "CHECKPOINT.md").read_text(encoding="utf-8")
@@ -210,7 +210,7 @@ class TestHandoffSections:
         (proj_dir / "shared_state.yaml").write_text(
             yaml.dump(state, allow_unicode=True), encoding="utf-8"
         )
-        monkeypatch.setattr("core.checkpoint_writer.ROOT", proj_dir.parent.parent)
+        monkeypatch.setattr("core.engine.checkpoint_writer.ROOT", proj_dir.parent.parent)
         cw = CheckpointWriter(project_id)
         cw.write()
         content = (proj_dir / "CHECKPOINT.md").read_text(encoding="utf-8")
@@ -230,7 +230,7 @@ class TestDeliveryRisks:
         (proj_dir / "shared_state.yaml").write_text(
             yaml.dump(state, allow_unicode=True), encoding="utf-8"
         )
-        monkeypatch.setattr("core.checkpoint_writer.ROOT", proj_dir.parent.parent)
+        monkeypatch.setattr("core.engine.checkpoint_writer.ROOT", proj_dir.parent.parent)
         cw = CheckpointWriter(project_id)
         cw.write()
         content = (proj_dir / "CHECKPOINT.md").read_text(encoding="utf-8")
@@ -249,7 +249,7 @@ class TestDeliveryRisks:
 
 class TestErrorHandling:
     def test_missing_project_raises(self, tmp_path, monkeypatch):
-        monkeypatch.setattr("core.checkpoint_writer.ROOT", tmp_path)
+        monkeypatch.setattr("core.engine.checkpoint_writer.ROOT", tmp_path)
         cw = CheckpointWriter("proj-does-not-exist")
         with pytest.raises(FileNotFoundError):
             cw.write()
@@ -267,9 +267,9 @@ class TestHandoffEngineHook:
         proj_dir.mkdir(parents=True)
 
         # Bootstrap a real SharedStateManager
-        monkeypatch.setattr("core.shared_state_manager.ROOT", tmp_path)
-        monkeypatch.setattr("core.checkpoint_writer.ROOT", tmp_path)
-        monkeypatch.setattr("core.handoff_engine.ROOT", tmp_path, raising=False)
+        monkeypatch.setattr("core.engine.shared_state_manager.ROOT", tmp_path)
+        monkeypatch.setattr("core.engine.checkpoint_writer.ROOT", tmp_path)
+        monkeypatch.setattr("core.engine.handoff_engine.ROOT", tmp_path, raising=False)
 
         sm = SharedStateManager(project_id)
         sm.initialize(request_id="req-hook-001")
@@ -303,8 +303,8 @@ class TestStateManagerHook:
         proj_dir = tmp_path / "projects" / project_id
         proj_dir.mkdir(parents=True)
 
-        monkeypatch.setattr("core.shared_state_manager.ROOT", tmp_path)
-        monkeypatch.setattr("core.checkpoint_writer.ROOT", tmp_path)
+        monkeypatch.setattr("core.engine.shared_state_manager.ROOT", tmp_path)
+        monkeypatch.setattr("core.engine.checkpoint_writer.ROOT", tmp_path)
 
         sm = SharedStateManager(project_id)
         sm.initialize(request_id="req-sm-hook-001")
@@ -323,8 +323,8 @@ class TestStateManagerHook:
         proj_dir = tmp_path / "projects" / project_id
         proj_dir.mkdir(parents=True)
 
-        monkeypatch.setattr("core.shared_state_manager.ROOT", tmp_path)
-        monkeypatch.setattr("core.checkpoint_writer.ROOT", tmp_path)
+        monkeypatch.setattr("core.engine.shared_state_manager.ROOT", tmp_path)
+        monkeypatch.setattr("core.engine.checkpoint_writer.ROOT", tmp_path)
 
         sm = SharedStateManager(project_id)
         sm.initialize(request_id="req-sm-nophase-001")
