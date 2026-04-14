@@ -102,7 +102,7 @@ def simulate_inquirer(
     # 4. Write clarified spec to disk
     intake_dir = projects_root / pid / "intake"
     intake_dir.mkdir(parents=True, exist_ok=True)
-    import core.intake_checker as ic
+    import core.engine.intake_checker as ic
     # Write via the checker (uses ROOT path) — we'll write directly for testing
     spec_output = {
         "project_id": pid,

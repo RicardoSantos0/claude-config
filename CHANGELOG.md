@@ -52,6 +52,31 @@ after the `95da5c6` folder restructuring commit left several files truncated or 
 
 **Result:** 937 tests pass (0 failures), up from 583 pre-migration.
 
+### Remove compatibility wrappers
+
+Removed the thin compatibility wrapper modules from `mas/core/` after migrating callers to `mas/core/engine/*`.
+Backups were created in `mas/core/wrappers_backup/` and removed after the full test suite passed.
+
+Removed files:
+- `mas/core/access_control.py`
+- `mas/core/audit_logger.py`
+- `mas/core/capability_registry.py`
+- `mas/core/checkpoint_writer.py`
+- `mas/core/consultation_engine.py`
+- `mas/core/context_compressor.py`
+- `mas/core/graph_memory.py`
+- `mas/core/handoff_helpers.py`
+- `mas/core/intake_checker.py`
+- `mas/core/log_helpers.py`
+- `mas/core/message_bus.py`
+- `mas/core/metrics_engine.py`
+- `mas/core/prompt_assembler.py`
+- `mas/core/shared_state_manager.py`
+- `mas/core/skill_bridge.py`
+- `mas/core/spawn_policy.py`
+- `mas/core/task_board.py`
+- `mas/core/training_engine.py`
+
 ---
 
 ## [2026-04-11] proj-20260411-001-agent-knowledge-and-flow-opt
