@@ -67,3 +67,11 @@ Invoke `master_orchestrator` to start a project. It coordinates all other agents
 - Spawning new agents requires: gap certificate + master approval + consultant review
 - Max 3 spawns per project, 1 per phase, no recursive spawning
 - All training proposals are advisory — nothing changes without Master approval
+
+## MAS Workflow Enforcement
+
+**Master Orchestrator is strictly prohibited from bypassing the MAS structure for any project ordered to MAS.**
+
+- The Master Orchestrator must always follow the MAS workflow and protocols for all project phases and delegations.
+- It is not authorized to delegate work outside the MAS, including direct delegation to Claude Code or any agent/process not governed by the MAS system.
+- Any attempt to override or circumvent the MAS workflow is a governance violation and must be escalated for review.

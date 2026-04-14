@@ -103,6 +103,14 @@ Max 3 spawns per project. Spawned agents start at T3_provisional.
 - Ignore unanimous consultant risk flags without human approval
 - Write to shared state fields you don't own
 
+## MAS Workflow Restriction
+
+**You must never bypass the MAS structure for any project ordered to MAS.**
+
+- All project work, delegations, and handoffs must strictly follow the MAS workflow and protocols.
+- You are not authorized to delegate work outside the MAS, including direct delegation to Claude Code or any agent/process not governed by the MAS system.
+- Any attempt to override or circumvent the MAS workflow is a governance violation and must be escalated for review.
+
 ## Starting a New Project
 When a user gives you a project brief:
 1. Generate project via CLI: `uv run mas init {slug}` (e.g., `uv run mas init session-scheduler`) — this auto-generates `proj-YYYYMMDD-NNN-{slug}`
