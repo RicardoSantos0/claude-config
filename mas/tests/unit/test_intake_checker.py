@@ -3,7 +3,7 @@ Unit Tests — IntakeChecker
 Tests completeness analysis, scoring, question generation, and answer application.
 """
 import pytest
-from core.intake_checker import IntakeChecker, CompletenessResult, QUALITY_THRESHOLD
+from core.engine.intake_checker import IntakeChecker, CompletenessResult, QUALITY_THRESHOLD
 
 
 @pytest.fixture

@@ -31,11 +31,11 @@ from datetime import datetime, timezone
 
 from core.engine.shared_state_manager import SharedStateManager
 from core.engine.handoff_engine import HandoffEngine
-from core.intake_checker import IntakeChecker
+from core.engine.intake_checker import IntakeChecker
 from core.engine.capability_registry import CapabilityRegistry
 from core.engine.task_board import TaskBoard
 from core.engine.metrics_engine import MetricsEngine
-from core.spawn_policy import SpawnPolicyEngine, build_agent_package, record_spawn, DRAFT
+from core.engine.spawn_policy import SpawnPolicyEngine, build_agent_package, record_spawn, DRAFT
 from core.engine.training_engine import TrainingEngine
 from core.engine.consultation_engine import ConsultationEngine, ALL_CONSULTANTS
 import core.engine.training_engine as te

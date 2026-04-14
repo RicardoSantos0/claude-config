@@ -15,7 +15,7 @@ from pathlib import Path
 from datetime import datetime, timezone
 from core.engine.shared_state_manager import SharedStateManager
 from core.engine.handoff_engine import HandoffEngine
-from core.intake_checker import IntakeChecker
+from core.engine.intake_checker import IntakeChecker
 
 
 @pytest.fixture
