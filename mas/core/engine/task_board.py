@@ -1,11 +1,33 @@
-"""Re-exports the implementation from core.engine.task_board."""
+"""
+Task Board Manager
+Manages the task board for a single project: tasks, milestones,
+dependency chains, progress tracking, and execution plan serialization.
 
-from core.engine.task_board import *  # noqa: F401,F403
+Backed by two files in the project's execution/ directory:
+  projects/{project_id}/execution/task_board.yaml   — task + milestone data
+  projects/{project_id}/execution/execution_plan.yaml — compiled plan snapshot
 
-if __name__ == "__main__":
-    import sys
-    from core.engine.task_board import main_cli
-    sys.exit(main_cli())
+Task statuses:     planned → assigned → in_progress → (completed | blocked | failed)
+Milestone statuses: pending → in_progress → (completed | blocked)
+Effort tiers:       trivial | small | medium | large | extra-large
+
+Usage as library:
+    from core.task_board import TaskBoard
+    board = TaskBoard("proj-001")
+    ms_id = board.create_milestone({...})
+    task_id = board.create_task({...})
+
+Usage as CLI:
+    uv run python core/task_board.py create-task --project-id proj-001 --task-json '{...}'
+    uv run python core/task_board.py update-status --project-id proj-001 --task-id task-001 --status in_progress
+    uv run python core/task_board.py list --project-id proj-001 [--status planned] [--milestone ms-001]
+    uv run python core/task_board.py show --project-id proj-001 --task-id task-001
+    uv run python core/task_board.py blocked --project-id proj-001
+    uv run python core/task_board.py milestone-status --project-id proj-001 --milestone-id ms-001
+    uv run python core/task_board.py progress-report --project-id proj-001 [--milestone-id ms-001]
+    uv run python core/task_board.py create-milestone --project-id proj-001 --milestone-json '{...}'
+    uv run python core/task_board.py deps --project-id proj-001 --task-id task-001
+"""
 
 import sys
 import json

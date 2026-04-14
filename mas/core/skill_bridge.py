@@ -37,7 +37,7 @@ from typing import Any
 import yaml
 
 try:
-    from core.token_counter import TokenCounter as _TokenCounter
+    from core.utils.token_counter import TokenCounter as _TokenCounter
     _tc = _TokenCounter()
 except ImportError:
     _tc = None  # type: ignore
