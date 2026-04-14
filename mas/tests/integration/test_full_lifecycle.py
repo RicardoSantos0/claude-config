@@ -37,7 +37,7 @@ from core.engine.task_board import TaskBoard
 from core.engine.metrics_engine import MetricsEngine
 from core.engine.spawn_policy import SpawnPolicyEngine, build_agent_package, record_spawn, DRAFT
 from core.engine.training_engine import TrainingEngine
-from core.engine.consultation_engine import ConsultationEngine, ALL_CONSULTANTS
+from core.engine.consultation_engine import ConsultationEngine, ALL_CONSULTANTS, CORE_THREE_CONSULTANTS
 import core.engine.training_engine as te
 
 
@@ -1006,7 +1006,7 @@ class TestFullProjectLifecycle:
         assert data2["core_identity"]["current_phase"] == "planning"
 
     def test_consultation_mandatory_for_architecture_decisions(self, consult_engine):
-        """Architecture decisions must trigger all 5 consultants."""
+        """Architecture decisions must trigger the core-three consultants."""
         domain_ctx = consult_engine.load_domain_context("software_engineering")
         request = consult_engine.create_request(
             project_id=PROJECT_ID,
@@ -1016,7 +1016,7 @@ class TestFullProjectLifecycle:
             domain_context=domain_ctx,
         )
         assert request.mandatory
-        assert set(request.consultants_selected) == set(ALL_CONSULTANTS)
+        assert set(request.consultants_selected) == set(CORE_THREE_CONSULTANTS)
 
     def test_spawn_blocked_for_recursive_spawn(
         self, sm, engine, spawn_engine, project_dir, registry_data

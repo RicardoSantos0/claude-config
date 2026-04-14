@@ -50,7 +50,24 @@ class WriteResult:
 
 # --- INITIAL STATE FACTORY ---
 
-def create_initial_state(project_id: str, request_id: str) -> dict:
+LITE_PHASES = ("intake", "execution", "closed")
+STANDARD_PHASES = (
+    "intake", "specification", "planning", "capability_discovery",
+    "execution", "review", "evaluation", "improvement", "closed",
+)
+
+
+def create_initial_state(project_id: str, request_id: str,
+                         mode: str = "standard") -> dict:
+    """
+    Build the initial shared state for a new project.
+
+    mode="lite"     → 3-phase lifecycle (intake → execution → closed).
+                      No capability discovery, no consultation, no HR handoff.
+    mode="standard" → full 9-phase lifecycle (default).
+    """
+    if mode not in ("standard", "lite"):
+        mode = "standard"
     now = datetime.now(timezone.utc).isoformat()
     return {
         "core_identity": {
@@ -74,6 +91,7 @@ def create_initial_state(project_id: str, request_id: str) -> dict:
             "priority": None,
         },
         "workflow": {
+            "mode": mode,
             "active_agents": [],
             "completed_phases": [],
             "pending_assignments": [],
@@ -158,16 +176,17 @@ class SharedStateManager:
 
     # --- LIFECYCLE ---
 
-    def initialize(self, request_id: str) -> None:
+    def initialize(self, request_id: str, mode: str = "standard") -> None:
         """Create project directory and initialize shared state. Idempotent."""
         self.project_dir.mkdir(parents=True, exist_ok=True)
         if not self.state_path.exists():
-            state = create_initial_state(self.project_id, request_id)
+            state = create_initial_state(self.project_id, request_id, mode=mode)
             self._save(state)
             self.logger.log(
                 "project_initialized",
                 project_id=self.project_id,
                 request_id=request_id,
+                mode=mode,
             )
 
     def exists(self) -> bool:

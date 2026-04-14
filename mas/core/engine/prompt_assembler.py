@@ -12,6 +12,10 @@ from typing import Any
 import yaml
 
 from core.utils.token_counter import TokenCounter
+from core.engine.context_compressor import compress, estimate_tokens
+
+# Threshold (tokens) above which we compress the state projection before injection
+_COMPRESSION_TOKEN_THRESHOLD = 2000
 
 _token_counter = TokenCounter()
 
@@ -226,6 +230,12 @@ class PromptAssembler:
         projected = _project_state(state, agent_id)
         compact = _compact_projection(projected)
 
+        # Compress large state projections to stay within token budget
+        state_yaml = yaml.dump(compact, default_flow_style=False,
+                               allow_unicode=True, sort_keys=False)
+        if estimate_tokens(state_yaml) > _COMPRESSION_TOKEN_THRESHOLD:
+            compact = compress(compact, mode="summary")
+
         # Wire protocol instruction (agent-to-agent outputs only; never for human-facing)
         # Inquirer is excluded — its output is natural language for humans.
         _WIRE_INSTRUCTION = (
@@ -280,12 +290,32 @@ class PromptAssembler:
         if graph_context:
             context["injected_graph_context"] = graph_context
 
+        # SQLite recent-events injection — agents see what happened before them
+        project_id = state.get("core_identity", {}).get("project_id", "")
+        sqlite_ctx = self._sqlite_context(project_id)
+        if sqlite_ctx:
+            context["injected_recent_events"] = sqlite_ctx
+
         if extra_context:
             context.update(extra_context)
 
         prompt = _fill_placeholders(template, context)
         self.last_token_count: int = _token_counter.count(prompt)
         return prompt
+
+    def _sqlite_context(self, project_id: str) -> str:
+        """
+        Query recent agent events from SQLite for prompt injection.
+        Returns a compact formatted string, or "" if no events or DB unavailable.
+        """
+        if not project_id:
+            return ""
+        try:
+            from core.db import query_project_history, format_events_for_prompt
+            events = query_project_history(project_id, limit=5)
+            return format_events_for_prompt(events)
+        except Exception:
+            return ""
 
     def _graph_context(self, agent_id: str, state: dict) -> str:
         """

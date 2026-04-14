@@ -151,6 +151,31 @@ class HandoffEngine:
         except Exception:
             pass
 
+        # Persist to SQLite event log (non-fatal)
+        try:
+            from core.db import append_event
+            append_event(
+                project_id=sm.project_id,
+                agent_id=from_agent,
+                action_type="handoff_created",
+                intent=task_description,
+                result_shape="handoff",
+                payload={
+                    "handoff_id": handoff_id,
+                    "to_agent": to_agent,
+                    "phase": phase,
+                },
+            )
+        except Exception:
+            pass
+
+        # Audit skill usage on artifacts (non-fatal)
+        try:
+            from core.engine.skill_bridge import SkillBridge as _SkillBridge
+            _SkillBridge().audit_handoff(handoff)
+        except Exception:
+            pass
+
         return handoff
 
     # --- VALIDATE ---
@@ -235,6 +260,19 @@ class HandoffEngine:
                 CheckpointWriter(sm.project_id).write()
             except Exception:
                 pass  # checkpoint failure must never block handoff acceptance
+
+            # Persist to SQLite event log (non-fatal)
+            try:
+                from core.db import append_event
+                append_event(
+                    project_id=sm.project_id,
+                    agent_id="system",
+                    action_type="handoff_accepted",
+                    intent=f"{handoff_id} status={status}",
+                    payload={"handoff_id": handoff_id, "status": status},
+                )
+            except Exception:
+                pass
         return ok
 
     def reject(self, sm: SharedStateManager, handoff_id: str,
@@ -253,6 +291,17 @@ class HandoffEngine:
                 to_agent="",
                 reason=reason,
             )
+            try:
+                from core.db import append_event
+                append_event(
+                    project_id=sm.project_id,
+                    agent_id="system",
+                    action_type="handoff_rejected",
+                    intent=f"{handoff_id} reason={reason}",
+                    payload={"handoff_id": handoff_id, "reason": reason},
+                )
+            except Exception:
+                pass
         return ok
 
     # --- QUERY ---

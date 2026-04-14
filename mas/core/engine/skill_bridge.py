@@ -260,6 +260,37 @@ class SkillBridge:
             "tokens_used": tokens_used,
         }
 
+    def audit_handoff(self, handoff: dict) -> None:
+        """
+        Called by handoff_engine after every handoff creation.
+        Checks if any artifact in the payload matches a registered skill output
+        and appends a record to the project's skill_audit_log.yaml.
+        Non-fatal — never raises.
+        """
+        project_id = handoff.get("project_id", "")
+        if not project_id:
+            return
+        artifacts = handoff.get("payload", {}).get("artifacts_produced", [])
+        if not artifacts:
+            return
+        skills = self.discover()
+        skill_names = {s.name for s in skills}
+        for artifact in artifacts:
+            artifact_str = str(artifact)
+            matched = [sn for sn in skill_names if sn in artifact_str]
+            if matched:
+                entry = self._make_audit(
+                    agent_id=handoff.get("from_agent", "unknown"),
+                    skill_name=matched[0],
+                    query=artifact_str,
+                    project_id=project_id,
+                    outcome="artifact_match",
+                    tokens_used=0,
+                    timestamp=handoff.get("timestamp", ""),
+                )
+                entry["handoff_id"] = handoff.get("handoff_id", "")
+                self.write_audit_entry(project_id, entry)
+
     def _audit_path(self, project_id: str) -> Path:
         return ROOT / "projects" / project_id / "skill_audit_log.yaml"
 

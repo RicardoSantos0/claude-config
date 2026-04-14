@@ -47,14 +47,25 @@ ALL_CONSULTANTS: list[str] = [
     "efficiency_advisor",
 ]
 
-# Decision types requiring ALL 5 consultants
+# Decision types requiring ALL 5 consultants (spawn only — highest stakes)
 MANDATORY_DECISION_TYPES: frozenset[str] = frozenset({
     "spawn",
     "scope_change",
+})
+
+# Decision types requiring the core 3 consultants (risk, quality, efficiency)
+# devils_advocate and domain_expert are excluded to reduce token overhead
+CORE_THREE_DECISION_TYPES: frozenset[str] = frozenset({
     "governance",
     "escalation",
     "architecture",
 })
+
+CORE_THREE_CONSULTANTS: list[str] = [
+    "risk_advisor",
+    "quality_advisor",
+    "efficiency_advisor",
+]
 
 # Risk levels
 RISK_LEVELS = ("none", "low", "medium", "high")
@@ -135,12 +146,16 @@ class ConsultationEngine:
     ) -> ConsultationRequest:
         """
         Build a ConsultationRequest.
-        If decision_type is mandatory, all 5 consultants are selected
-        regardless of the `consultants` argument.
+        If decision_type is in MANDATORY_DECISION_TYPES, all 5 consultants are selected.
+        If decision_type is in CORE_THREE_DECISION_TYPES, core 3 consultants are selected.
+        Otherwise the caller's list is used (minimum 2).
         """
-        mandatory = decision_type in MANDATORY_DECISION_TYPES
-
-        if mandatory or consultants is None:
+        mandatory = decision_type in MANDATORY_DECISION_TYPES or decision_type in CORE_THREE_DECISION_TYPES
+        if decision_type in MANDATORY_DECISION_TYPES:
+            selected = list(ALL_CONSULTANTS)
+        elif decision_type in CORE_THREE_DECISION_TYPES:
+            selected = list(CORE_THREE_CONSULTANTS)
+        elif consultants is None:
             selected = list(ALL_CONSULTANTS)
         else:
             # Enforce minimum of 2
@@ -394,6 +409,10 @@ class ConsultationEngine:
     @staticmethod
     def is_mandatory(decision_type: str) -> bool:
         return decision_type in MANDATORY_DECISION_TYPES
+
+    @staticmethod
+    def is_core_three(decision_type: str) -> bool:
+        return decision_type in CORE_THREE_DECISION_TYPES
 
     @staticmethod
     def get_all_consultants() -> list[str]:

@@ -4,8 +4,23 @@ A governed agent network for project delivery. Coordinates 14 specialized agents
 a formal handoff protocol, shared state with access control, and a full evaluation +
 improvement loop.
 
-All `uv run` commands must be run from the **repo root** (the directory containing
-`pyproject.toml` — one level up from here).
+All commands must be run from the **repo root** (the directory containing `pyproject.toml`).
+
+**Recommended: activate the venv once per session, then use bare commands.**
+
+```powershell
+# Windows — activate venv (run once per shell session):
+C:\Users\ricar\Documents\claude-config\.venv\Scripts\activate
+
+# After activation, all bare commands work:
+mas init session-scheduler
+mas init --mode=lite quick-task
+mas status proj-20260414-001-true-mas-integration
+pytest mas/tests/
+```
+
+`uv run` also works but rebuilds the wheel each time, which is slower and fails
+if Windows App Store Python is active. Prefer the activated venv.
 
 ---
 
@@ -13,18 +28,19 @@ All `uv run` commands must be run from the **repo root** (the directory containi
 
 ```bash
 # Project lifecycle
-uv run mas init    <slug-or-id>      # Initialize new project (e.g. 'session-scheduler')
-uv run mas status  <project-id>     # Current phase, owner, pending handoffs
-uv run mas state   <project-id>     # Full shared state dump
-uv run mas pending <project-id>     # Unresolved handoffs
-uv run mas snapshot <project-id>    # Snapshot state at current phase
-uv run mas roster                   # All registered agents
+mas init    <slug-or-id>               # Initialize new project
+mas init    --mode=lite <slug>         # Lite mode: 3 phases, no consultation
+mas status  <project-id>              # Current phase [lite], owner, pending handoffs
+mas state   <project-id>              # Full shared state dump
+mas pending <project-id>              # Unresolved handoffs
+mas snapshot <project-id>             # Snapshot state at current phase
+mas roster                            # All registered agents
 
 # Tests
-uv run pytest mas/tests/            # Full suite (590 tests)
-uv run pytest mas/tests/unit/       # Unit tests only
-uv run pytest mas/tests/integration/# Integration tests only
-uv run pytest mas/tests/integration/test_full_lifecycle.py  # End-to-end lifecycle test
+pytest mas/tests/                     # Full suite
+pytest mas/tests/unit/                # Unit tests only
+pytest mas/tests/integration/         # Integration tests only
+pytest mas/tests/integration/test_full_lifecycle.py  # End-to-end lifecycle test
 ```
 
 ---
@@ -84,10 +100,13 @@ User → master_orchestrator
 ```
 
 ### Consultation Triggers
-These decision types **always** invoke all 5 consultants:
-`spawn` · `scope_change` · `governance` · `escalation` · `architecture`
+**All 5 consultants** (`spawn`, `scope_change`):
+These are mandatory types — the full panel is always convened.
 
-If all 5 return `high` risk → `human_escalation_required = true` (hard stop).
+**Core-three consultants** (`governance`, `escalation`, `architecture`):
+Scoped panel: `risk_advisor`, `quality_advisor`, `efficiency_advisor`.
+
+If **all responding** consultants return `high` risk → `human_escalation_required = true` (hard stop).
 
 ---
 

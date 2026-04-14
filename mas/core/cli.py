@@ -102,7 +102,11 @@ def main():
 @click.argument("name_or_id")
 @click.option("--request-id", default=None,
               help="Optional request ID (auto-generated if omitted)")
-def init(name_or_id: str, request_id: str):
+@click.option("--mode", default="standard",
+              type=click.Choice(["standard", "lite"], case_sensitive=False),
+              help="Project mode: 'standard' (9-phase, full governance) or "
+                   "'lite' (3-phase: intake → execution → closed, no consultation).")
+def init(name_or_id: str, request_id: str, mode: str):
     """Initialize a new project and its shared state.
 
     NAME_OR_ID can be either a human-readable slug (e.g. 'website-redesign')
@@ -113,6 +117,7 @@ def init(name_or_id: str, request_id: str):
 
     Examples:
         mas init session-scheduler
+        mas init --mode=lite quick-fix
         mas init proj-20260410-001-session-scheduler
     """
     from core.engine.shared_state_manager import SharedStateManager
@@ -136,11 +141,13 @@ def init(name_or_id: str, request_id: str):
         click.echo(f"[warn] Project '{project_id}' already exists — skipping init.", err=True)
         sys.exit(0)
 
-    sm.initialize(request_id=request_id)
-    click.echo(f"[ok] Project initialized: {sm.project_dir}")
+    sm.initialize(request_id=request_id, mode=mode)
+    mode_tag = f" [{mode}]" if mode == "lite" else ""
+    click.echo(f"[ok] Project initialized{mode_tag}: {sm.project_dir}")
     click.echo(f"     Project ID  : {project_id}")
     click.echo(f"     State file  : {sm.state_path}")
     click.echo(f"     Request ID  : {request_id}")
+    click.echo(f"     Mode        : {mode}")
 
 
 # ---------------------------------------------------------------------------
@@ -165,6 +172,7 @@ def status(project_id: str):
     owner = wf.get("current_owner", "—")
     proj_status = ci.get("status", "—")
     updated = meta.get("updated_at", "—")
+    proj_mode = wf.get("mode", "standard")
 
     pending_handoffs = [
         h for h in wf.get("handoff_history", [])
@@ -173,9 +181,11 @@ def status(project_id: str):
     completed_phases = wf.get("completed_phases", [])
     violations = state.get("_meta", {}).get("governance_violations", [])
 
+    mode_tag = " [lite]" if proj_mode == "lite" else ""
     click.echo(f"\nProject  : {project_id}")
     click.echo(f"Status   : {proj_status}")
-    click.echo(f"Phase    : {phase}")
+    click.echo(f"Phase    : {phase}{mode_tag}")
+    click.echo(f"Mode     : {proj_mode}")
     click.echo(f"Owner    : {owner}")
     click.echo(f"Updated  : {updated}")
     click.echo(f"Completed phases : {', '.join(completed_phases) or 'none'}")
