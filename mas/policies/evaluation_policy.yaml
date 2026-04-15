@@ -72,6 +72,39 @@ evaluation_policy:
       no_action: "Document reasoning — gap was project-specific and unlikely to recur"
     record_in: "decisions.decision_log with rationale and alternatives_considered"
 
+  # --- GRAPH CONTRIBUTION (prop-0515a6a5, prop-f3b3a7e9, prop-f53c0198) ---
+  # global_graph_contribution scores based on entries written to the global YAML graph
+  # and the agent_graph SQLite tables. Low scores on every project indicate EpisodeWriter
+  # and migrate-graph are not running at closure.
+  graph_contribution:
+    required_at_closure: true
+    steps:
+      - "Run EpisodeWriter.replay_from_state(project_id, shared_state) before advancing to 'closed'"
+      - "Run 'mas db migrate-graph' after replay to persist nodes/edges to SQLite agent_graph tables"
+    threshold_for_not_applicable: 25.0
+    note: >
+      On dry-run projects (no live agent calls), global_graph_contribution ≤ 25 is promoted to
+      'not_applicable' by MetricsEngine and excluded from the project score average. This prevents
+      penalising simulated runs for the absence of live episode data.
+    improvement_trigger: "Score < 70 across 2+ consecutive projects → trainer proposal"
+
+  # --- DRY-RUN METRIC HANDLING ---
+  # Some metrics have no meaningful signal on dry-run projects (no live LLM calls).
+  # MetricsEngine.evaluate_project() automatically promotes these to mode='not_applicable'
+  # so they are excluded from the project score average.
+  dry_run_metrics:
+    not_applicable_when_dry_run:
+      - goal_achievement          # scores 0 or 50 — no task output to match against criteria
+      - acceptance_criteria_pass_rate  # scores 50 — no agent ran AC tests
+      - scope_adherence           # scores 50 — no scope deviation possible without real work
+      - decision_quality          # scores 50 — no real decisions logged
+      - documentation_completeness  # scores 0 — scribe not invoked in simulation
+      - global_graph_contribution   # scores low — EpisodeWriter not run
+    detection: "MetricsEngine._is_dry_run_state() checks query_token_usage().live_calls == 0"
+    always_scored:
+      - phase_efficiency    # based on handoff structure, valid even dry-run
+      - record_integrity    # based on governance violations, valid even dry-run
+
   # --- TOKEN TRACKING ---
   token_tracking:
     enabled: true

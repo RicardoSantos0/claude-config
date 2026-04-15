@@ -4,6 +4,50 @@ All notable changes to this repository are documented here.
 
 ---
 
+## [2026-04-15] Trainer proposal implementation (6 proposals applied)
+
+### Applied training proposals from proj-20260414 and proj-20260415-004
+
+**prop-8d1b86d2 (P2, approved) — `product_manager_agent.md` writes success/acceptance criteria:**
+- `agents/product_manager_agent.md`: Added explicit Step 5 with CLI commands to write
+  `project_definition.success_criteria` and `project_definition.acceptance_criteria` to shared
+  state after producing the product plan. Explains that these fields drive the `goal_achievement`
+  and `acceptance_criteria_pass_rate` evaluation metrics.
+
+**prop-0515a6a5 + prop-f3b3a7e9 (P3/P2, approved) — `global_graph_contribution` policy:**
+- `mas/policies/evaluation_policy.yaml`: Added `graph_contribution` section documenting that
+  `EpisodeWriter.replay_from_state()` + `mas db migrate-graph` are required at project closure.
+  Added `dry_run_metrics` section listing which metrics become `not_applicable` in dry-run mode
+  and how detection works.
+
+**prop-85472733 (P4) — `goal_achievement` 0.0 on dry-run projects:**
+- `mas/core/engine/metrics_engine.py`: Extended `_dry_run_defaults` logic — `goal_achievement`
+  now becomes `not_applicable` when score ≤ 50.0 on dry-run (previously only caught score == 50.0,
+  missing the 0.0 case when criteria exist but no tasks matched).
+
+**prop-3a881566 (P4) — `documentation_completeness` 0.0 in simulated phases:**
+- `mas/core/engine/metrics_engine.py`: `documentation_completeness` now becomes `not_applicable`
+  when score ≤ 50.0 on dry-run projects (scribe not invoked in simulation).
+
+**prop-f53c0198 (P4) — `global_graph_contribution` low when EpisodeWriter not run:**
+- `mas/core/engine/metrics_engine.py`: `global_graph_contribution` ≤ 25.0 on dry-run projects
+  is now `not_applicable` with a note pointing to `mas db migrate-graph`.
+- `mas/policies/evaluation_policy.yaml`: Documented threshold and not_applicable promotion rule.
+
+### Also in this session
+
+- `mas/core/engine/agent_runner.py` + `mas/core/cli.py`: Added `load_dotenv()` so `.env`
+  at repo root is auto-loaded; `ANTHROPIC_API_KEY` now available at runtime without manual export.
+- `mas/tests/integration/`: Removed 12 dummy-repo integration tests that spun up temporary YAML
+  project directories (irrelevant now that the goal is SQLite-backed storage). Kept
+  `test_sqlite_handoff_logging.py` (SQL-focused, passes). Suite: 960 tests.
+- `mas/core/engine/access_control.py`: Added `SYSTEM` sentinel to `decisions.decision_log`
+  write list (required for handoff_engine AC1 auto-population).
+
+**All 6 proposals marked `applied` in `mas/roster/training_backlog.yaml`.**
+
+---
+
 ## [2026-04-15] proj-20260415-004-mas-improvements-full — MAS Improvements (9 Deliverables)
 
 ### Code Changes

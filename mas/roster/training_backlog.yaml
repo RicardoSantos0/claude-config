@@ -1,6 +1,8 @@
 last_updated: '2026-04-15T12:02:00.000000+00:00'
 proposals:
-- approved_at: '2026-04-11T11:57:20.098816+00:00'
+- applied_at: '2026-04-15T19:00:42.704273+00:00'
+  applied_in_project: proj-20260415-004-mas-improvements-full
+  approved_at: '2026-04-11T11:57:20.098816+00:00'
   approved_by: master_orchestrator
   created_at: '2026-04-11T11:44:23.438840+00:00'
   description: 'Metric ''goal_achievement'' scored 50.0/100 (below threshold 70.0).
@@ -17,7 +19,7 @@ proposals:
   recommended_change: Improve alignment between success criteria and task decomposition.
     Ensure task descriptions use keywords from success criteria.
   rejection_reason: ''
-  status: approved
+  status: applied
   systemic: false
   target_agent: system
   target_artifact: agents/product_manager_agent.md
@@ -170,7 +172,9 @@ proposals:
   target_agent: system
   target_artifact: policies/
   tradeoffs: Investigation required before recommending specific change.
-- approved_at: '2026-04-11T21:27:58.978615+00:00'
+- applied_at: '2026-04-15T19:00:42.704273+00:00'
+  applied_in_project: proj-20260415-004-mas-improvements-full
+  approved_at: '2026-04-11T21:27:58.978615+00:00'
   approved_by: master_orchestrator
   created_at: '2026-04-11T21:26:43.807824+00:00'
   description: 'Metric ''global_graph_contribution'' scored 5.0/100 (below threshold
@@ -187,7 +191,7 @@ proposals:
   recommended_change: 'Investigate and address low score for metric ''global_graph_contribution''
     (score: 5.0).'
   rejection_reason: ''
-  status: approved
+  status: applied
   systemic: false
   target_agent: system
   target_artifact: policies/
@@ -276,7 +280,9 @@ proposals:
   target_agent: system
   target_artifact: policies/governance_policy.yaml
   tradeoffs: Policy changes may slow workflow if overly restrictive.
-- approved_at: '2026-04-11T21:27:59.138458+00:00'
+- applied_at: '2026-04-15T19:00:42.704273+00:00'
+  applied_in_project: proj-20260415-004-mas-improvements-full
+  approved_at: '2026-04-11T21:27:59.138458+00:00'
   approved_by: master_orchestrator
   created_at: '2026-04-11T21:26:43.807824+00:00'
   description: 'Improvement area identified: global_graph_contribution'
@@ -292,7 +298,7 @@ proposals:
   recommended_change: Investigate and address 'global_graph_contribution' in the relevant
     agent or policy.
   rejection_reason: ''
-  status: approved
+  status: applied
   systemic: false
   target_agent: system
   target_artifact: policies/
@@ -375,8 +381,8 @@ proposals:
   systemic: false
   target_agent: system
   target_artifact: mas/core/cli.py
-  tradeoffs: "Minimal \u2014 CLI surface area increases by one command. Rebuild on\
-    \ 619 rows takes < 1s."
+  tradeoffs: Minimal — CLI surface area increases by one command. Rebuild on 619 rows
+    takes < 1s.
 - applied_at: '2026-04-15T12:02:00.000000+00:00'
   applied_by: master_orchestrator
   applied_in_project: proj-20260415-002-db-ops-and-librarian
@@ -400,10 +406,12 @@ proposals:
   systemic: false
   target_agent: system
   target_artifact: mas/core/engine/agent_runner.py
-  tradeoffs: "Low priority \u2014 only meaningful once live agent calls are used regularly."
-- created_at: '2026-04-15T14:38:15.516969+00:00'
-  description: "Systemic finding: goal_achievement scored 0.0 \u2014 dry-run project\
-    \ with no success criteria defined in state"
+  tradeoffs: Low priority — only meaningful once live agent calls are used regularly.
+- applied_at: '2026-04-15T19:00:42.704273+00:00'
+  applied_in_project: proj-20260415-004-mas-improvements-full
+  created_at: '2026-04-15T14:38:15.516969+00:00'
+  description: 'Systemic finding: goal_achievement scored 0.0 — dry-run project with
+    no success criteria defined in state'
   evidence:
   - eval-proj-20260415-004-mas-improvements-full
   minimum_evidence_met: true
@@ -415,14 +423,16 @@ proposals:
   proposal_type: governance_failure
   recommended_change: Review governance policy and update to address systemic pattern.
   rejection_reason: ''
-  status: pending
+  status: applied
   systemic: true
   target_agent: system
   target_artifact: policies/governance_policy.yaml
   tradeoffs: Policy changes may slow workflow if overly restrictive.
-- created_at: '2026-04-15T14:38:15.516999+00:00'
-  description: "Systemic finding: documentation_completeness 0.0 \u2014 scribe not\
-    \ invoked in simulated phases"
+- applied_at: '2026-04-15T19:00:42.704273+00:00'
+  applied_in_project: proj-20260415-004-mas-improvements-full
+  created_at: '2026-04-15T14:38:15.516999+00:00'
+  description: 'Systemic finding: documentation_completeness 0.0 — scribe not invoked
+    in simulated phases'
   evidence:
   - eval-proj-20260415-004-mas-improvements-full
   minimum_evidence_met: true
@@ -434,14 +444,16 @@ proposals:
   proposal_type: governance_failure
   recommended_change: Review governance policy and update to address systemic pattern.
   rejection_reason: ''
-  status: pending
+  status: applied
   systemic: true
   target_agent: system
   target_artifact: policies/governance_policy.yaml
   tradeoffs: Policy changes may slow workflow if overly restrictive.
-- created_at: '2026-04-15T14:38:15.517007+00:00'
-  description: "Systemic finding: global_graph_contribution 20.0 \u2014 EpisodeWriter\
-    \ not yet run at closure"
+- applied_at: '2026-04-15T19:00:42.704273+00:00'
+  applied_in_project: proj-20260415-004-mas-improvements-full
+  created_at: '2026-04-15T14:38:15.517007+00:00'
+  description: 'Systemic finding: global_graph_contribution 20.0 — EpisodeWriter not
+    yet run at closure'
   evidence:
   - eval-proj-20260415-004-mas-improvements-full
   minimum_evidence_met: true
@@ -453,7 +465,7 @@ proposals:
   proposal_type: governance_failure
   recommended_change: Review governance policy and update to address systemic pattern.
   rejection_reason: ''
-  status: pending
+  status: applied
   systemic: true
   target_agent: system
   target_artifact: policies/governance_policy.yaml

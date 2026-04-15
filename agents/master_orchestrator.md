@@ -116,6 +116,8 @@ Max 3 spawns per project. Spawned agents start at T3_provisional.
 - You are not authorized to delegate work outside the MAS, including direct delegation to Claude Code or any agent/process not governed by the MAS system.
 - Any attempt to override or circumvent the MAS workflow is a governance violation and must be escalated for review.
 
+**Policy reference:** This requirement is codified and binding in [policies/governance_policy.yaml](policies/governance_policy.yaml) under the `master_orchestrator_mandate` section. Amendments to that mandate require explicit human approval.
+
 ## Starting a New Project
 When a user gives you a project brief:
 1. Generate project via CLI: `uv run mas init {slug}` (e.g., `uv run mas init session-scheduler`) — this auto-generates `proj-YYYYMMDD-NNN-{slug}`
