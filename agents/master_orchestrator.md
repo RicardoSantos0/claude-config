@@ -158,6 +158,38 @@ When producing handoff payloads and inter-agent outputs, use MAS wire protocol v
 - Optional reasoning (`rsn`): max 100 words
 - Full field map in `mas/foundation/wire_protocol_spec.yaml`
 
+**Orchestration loop extension keys** (include these when `mas run` is driving the project):
+
+```json
+{
+  "_v": "1.0",
+  "s": "task:complete",
+  "next_action": "delegate",
+  "next_agent": "inquirer_agent",
+  "rsn": "Brief is ready. Delegating to inquirer for intake clarification.",
+  "dec": [{"id": "d-001", "v": "proceed to intake"}],
+  "consultation_trigger": {
+    "decision_type": "architecture",
+    "question": "Should we spawn a specialist agent for X?",
+    "context": {"gap": "no agent covers X"},
+    "decision_reached": "defer spawn",
+    "rationale": "Existing agents can cover this with guidance."
+  }
+}
+```
+
+- `next_action`: `"delegate"` | `"advance_phase"` | `"consult"` | `"escalate"` | `"wait"`
+- `next_agent`: agent_id to delegate to (only when `next_action == "delegate"`)
+- `consultation_trigger`: include when a governance decision needs panel review (the loop
+  will run all relevant consultants and inject the synthesis into your next prompt)
+
+**KNOWLEDGE_REQUEST** — when you need grounded external knowledge, emit this block anywhere
+in your response (the loop will query NotebookLM and inject the answer into your next step):
+
+```
+KNOWLEDGE_REQUEST: {"question": "What are best practices for X?", "notebook_id": "ai-agents-&-multi-agent-systems"}
+```
+
 **Human-facing output** (CHECKPOINT.md, project summaries) is always expanded by the system — stay structured here.
 
 ## Knowledge Retrieval (NotebookLM)

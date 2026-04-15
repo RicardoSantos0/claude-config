@@ -511,6 +511,74 @@ def migrate_graph(dry_run: bool):
 
 
 # ---------------------------------------------------------------------------
+# mas run — autonomous orchestration loop
+# ---------------------------------------------------------------------------
+
+@main.command()
+@click.argument("project_id")
+@click.option("--max-steps", default=50, show_default=True,
+              help="Hard stop after N agent steps.")
+@click.option("--dry-run", is_flag=True, default=False,
+              help="Dry-run mode — no real Anthropic API calls.")
+@click.option("--auto", is_flag=True, default=False,
+              help="Skip human confirmation at phase boundaries.")
+@click.option("--phase", "target_phase", default=None, metavar="PHASE",
+              help="Stop after this phase completes (e.g. 'specification').")
+def run(project_id: str, max_steps: int, dry_run: bool,
+        auto: bool, target_phase: str | None):
+    """Run the autonomous orchestration loop for a project.
+
+    Drives the project through intake -> specification -> planning phases,
+    pausing at each phase boundary for human confirmation (unless --auto).
+    Integrates consultation and NotebookLM knowledge requests.
+
+    Examples:
+
+    \b
+        mas run proj-20260415-005-my-project
+        mas run proj-20260415-005-my-project --dry-run --auto --max-steps 10
+        mas run proj-20260415-005-my-project --phase specification
+    """
+    _require_project(project_id)
+
+    from core.engine.orchestration_loop import OrchestrationLoop, LoopConfig, StopReason
+
+    config = LoopConfig(
+        project_id=project_id,
+        max_steps=max_steps,
+        dry_run=dry_run,
+        auto=auto,
+        target_phase=target_phase,
+    )
+
+    click.echo(f"\n[mas run] {project_id}")
+    if dry_run:
+        click.echo("  mode: dry-run (no real API calls)")
+    if auto:
+        click.echo("  mode: auto (phase boundaries skipped)")
+    click.echo("")
+
+    loop = OrchestrationLoop(config)
+    result = loop.run()
+
+    click.echo(f"\n[mas run] stopped at step {result.stopped_at_step}")
+    click.echo(f"  reason : {result.reason.value}")
+    click.echo(f"  agent  : {result.last_agent}")
+    click.echo(f"  phase  : {result.last_phase}")
+    if result.message:
+        click.echo(f"  message: {result.message}")
+
+    if result.reason == StopReason.UNANIMOUS_RISK:
+        click.echo("\n[GOVERNANCE] Unanimous high-risk — human review required.", err=True)
+        sys.exit(2)
+    elif result.reason == StopReason.HUMAN_ESCALATION:
+        click.echo("\n[GOVERNANCE] Human escalation required.", err=True)
+        sys.exit(2)
+    elif result.reason == StopReason.ERROR:
+        sys.exit(1)
+
+
+# ---------------------------------------------------------------------------
 # Entry point guard (for `uv run python core/cli.py`)
 # ---------------------------------------------------------------------------
 
