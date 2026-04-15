@@ -4,7 +4,7 @@
 
 system:
   name: "Governed Multi-Agent Delivery System"
-  version: "0.1.0"
+  version: "0.2.0"
   created_at: "2026-04-09T00:00:00Z"
   governance_mode: "strict"  # strict | permissive
 

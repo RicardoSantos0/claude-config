@@ -70,13 +70,17 @@ class TestDryRun:
 
 
 # ---------------------------------------------------------------------------
-# SQLite logging (dry_run does NOT log — only live calls log)
+# SQLite logging (dry_run logs a zero-token agent_call row for observability)
 # ---------------------------------------------------------------------------
 
 class TestSQLiteLogging:
 
-    def test_dry_run_does_not_log_to_db(self, db):
+    def test_dry_run_logs_zero_token_row(self, db):
+        """Dry-run calls now write a zero-token agent_call row (AC7)."""
+        import json
         runner = AgentRunner(db_path=db)
         runner.run("inquirer_agent", "prompt", project_id="proj-test", dry_run=True)
-        rows = query_events(project_id="proj-test", db_path=db)
-        assert len(rows) == 0
+        rows = query_events(project_id="proj-test", action_type="agent_call", db_path=db)
+        assert len(rows) == 1
+        payload = json.loads(rows[0]["payload"])
+        assert payload["params"]["inputs"]["tokens_total"] == 0

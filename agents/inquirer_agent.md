@@ -30,7 +30,7 @@ When Master sends you a handoff with a raw brief:
 ### Step 2 — Analyze Completeness
 Run the intake checker (see `_utilities.md` → Intake Commands):
 ```bash
-uv run python mas/core/intake_checker.py analyze --spec-json '{current_spec_as_json}'
+uv run python mas/core/engine/intake_checker.py analyze --spec-json '{current_spec_as_json}'
 ```
 This outputs: `complete`, `score`, `ready_for_handoff`, `required_missing`, `recommended_missing`, `ambiguous`.
 
@@ -44,7 +44,7 @@ This outputs: `complete`, `score`, `ready_for_handoff`, `required_missing`, `rec
 ### Step 3 — Generate Questions
 If score < 0.85 and rounds_used < 3, generate clarification questions:
 ```bash
-uv run python mas/core/intake_checker.py questions \
+uv run python mas/core/engine/intake_checker.py questions \
   --spec-json '{current_spec_as_json}' \
   --round {round_number} \
   --max 7
@@ -54,7 +54,7 @@ Present the questions to the user clearly, numbered. Wait for their answers.
 ### Step 4 — Record Q&A
 After the user answers, record the Q&A round:
 ```bash
-uv run python mas/core/intake_checker.py record-qa \
+uv run python mas/core/engine/intake_checker.py record-qa \
   --project-id {project_id} \
   --round {round_number} \
   --qa-json '[{"field":"project_goal","question":"...","answer":"...","resolved":true}]'
@@ -70,7 +70,7 @@ Apply the answers to the current spec and re-analyze:
 ### Step 6 — Write Final Specification
 Write via intake checker (see `_utilities.md` → Intake Commands):
 ```bash
-uv run python mas/core/intake_checker.py write-spec --project-id {project_id} --spec-json '{final_spec_as_json}'
+uv run python mas/core/engine/intake_checker.py write-spec --project-id {project_id} --spec-json '{final_spec_as_json}'
 ```
 
 Also update shared state via `shared_state_manager.py write` (see `_utilities.md`) to **both** fields:

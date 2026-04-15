@@ -290,9 +290,12 @@ class PromptAssembler:
         if graph_context:
             context["injected_graph_context"] = graph_context
 
-        # SQLite recent-events injection — agents see what happened before them
+        # SQLite recent-events injection — agents see what happened before them.
+        # Phase is passed as the semantic search query: finds relevant past events
+        # from the same phase across projects, not just the most recent ones.
         project_id = state.get("core_identity", {}).get("project_id", "")
-        sqlite_ctx = self._sqlite_context(project_id)
+        phase = state.get("core_identity", {}).get("current_phase", "")
+        sqlite_ctx = self._sqlite_context(project_id, phase=phase)
         if sqlite_ctx:
             context["injected_recent_events"] = sqlite_ctx
 
@@ -303,16 +306,28 @@ class PromptAssembler:
         self.last_token_count: int = _token_counter.count(prompt)
         return prompt
 
-    def _sqlite_context(self, project_id: str) -> str:
+    def _sqlite_context(self, project_id: str, phase: str = "") -> str:
         """
-        Query recent agent events from SQLite for prompt injection.
+        Query relevant agent events from SQLite for prompt injection.
+
+        Strategy:
+          1. If a phase context is provided, try semantic search (FTS5) first.
+             If ≥ 2 semantically relevant results found, use those.
+          2. Otherwise fall back to the 5 most recent events (chronological).
+
         Returns a compact formatted string, or "" if no events or DB unavailable.
+        Never raises — all errors are swallowed to protect prompt assembly.
         """
         if not project_id:
             return ""
         try:
-            from core.db import query_project_history, format_events_for_prompt
-            events = query_project_history(project_id, limit=5)
+            from core.db import semantic_search, query_project_history, format_events_for_prompt
+            events: list[dict] = []
+            if phase:
+                events = semantic_search(phase, project_id=project_id, limit=5)
+            if len(events) < 2:
+                # Not enough semantic hits — use recent history as fallback
+                events = query_project_history(project_id, limit=5)
             return format_events_for_prompt(events)
         except Exception:
             return ""

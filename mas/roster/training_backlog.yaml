@@ -296,4 +296,99 @@ proposals:
   - proj-20260411-001-agent-knowledge-and-flow-opt
   approved_by: master_orchestrator
   approved_at: '2026-04-11T21:27:59.138458+00:00'
-last_updated: '2026-04-11T21:26:43.815546+00:00'
+- proposal_id: prop-true-mas-001
+  proposal_type: governance_failure
+  priority: 2
+  target_agent: system
+  target_artifact: mas/core/engine/access_control.py
+  description: 'Recurring: inquirer_agent and master_orchestrator produce unauthorized_write
+    violations on fields they legitimately own in the workflow. 28 violations recorded
+    in proj-20260414-001-true-mas-integration.'
+  recommended_change: Update access_control.py to grant inquirer_agent write rights
+    on project_definition goal/problem/scope/criteria fields, and master_orchestrator
+    on artifacts.deliverables and decisions.decision_log.
+  evidence:
+  - proj-20260414-001-true-mas-integration
+  tradeoffs: Broadening write rights reduces governance strictness; mitigated by keeping
+    co-ownership (not replacing existing owners).
+  minimum_evidence_met: true
+  systemic: true
+  status: applied
+  rejection_reason: ''
+  original_proposal_id: ''
+  created_at: '2026-04-14T21:59:00.000000+00:00'
+  project_ids:
+  - proj-20260414-001-true-mas-integration
+  applied_by: master_orchestrator
+  applied_at: '2026-04-15T00:00:00.000000+00:00'
+  applied_in_project: proj-20260415-001-db-semantic-and-acl-fix
+- proposal_id: prop-true-mas-002
+  proposal_type: efficiency_improvement
+  priority: 3
+  target_agent: master_orchestrator
+  target_artifact: mas/core/engine/agent_runner.py
+  description: 'Token usage from live Anthropic responses not wired into communication.tokens_by_agent.
+    wire_compliance_rate stays 0% for all projects using dry-run mode.'
+  recommended_change: After a live agent_runner call, read token_usage from the response
+    and write to communication.tokens_by_agent via shared state. Add a CLI summary
+    command (mas tokens <project-id>).
+  evidence:
+  - proj-20260414-001-true-mas-integration
+  tradeoffs: Requires shared state write from agent_runner (non-fatal); communication
+    section ownership may need expansion.
+  minimum_evidence_met: true
+  systemic: false
+  status: partial
+  rejection_reason: ''
+  original_proposal_id: ''
+  created_at: '2026-04-14T21:59:00.000000+00:00'
+  project_ids:
+  - proj-20260414-001-true-mas-integration
+  notes: 'Partially addressed in proj-20260415-001-db-semantic-and-acl-fix: agent_runner
+    now logs tokens_prompt/completion/total to agent_events SQLite. Shared state write
+    and CLI command remain pending.'
+- proposal_id: prop-acl-001
+  proposal_type: efficiency_improvement
+  priority: 3
+  target_agent: system
+  target_artifact: mas/core/cli.py
+  description: 'No CLI command to backfill the FTS5 index for large existing databases.
+    After init_db() adds the FTS5 table, existing rows are not automatically indexed
+    (trigger only fires on new inserts). Manual Python invocation required.'
+  recommended_change: Add `mas db rebuild-fts` subcommand that runs `INSERT INTO
+    agent_events_fts(agent_events_fts) VALUES ("rebuild")` against episodic.db. Safe
+    to run multiple times (idempotent rebuild).
+  evidence:
+  - proj-20260415-001-db-semantic-and-acl-fix
+  tradeoffs: Minimal — CLI surface area increases by one command. Rebuild on 619 rows
+    takes < 1s.
+  minimum_evidence_met: true
+  systemic: false
+  status: pending
+  rejection_reason: ''
+  original_proposal_id: ''
+  created_at: '2026-04-15T10:05:00.000000+00:00'
+  project_ids:
+  - proj-20260415-001-db-semantic-and-acl-fix
+- proposal_id: prop-acl-002
+  proposal_type: efficiency_improvement
+  priority: 4
+  target_agent: system
+  target_artifact: mas/core/engine/agent_runner.py
+  description: 'No visibility into real-vs-dry-run ratio for agent_runner calls. All
+    calls are currently dry-run (no ANTHROPIC_API_KEY in test runs), but this is not
+    surfaced in project metrics or mas status.'
+  recommended_change: Add a dry_run_count / live_count field to agent_call events
+    payload. Surface as a ratio in `mas status` output alongside wire_compliance_rate.
+  evidence:
+  - proj-20260415-001-db-semantic-and-acl-fix
+  tradeoffs: Low priority — only meaningful once live agent calls are used regularly.
+  minimum_evidence_met: false
+  systemic: false
+  status: pending
+  rejection_reason: ''
+  original_proposal_id: ''
+  created_at: '2026-04-15T10:05:00.000000+00:00'
+  project_ids:
+  - proj-20260415-001-db-semantic-and-acl-fix
+last_updated: '2026-04-15T10:05:00.000000+00:00'

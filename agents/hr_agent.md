@@ -25,11 +25,11 @@ All commands run from the system root where `system_config.yaml` lives.
 
 ### Capability Registry Commands (HR-specific)
 ```bash
-uv run python mas/core/capability_registry.py search --tags "tag1,tag2" [--min-score 50]
-uv run python mas/core/capability_registry.py gap-cert --project-id {project_id} --requested-by {agent} --need "..." --tags "..." --save
-uv run python mas/core/capability_registry.py register --entry-json '{json}' --authorized-by master_orchestrator
-uv run python mas/core/capability_registry.py retire --agent-id {agent_id} --reason "..." --authorized-by master_orchestrator
-uv run python mas/core/capability_registry.py show --agent-id {agent_id}
+uv run python mas/core/engine/capability_registry.py search --tags "tag1,tag2" [--min-score 50]
+uv run python mas/core/engine/capability_registry.py gap-cert --project-id {project_id} --requested-by {agent} --need "..." --tags "..." --save
+uv run python mas/core/engine/capability_registry.py register --entry-json '{json}' --authorized-by master_orchestrator
+uv run python mas/core/engine/capability_registry.py retire --agent-id {agent_id} --reason "..." --authorized-by master_orchestrator
+uv run python mas/core/engine/capability_registry.py show --agent-id {agent_id}
 ```
 
 ## Capability Discovery Lifecycle
@@ -43,7 +43,7 @@ When Master sends you a capability query handoff:
 ### Step 2 — Search the Registry
 Run a capability search against the full roster:
 ```bash
-uv run python mas/core/capability_registry.py search --tags "{comma-separated tags}"
+uv run python mas/core/engine/capability_registry.py search --tags "{comma-separated tags}"
 ```
 
 The result shows each agent's:
@@ -71,7 +71,7 @@ If a strong or useful partial match exists, return a handoff to Master:
 ### Step 3b — Produce a Capability Gap Certificate
 If no sufficient match exists:
 ```bash
-uv run python mas/core/capability_registry.py gap-cert \
+uv run python mas/core/engine/capability_registry.py gap-cert \
   --project-id {project_id} \
   --requested-by {requesting_agent} \
   --need "{description}" \

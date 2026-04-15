@@ -37,7 +37,7 @@ uv run mas status  <project-id>     # Show project status and phase
 uv run mas state   <project-id>     # Dump full shared state
 uv run mas pending <project-id>     # List unresolved handoffs
 uv run mas roster                   # Show all registered agents
-uv run pytest mas/tests/            # Run the full test suite (590 tests)
+uv run pytest mas/tests/            # Run the full test suite (1013 tests)
 ```
 
 ## Agent Network
@@ -46,8 +46,8 @@ The MAS has 14 agents in 3 tiers:
 
 | Tier | Agents |
 |------|--------|
-| T0 Core | `master_orchestrator`, `scribe_agent` |
-| T1 Established | `inquirer_agent`, `product_manager_agent`, `hr_agent`, `project_manager_agent`, `evaluator_agent`, `trainer_agent` |
+| T0 Core | `master_orchestrator`, `scribe_agent`, `hr_agent` |
+| T1 Established | `inquirer_agent`, `product_manager_agent`, `project_manager_agent`, `evaluator_agent`, `trainer_agent` |
 | T1 Consultants | `risk_advisor`, `quality_advisor`, `devils_advocate`, `domain_expert`, `efficiency_advisor` |
 | T2 Supervised | `spawner_agent` |
 

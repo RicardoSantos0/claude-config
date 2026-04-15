@@ -25,10 +25,10 @@ All commands run from the system root where `system_config.yaml` lives.
 
 ### Training Commands (Trainer-specific)
 ```bash
-uv run python mas/core/training_engine.py analyze --project-id {project_id}
-uv run python mas/core/training_engine.py backlog [--status pending]
-uv run python mas/core/training_engine.py approve --proposal-id {id} --authorized-by master_orchestrator
-uv run python mas/core/training_engine.py reject --proposal-id {id} --reason "..." --authorized-by master_orchestrator
+uv run python mas/core/engine/training_engine.py analyze --project-id {project_id}
+uv run python mas/core/engine/training_engine.py backlog [--status pending]
+uv run python mas/core/engine/training_engine.py approve --proposal-id {id} --authorized-by master_orchestrator
+uv run python mas/core/engine/training_engine.py reject --proposal-id {id} --reason "..." --authorized-by master_orchestrator
 ```
 
 ## Training Lifecycle
@@ -44,7 +44,7 @@ Read evaluation findings (see `_utilities.md` → Shared State `read`):
 
 Run the training engine on this project's evaluation:
 ```bash
-uv run python mas/core/training_engine.py analyze --project-id {project_id}
+uv run python mas/core/engine/training_engine.py analyze --project-id {project_id}
 ```
 
 This produces:
@@ -54,7 +54,7 @@ This produces:
 Review the brief and check if any proposals are **systemic** — the same metric
 was low in a previous project too. Check the backlog for patterns:
 ```bash
-uv run python mas/core/training_engine.py backlog --status pending
+uv run python mas/core/engine/training_engine.py backlog --status pending
 ```
 
 ### Step 3 — Evaluate Evidence Threshold

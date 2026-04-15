@@ -45,3 +45,4 @@ mas/roster/**/*.bak
 skills/notebooklm/data/browser_state/
 skills/notebooklm/data/auth_info.json
 mas/data/episodic.db
+.vscode/settings.json

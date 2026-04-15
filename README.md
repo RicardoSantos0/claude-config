@@ -54,13 +54,24 @@ This creates symlinks so `agents/`, `commands/`, and `skills/` are globally avai
 
 ### Run a MAS project
 
-All `uv run` commands must be executed from this repo root (where `pyproject.toml` lives).
+Activate the venv once per session (recommended — faster than `uv run`):
+
+```powershell
+# Windows
+C:\Users\ricar\Documents\claude-config\.venv\Scripts\activate
+```
+
+Then use bare commands:
 
 ```bash
-uv run mas init session-scheduler   # Start a new project
-uv run mas status <project-id>      # Check project phase
-uv run mas roster                   # List all agents
+mas init session-scheduler          # Standard project (9 phases)
+mas init --mode=lite quick-fix      # Lite project (3 phases, no consultation)
+mas status <project-id>             # Check project phase
+mas roster                          # List all agents
+pytest mas/tests/                   # Run test suite (1013 tests)
 ```
+
+`uv run mas ...` also works from repo root but is slower.
 
 ---
 
@@ -105,21 +116,27 @@ claude-config/
 └── mas/                   # Multi-Agent System engine
     ├── CLAUDE.md
     ├── system_config.yaml
-    ├── core/              # 20 Python modules
-    ├── domains/           # Domain context files
+    ├── core/              # Python engine
+    │   ├── cli.py         # CLI entry point
+    │   ├── db.py          # SQLite access layer (FTS5 semantic search)
+    │   └── engine/        # 20 engine modules
+    ├── data/              # Runtime databases
+    │   ├── episodic.db    # SQLite WAL — agent_events + FTS5 index
+    │   └── semantic_stub.json  # Semantic search config (backend: sqlite_fts5)
+    ├── domains/           # Domain context files (auto-injected into domain_expert)
     ├── foundation/        # Protocol & schema specs
     ├── policies/          # 6 governance YAML files
-    ├── projects/          # Project workspaces
-    ├── roster/            # Agent/skill registrations
-    ├── templates/         # YAML templates
-    └── tests/             # Test suite (653 tests)
+    ├── projects/          # Project workspaces (gitignored)
+    ├── roster/            # Agent registry + training_backlog.yaml
+    ├── templates/         # Handoff, spawn, eval report templates
+    └── tests/             # Test suite (1013 tests)
 ```
 
 ---
 
 ## Multi-Agent System (MAS)
 
-Version **0.1.0**. A governed multi-agent delivery system that coordinates 14 specialized AI agents through formal handoff protocols, access-controlled shared state, and policy enforcement.
+Version **0.2.0**. A governed multi-agent delivery system that coordinates 14 specialized AI agents through formal handoff protocols, access-controlled shared state, and policy enforcement.
 
 **Key dependencies**: `anthropic>=0.49.0`, `pyyaml>=6.0`, `python-dotenv>=1.0`, `click>=8.1`, `rich>=13.0`, `networkx>=3.0`
 
@@ -180,6 +197,8 @@ Version **0.1.0**. A governed multi-agent delivery system that coordinates 14 sp
 
 ### Project Lifecycle
 
+**Standard mode** (9 phases):
+
 ```mermaid
 flowchart LR
     A[intake] --> B[specification]
@@ -192,7 +211,16 @@ flowchart LR
     H --> I[closed]
 ```
 
-Each phase transition requires:
+**Lite mode** (`mas init --mode=lite <slug>`, 3 phases):
+
+```
+intake → execution → closed
+```
+
+Lite mode skips specification, planning, capability discovery, consultation, and review.
+`mas status` shows `[lite]` next to the phase. Spawn is blocked in lite projects.
+
+Each standard phase transition requires:
 1. Exit criteria verification by Master
 2. Shared state snapshot
 3. Phase recording in state
@@ -201,30 +229,37 @@ Each phase transition requires:
 
 ### Core Modules
 
-20 Python modules in `mas/core/`:
+**`mas/core/`** — top-level (always importable as `core.*`):
 
 | Module | Purpose |
 |--------|---------|
-| `cli.py` | Top-level CLI entry point (`uv run mas`) |
+| `cli.py` | CLI entry point (`mas init`, `mas status`, `mas init --mode=lite`, …) |
+| `db.py` | Central SQLite layer: `append_event`, `semantic_search`, `query_token_usage` |
+| `wire_protocol.py` | Compact wire format for handoff payloads |
 | `config.py` | System configuration loader |
+
+**`mas/core/engine/`** — engine subpackage (import as `core.engine.*`):
+
+| Module | Purpose |
+|--------|---------|
 | `shared_state_manager.py` | Project state, access control, snapshots |
-| `handoff_engine.py` | Handoff creation, acceptance, compact wire format |
+| `handoff_engine.py` | Handoff creation, acceptance, SQLite event logging |
+| `access_control.py` | Field-level write permissions (updated 0.2.0 — broader write rights) |
+| `prompt_assembler.py` | State projection + FTS5-aware prompt injection |
+| `agent_runner.py` | Anthropic SDK wrapper; gated on `ANTHROPIC_API_KEY`; logs tokens |
 | `consultation_engine.py` | Consultation lifecycle, synthesis, compact format |
 | `intake_checker.py` | Spec quality scoring (threshold ≥ 0.85) |
 | `capability_registry.py` | Roster, gap certificates, match scoring |
 | `task_board.py` | Milestones, tasks, dependency chains |
 | `metrics_engine.py` | Project + agent scoring, evaluation reports |
-| `spawn_policy.py` | Spawn validation, agent package builder |
+| `spawn_policy.py` | Spawn validation; `LITE_MODE_NO_SPAWN` for lite projects |
 | `training_engine.py` | Proposal generation, backlog management |
-| `access_control.py` | Field-level write permissions |
-| `audit_logger.py` | Structured YAML event logging |
-| `message_bus.py` | Inter-agent messaging |
-| `prompt_assembler.py` | State projection and prompt building with lean injection |
-| `checkpoint_writer.py` | Human-readable project checkpoints |
-| `token_counter.py` | Heuristic/tiktoken token estimation |
-| `wire_protocol.py` | Compact wire format for handoff payloads |
 | `skill_bridge.py` | Agent-to-skill gateway with authorization matrix |
 | `graph_memory.py` | Graph-based relationship memory |
+| `audit_logger.py` | Structured YAML event logging |
+| `checkpoint_writer.py` | Human-readable project checkpoints |
+| `context_compressor.py` | Progressive state compression for token budgets |
+| `message_bus.py` | Inter-agent messaging |
 
 ### Governance
 
@@ -284,13 +319,25 @@ The 5-member consultant panel (`risk_advisor`, `quality_advisor`, `devils_advoca
 - **Graph memory** for relationship tracking
 - **Communication efficiency metrics** in evaluation (half-weight): token efficiency, payload density, context injection efficiency, consultation overhead, wire compliance
 
-### Memory Types
+### Memory and Episodic DB
 
-| Type | Scope | Lifetime | Notes |
+**Three-tier memory:**
+
+| Type | Scope | Lifetime | Store |
 |------|-------|----------|-------|
-| Working state | Task/phase | Ephemeral | Archived at phase completion |
-| Project memory | Per project | Durable | Written by Scribe only, never deleted |
-| Roster memory | System-wide | Durable | Agent/skill/tool definitions |
+| Working state | Task/phase | Ephemeral | `shared_state.yaml` (archived at phase end) |
+| Episodic (events) | Per project | Durable | `mas/data/episodic.db` — `agent_events` table |
+| Roster | System-wide | Durable | `mas/roster/` YAML files |
+
+**`mas/data/episodic.db`** is the primary event store (603+ rows across all projects):
+
+- Every handoff create/accept/reject writes a row
+- Every `agent_runner` call writes a row (including dry-run, with 0-token payload)
+- FTS5 virtual table `agent_events_fts` enables semantic search over `intent` + `payload`
+- `core.db.semantic_search(query, project_id)` — BM25-ranked full-text search
+- `core.db.query_token_usage(project_id)` — sums `tokens_prompt/completion/total`
+- `prompt_assembler` injects the 5 most relevant past events into every agent prompt
+  (uses semantic search with current phase as query; falls back to recent-5 if < 2 hits)
 
 ### LLM Configuration
 
@@ -332,27 +379,29 @@ Markdown files in `mas/domains/` auto-injected into `domain_expert`:
 
 ## CLI Reference
 
-All commands run from repo root via `uv`:
+Activate the venv first (`...\.venv\Scripts\activate`), then:
 
 ```bash
-uv run mas init <slug>           # Initialize new project
-uv run mas status <project-id>   # Current phase, owner, pending handoffs
-uv run mas state <project-id>    # Full shared state dump
-uv run mas pending <project-id>  # Unresolved handoffs
-uv run mas snapshot <project-id> # Snapshot at current phase
-uv run mas roster                # All registered agents
+mas init <slug>                  # Initialize standard project (9 phases)
+mas init --mode=lite <slug>      # Initialize lite project (3 phases, no consultation)
+mas status <project-id>          # Current phase [lite], owner, pending handoffs
+mas pending <project-id>         # Unresolved handoffs
+mas snapshot <project-id>        # Snapshot state at current phase
+mas roster                       # All registered agents
 ```
+
+Or via `uv run mas <command>` from repo root (slower).
 
 ---
 
 ## Testing
 
 ```bash
-uv run pytest mas/tests/              # Full suite (653 tests)
-uv run pytest mas/tests/unit/         # Unit tests
-uv run pytest mas/tests/integration/  # Integration tests
-uv run pytest mas/tests/governance/   # Access control & immutability
-uv run pytest mas/tests/prompts/      # Agent prompt tests
+pytest mas/tests/              # Full suite (1013 tests)
+pytest mas/tests/unit/         # Unit tests
+pytest mas/tests/integration/  # Integration tests
+pytest mas/tests/governance/   # Access control & immutability
+pytest mas/tests/prompts/      # Agent prompt tests
 ```
 
 End-to-end lifecycle test: `mas/tests/integration/test_full_lifecycle.py`

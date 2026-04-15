@@ -94,6 +94,8 @@ class AgentRunner:
             }
         """
         if dry_run or not self.available:
+            self._log_event(project_id, agent_id, prompt,
+                            tokens_prompt=0, tokens_completion=0)
             return {
                 "text": f"[dry_run] {agent_id}: set ANTHROPIC_API_KEY for live calls",
                 "tokens_used": 0,
@@ -113,9 +115,13 @@ class AgentRunner:
         try:
             msg = self._client.messages.create(**kwargs)  # type: ignore[union-attr]
             text = msg.content[0].text if msg.content else ""
-            tokens = (msg.usage.input_tokens or 0) + (msg.usage.output_tokens or 0)
+            tokens_prompt     = msg.usage.input_tokens  or 0
+            tokens_completion = msg.usage.output_tokens or 0
+            tokens = tokens_prompt + tokens_completion
 
-            self._log_event(project_id, agent_id, prompt, tokens)
+            self._log_event(project_id, agent_id, prompt,
+                            tokens_prompt=tokens_prompt,
+                            tokens_completion=tokens_completion)
 
             return {
                 "text": text,
@@ -142,7 +148,8 @@ class AgentRunner:
         project_id: str,
         agent_id: str,
         prompt: str,
-        tokens: int,
+        tokens_prompt: int = 0,
+        tokens_completion: int = 0,
     ) -> None:
         """Write an agent_call event to SQLite. Non-fatal."""
         if not project_id:
@@ -152,13 +159,19 @@ class AgentRunner:
             kwargs: dict = {}
             if self._db_path:
                 kwargs["db_path"] = self._db_path
+            tokens_total = tokens_prompt + tokens_completion
             append_event(
                 project_id=project_id,
                 agent_id=agent_id,
                 action_type="agent_call",
                 intent=prompt[:120],
-                result_shape=f"tokens={tokens}",
-                payload={"model": self.model, "tokens": tokens},
+                result_shape=f"tokens={tokens_total}",
+                payload={
+                    "model":             self.model,
+                    "tokens_prompt":     tokens_prompt,
+                    "tokens_completion": tokens_completion,
+                    "tokens_total":      tokens_total,
+                },
                 **kwargs,
             )
         except Exception:

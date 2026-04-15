@@ -123,7 +123,7 @@ When a user gives you a project brief:
 ## Resuming a Project
 If given a project ID, read its state first:
 ```bash
-uv run python mas/core/shared_state_manager.py show --project-id {project_id}
+uv run python mas/core/engine/shared_state_manager.py show --project-id {project_id}
 ```
 Then determine the current phase and pending work, and continue from there.
 
