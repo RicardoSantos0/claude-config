@@ -64,7 +64,8 @@ ACCESS_CONTROL: dict[str, dict] = {
 
     # === DECISIONS ===
     # master_orchestrator co-owns decision_log: it records coordination decisions during execution
-    "decisions.decision_log":    {"write": ["scribe_agent", "master_orchestrator"],   "mode": "append_only"},
+    # SYSTEM added so handoff_engine.accept() can auto-populate dec items (AC1)
+    "decisions.decision_log":    {"write": ["scribe_agent", "master_orchestrator", SYSTEM],   "mode": "append_only"},
     "decisions.assumptions":     {"write": [ANY_AGENT],        "mode": "append_only"},
     "decisions.open_questions":  {"write": [ANY_AGENT],        "mode": "append_only_with_resolution"},
     "decisions.approvals":       {"write": ["master_orchestrator"], "mode": "append_only"},
@@ -112,6 +113,11 @@ ACCESS_CONTROL: dict[str, dict] = {
     "communication.wire_compliance_rate":   {"write": [SYSTEM]},
     "communication.wire_compliant_count":   {"write": [SYSTEM]},
     "communication.wire_total_count":       {"write": [SYSTEM]},
+
+    # === LIBRARIAN (db_operations — T2 supervised) ===
+    # librarian_agent has write access to its own status/log fields only.
+    # Actual DB writes go through mas db CLI (no shared state fields needed).
+    "governance.consultation_outcome":      {"write": ["master_orchestrator"]},
 }
 
 

@@ -51,7 +51,12 @@ def redirect_db(db, monkeypatch):
 @pytest.fixture
 def sm(tmp_path):
     s = SharedStateManager(PROJECT_ID, projects_root=tmp_path)
-    s.initialize(request_id="req-001")
+    # s.initialize(request_id="req-001")  # disabled: avoid creating real projects during migration-focused runs
+    # Ensure minimal state exists for tests when initialize() is disabled
+    if not s.exists():
+        from core.engine.shared_state_manager import create_initial_state
+        s.project_dir.mkdir(parents=True, exist_ok=True)
+        s._save(create_initial_state(PROJECT_ID, "req-test"))
     return s
 
 

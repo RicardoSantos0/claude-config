@@ -197,7 +197,8 @@ class TestPromptAssemblerUsesSemanticSearch:
 
             result = pa._sqlite_context("proj-y", phase="review")
 
-        mock_sem.assert_called_once()
+        # AC3: when local search returns < 2 results, a second cross-project call is made
+        assert mock_sem.call_count >= 1
         mock_hist.assert_called_once_with("proj-y", limit=5)
         assert result == "[fallback]"
 

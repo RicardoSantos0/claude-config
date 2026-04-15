@@ -44,6 +44,8 @@ __all__ = [
     "query_agent_context",
     "semantic_search",
     "query_token_usage",
+    "query_graph_node",
+    "query_graph_edges",
     "format_events_for_prompt",
 ]
 
@@ -139,10 +141,13 @@ def query_token_usage(
     """
     Sum token usage across all agent_call events for a project.
     Token fields are stored in the JSON payload as:
-      {"tokens_prompt": N, "tokens_completion": N, "tokens_total": N}
+      {"tokens_prompt": N, "tokens_completion": N, "tokens_total": N, "dry_run": bool}
 
     Returns:
-        {"total_prompt": int, "total_completion": int, "total": int, "calls": int}
+        {
+            "total_prompt": int, "total_completion": int, "total": int,
+            "calls": int, "live_calls": int, "dry_calls": int
+        }
     """
     try:
         import json as _json
@@ -151,15 +156,20 @@ def query_token_usage(
                 "SELECT payload FROM agent_events WHERE project_id=? AND action_type='agent_call'",
                 (project_id,),
             ).fetchall()
-        total_prompt = total_completion = total = calls = 0
+        total_prompt = total_completion = total = calls = live_calls = dry_calls = 0
         for row in rows:
             try:
                 data = _json.loads(row["payload"] or "{}")
-                params = data.get("params", {}).get("inputs", {})
+                # Support both flat payload (new format) and nested params.inputs (old format)
+                params = data.get("params", {}).get("inputs", data)
                 total_prompt     += params.get("tokens_prompt", 0)
                 total_completion += params.get("tokens_completion", 0)
                 total            += params.get("tokens_total", 0)
                 calls += 1
+                if params.get("dry_run", False):
+                    dry_calls += 1
+                else:
+                    live_calls += 1
             except Exception:
                 pass
         return {
@@ -167,9 +177,65 @@ def query_token_usage(
             "total_completion": total_completion,
             "total":            total,
             "calls":            calls,
+            "live_calls":       live_calls,
+            "dry_calls":        dry_calls,
         }
     except Exception:
-        return {"total_prompt": 0, "total_completion": 0, "total": 0, "calls": 0}
+        return {
+            "total_prompt": 0, "total_completion": 0, "total": 0,
+            "calls": 0, "live_calls": 0, "dry_calls": 0,
+        }
+
+
+def query_graph_node(
+    node_id: str,
+    db_path: Path = DB_PATH,
+) -> dict | None:
+    """
+    Retrieve a single node from the agent_graph table by its ID.
+    Returns None if the table doesn't exist or the node is not found.
+
+    Args:
+        node_id: The node's primary key (e.g. an agent_id like 'master_orchestrator').
+        db_path: Path to the SQLite database.
+    """
+    try:
+        with _get_connection(db_path) as conn:
+            row = conn.execute(
+                "SELECT id, type, label, meta FROM agent_graph WHERE id = ?",
+                (node_id,),
+            ).fetchone()
+            return dict(row) if row else None
+    except Exception:
+        return None
+
+
+def query_graph_edges(
+    node_id: str,
+    limit: int = 10,
+    db_path: Path = DB_PATH,
+) -> list[dict]:
+    """
+    Retrieve all edges where node_id is the source OR target.
+    Returns [] if the table doesn't exist or no edges found.
+
+    Args:
+        node_id: The node whose edges to retrieve.
+        limit:   Max edges to return.
+        db_path: Path to the SQLite database.
+    """
+    try:
+        with _get_connection(db_path) as conn:
+            rows = conn.execute(
+                """SELECT id, source, target, relation, meta
+                   FROM agent_graph_edges
+                   WHERE source = ? OR target = ?
+                   LIMIT ?""",
+                (node_id, node_id, limit),
+            ).fetchall()
+            return [dict(r) for r in rows]
+    except Exception:
+        return []
 
 
 def format_events_for_prompt(events: list[dict]) -> str:

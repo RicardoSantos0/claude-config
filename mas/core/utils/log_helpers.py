@@ -100,6 +100,21 @@ def init_db(db_path: Path = DB_PATH) -> None:
                     INSERT INTO agent_events_fts(rowid, intent, payload)
                     VALUES (NEW.id, NEW.intent, NEW.payload);
                 END;
+
+            -- Graph tables: nodes and edges migrated from global_graph.yaml
+            CREATE TABLE IF NOT EXISTS agent_graph (
+                id      TEXT PRIMARY KEY,
+                type    TEXT,
+                label   TEXT,
+                meta    TEXT
+            );
+            CREATE TABLE IF NOT EXISTS agent_graph_edges (
+                id          TEXT PRIMARY KEY,
+                source      TEXT,
+                target      TEXT,
+                relation    TEXT,
+                meta        TEXT
+            );
         """)
 
 

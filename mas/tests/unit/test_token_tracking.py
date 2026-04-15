@@ -130,7 +130,12 @@ class TestQueryTokenUsage:
         init_db(db_path)
 
         result = query_token_usage("proj-no-calls", db_path=db_path)
-        assert result == {"total_prompt": 0, "total_completion": 0, "total": 0, "calls": 0}
+        assert result["total_prompt"] == 0
+        assert result["total_completion"] == 0
+        assert result["total"] == 0
+        assert result["calls"] == 0
+        assert result["dry_calls"] == 0
+        assert result["live_calls"] == 0
 
     def test_only_counts_agent_call_rows(self):
         """AC7: handoff rows are ignored; only action_type='agent_call' is summed."""

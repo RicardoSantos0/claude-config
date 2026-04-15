@@ -208,10 +208,25 @@ registry:
       participate in handoff chain. Exception approved 2026-04-14."
     spawn_origin: null
     created_at: '2026-04-10T00:00:00+00:00'
+  - agent_id: librarian_agent
+    name: Librarian Agent
+    version: 1.0.0
+    trust_tier: T2_supervised
+    status: active
+    capabilities:
+    - db_operations
+    - fts-rebuild
+    - graph-query
+    - vacuum
+    - db-stats
+    performance_score: null
+    spawn_origin: "proj-20260415-002-db-ops-and-librarian"
+    gap_cert: "gap-proj-20260415-002-001"
+    created_at: '2026-04-15T00:00:00+00:00'
   skills: []
   tools: []
 counts:
-  active_agents: 15
+  active_agents: 16
   active_skills: 0
   retired_agents: 0
-  spawned_total: 0
+  spawned_total: 1

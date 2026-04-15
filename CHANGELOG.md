@@ -4,6 +4,76 @@ All notable changes to this repository are documented here.
 
 ---
 
+## [2026-04-15] proj-20260415-004-mas-improvements-full — MAS Improvements (9 Deliverables)
+
+### Code Changes
+
+**AC1 — `handoff_engine.accept()` auto-populates `decisions.decision_log` from `dec` payload:**
+- `mas/core/engine/handoff_engine.py`: Added post-accept block that extracts `dec` items from
+  accepted handoff payload and appends them to `decisions.decision_log` via `system_append`.
+- `mas/core/engine/access_control.py`: Added `SYSTEM` to `decisions.decision_log` write list
+  so `system_append` is authorized.
+
+**AC2 — `metrics_engine` `not_applicable` mode for dry-run projects:**
+- `mas/core/engine/metrics_engine.py`: Added `mode: str = "live"` field to `MetricResult`
+  dataclass; added `_is_dry_run_state()`; updated `aggregate_project_score()` to exclude
+  `not_applicable` metrics; updated `evaluate_project()` to promote 50-default metrics to
+  `not_applicable` on dry-run projects.
+
+**AC3 — `prompt_assembler` cross-project semantic search fallback:**
+- `mas/core/engine/prompt_assembler.py`: Updated `_sqlite_context()` — when local semantic
+  search returns < 2 results, tries a second `semantic_search(project_id=None)` cross-project
+  call before falling back to `query_project_history`.
+
+**AC4 — `db.py` graph query helpers:**
+- `mas/core/db.py`: Added `query_graph_node(node_id)` and `query_graph_edges(node_id, limit)`
+  querying the `agent_graph` and `agent_graph_edges` SQLite tables.
+
+**AC5 — `prompt_assembler._graph_context()` uses SQLite:**
+- `mas/core/engine/prompt_assembler.py`: Refactored `_graph_context()` to query
+  `agent_graph`/`agent_graph_edges` tables first via the new `query_graph_node` and
+  `query_graph_edges` helpers; falls back to YAML GraphMemory if tables are empty.
+
+**AC6 — `training_engine` proposal deduplication:**
+- `mas/core/engine/training_engine.py`: Added `_is_duplicate(description, backlog)` helper;
+  added deduplication check in all 3 proposal generation loops; skips proposals whose
+  description matches an `applied` or `approved` entry in the training backlog; also skips
+  `not_applicable` metrics.
+
+### Documentation Changes
+
+**AC7 — `mas/CLAUDE.md` Live Run Quickstart:**
+- Added "## Live Run Quickstart" section with ANTHROPIC_API_KEY setup, venv activation,
+  `mas tokens`, `mas db rebuild-fts`, `mas db migrate-graph` commands, and dry-run note.
+
+**AC8 — `master_orchestrator.md` + `scribe_agent.md` phase-close documentation:**
+- `agents/master_orchestrator.md`: Added step 5 (invoke scribe_agent at phase transitions),
+  step 6 (spawn opportunity review at review phase), step 7 (EpisodeWriter + migrate-graph at
+  closure).
+- `agents/scribe_agent.md`: Added D8 section detailing exactly what to do at phase-close:
+  create phase summary file, append to `artifacts.change_log`, append to `artifacts.documents`,
+  return handoff with `s: "scribe:recorded"`.
+
+**AC9 — `librarian_agent.md` maintenance schedule** (carried from proj-002):
+- Already present in `agents/librarian_agent.md` as a dedicated maintenance schedule section.
+
+### Tests
+
+- `mas/tests/unit/test_mas_improvements.py` — 31 tests covering all 9 ACs
+- `mas/tests/unit/test_semantic_search.py` — updated `test_sqlite_context_falls_back_when_semantic_empty`
+  to assert `call_count >= 1` (AC3 now makes 2 calls when local results < 2)
+
+**Full suite: 1083 tests, all passing.**
+
+### Backlog
+
+3 systemic proposals added to `mas/roster/training_backlog.yaml`:
+- goal_achievement scoring on dry-run projects needs explicit N/A handling (not just 0.0)
+- documentation_completeness should account for simulated scribe writes
+- EpisodeWriter + migrate-graph should auto-run on project close in live mode
+
+---
+
 ## [2026-04-14] Post-restructuring migration fixes
 
 ### Engine Subpackage Migration
@@ -262,3 +332,68 @@ Result: 0 violations in `proj-20260415-001-db-semantic-and-acl-fix` (was 28).
   large existing databases without writing Python directly
 - `prop-acl-002`: Track real-vs-dry-run call ratio in `communication` shared state
   (wire compliance analogue for agent_runner calls)
+
+---
+
+## [2026-04-15] proj-20260415-002-db-ops-and-librarian — DB Ops, Token CLI, Librarian Agent
+
+**MAS project** | Standard mode | 9 phases | Score: 54.4/100 | 1052 tests (exit 0)
+
+### Deliverables
+
+**D1 — `mas tokens <project-id>` CLI**
+- New `mas tokens` subcommand reads `query_token_usage()` and prints prompt/completion/total
+  token counts plus dry/live call breakdown
+- `mas status` now includes agent call counts and dry% ratio
+
+**D2 — `mas db rebuild-fts` CLI**
+- New `mas db` subgroup with `rebuild-fts` subcommand
+- Runs `INSERT INTO agent_events_fts(agent_events_fts) VALUES ('rebuild')` — safe and idempotent
+
+**D3 — Dry/Live Run Accounting**
+- `agent_runner._log_event()` now includes `"dry_run": bool` in every `agent_call` payload
+- `query_token_usage()` returns `dry_calls` and `live_calls` counts alongside totals
+- `mas status` and `mas tokens` surface the dry% ratio
+
+**D4 — Graph SQLite Tables + Migration CLI**
+- `init_db()` in `log_helpers.py` now creates `agent_graph` and `agent_graph_edges` tables
+- New `mas db migrate-graph [--dry-run]` CLI migrates `global_graph.yaml` nodes/edges
+  into SQLite with `INSERT OR IGNORE` (idempotent)
+
+**D5 — `librarian_agent` Spawn**
+- Gap certificate `gap-proj-20260415-002-001` issued by hr_agent (db_operations capability)
+- All-5-consultant review: 4/5 approve (low risk), 1/5 caution (ACL constraint — addressed)
+- `agents/librarian_agent.md` drafted — T2 supervised, db_operations capability
+- Registered in `mas/roster/registry_index.yaml` (16 active agents, spawned_total=1)
+- ACL entry added in `access_control.py` (`governance.consultation_outcome`)
+
+### Backlog Proposals Applied
+
+- `prop-true-mas-002` → **applied** (tokens CLI + dry/live accounting fully implemented)
+- `prop-acl-001` → **applied** (`mas db rebuild-fts` CLI implemented)
+- `prop-acl-002` → **applied** (dry_run field in payload, ratio in `mas status`)
+
+### Tests
+
+39 new tests (full suite: 1052, exit 0):
+
+- `mas/tests/unit/test_cli_tokens.py` (7 tests — AC1, AC2)
+- `mas/tests/unit/test_cli_db.py` (12 tests — AC3, AC6, AC7)
+- `mas/tests/unit/test_dry_live_accounting.py` (5 tests — AC4, AC5)
+- `mas/tests/unit/test_librarian_agent_prompt.py` (15 tests — AC8, AC9)
+- Updated `mas/tests/unit/test_token_tracking.py` — `test_empty_project_returns_zeros`
+  updated to assert new `dry_calls`/`live_calls` keys in return dict
+
+### Trainer Proposals (this project — pending Master decision)
+
+16 proposals generated; 4 auto-reject candidates (systemic engine noise).
+12 actionable proposals flagged — all relate to metrics scored <70 due to missing
+structured state (no formal task board, no decision log entries, no AC formal records):
+
+- `global_graph_contribution` (15/100) — D4 migrates graph to SQLite; score will improve
+  once `mas db migrate-graph` is run against the live DB
+- `documentation_completeness` (20/100) — Scribe Agent not fully exercised in simulated
+  runs; will improve when live agent calls populate project folders
+- `goal_achievement`, `acceptance_criteria_pass_rate`, `scope_adherence`,
+  `decision_quality` (all 50/100) — metrics fire at 50 when structured state not present;
+  real improvement requires live agent runs with formal spec/AC recording

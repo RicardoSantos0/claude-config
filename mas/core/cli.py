@@ -22,6 +22,13 @@ import yaml
 
 ROOT = Path(__file__).parent.parent
 
+# Load .env at repo root so ANTHROPIC_API_KEY is available to agent_runner
+try:
+    from dotenv import load_dotenv as _load_dotenv
+    _load_dotenv(ROOT / ".env")
+except Exception:
+    pass
+
 # Max slug length (lowercase alphanum + hyphens)
 _MAX_SLUG_LEN = 40
 _SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$")
@@ -89,9 +96,18 @@ def _load_state(project_id: str) -> dict:
 # ---------------------------------------------------------------------------
 
 @click.group()
-@click.version_option("0.1.0", prog_name="mas")
+@click.version_option("0.2.0", prog_name="mas")
 def main():
     """Governed Multi-Agent Delivery System."""
+
+
+# ---------------------------------------------------------------------------
+# mas db (subgroup)
+# ---------------------------------------------------------------------------
+
+@main.group()
+def db():
+    """Database maintenance commands."""
 
 
 # ---------------------------------------------------------------------------
@@ -182,6 +198,13 @@ def status(project_id: str):
     violations = state.get("_meta", {}).get("governance_violations", [])
 
     mode_tag = " [lite]" if proj_mode == "lite" else ""
+    # Token usage summary (D1/D3)
+    from core.db import query_token_usage
+    usage = query_token_usage(project_id)
+    live_calls = usage.get("live_calls", 0)
+    dry_calls  = usage.get("dry_calls", 0)
+    total_tok  = usage.get("total", 0)
+
     click.echo(f"\nProject  : {project_id}")
     click.echo(f"Status   : {proj_status}")
     click.echo(f"Phase    : {phase}{mode_tag}")
@@ -191,6 +214,13 @@ def status(project_id: str):
     click.echo(f"Completed phases : {', '.join(completed_phases) or 'none'}")
     click.echo(f"Pending handoffs : {len(pending_handoffs)}")
     click.echo(f"Violations       : {len(violations)}")
+
+    # Dry/live accounting
+    total_calls = live_calls + dry_calls
+    if total_calls > 0:
+        dry_pct = dry_calls / total_calls * 100
+        click.echo(f"Agent calls      : {total_calls}  (live: {live_calls}, dry: {dry_calls}, dry%: {dry_pct:.1f}%)")
+    click.echo(f"Tokens (total)   : {total_tok:,}")
 
     if pending_handoffs:
         click.echo("\nPending handoffs:")
@@ -329,6 +359,155 @@ def roster(filter_status: str):
             )
     else:
         click.echo("\nNo agents registered yet.")
+
+
+# ---------------------------------------------------------------------------
+# mas tokens
+# ---------------------------------------------------------------------------
+
+@main.command()
+@click.argument("project_id")
+def tokens(project_id: str):
+    """Show token usage summary for a project.
+
+    Example: mas tokens proj-20260415-001
+    """
+    _require_project(project_id)
+    from core.db import query_token_usage
+
+    usage = query_token_usage(project_id)
+    total        = usage.get("total", 0)
+    prompt       = usage.get("total_prompt", 0)
+    completion   = usage.get("total_completion", 0)
+    calls        = usage.get("calls", 0)
+    dry_calls    = usage.get("dry_calls", 0)
+    live_calls   = usage.get("live_calls", 0)
+
+    click.echo(f"\nToken usage — {project_id}")
+    click.echo(f"  Total calls      : {calls}  (live: {live_calls}, dry: {dry_calls})")
+    click.echo(f"  Prompt tokens    : {prompt:,}")
+    click.echo(f"  Completion tokens: {completion:,}")
+    click.echo(f"  Total tokens     : {total:,}")
+
+    if live_calls + dry_calls > 0:
+        dry_pct = dry_calls / (live_calls + dry_calls) * 100
+        click.echo(f"  Dry-run ratio    : {dry_pct:.1f}%")
+
+
+# ---------------------------------------------------------------------------
+# mas db rebuild-fts
+# ---------------------------------------------------------------------------
+
+@db.command("rebuild-fts")
+def rebuild_fts():
+    """Rebuild the FTS5 index from agent_events (safe to run at any time).
+
+    Example: mas db rebuild-fts
+    """
+    from core.utils.log_helpers import _get_connection, DB_PATH
+
+    conn = _get_connection(DB_PATH)
+    try:
+        conn.execute("INSERT INTO agent_events_fts(agent_events_fts) VALUES ('rebuild')")
+        conn.commit()
+        count = conn.execute("SELECT COUNT(*) FROM agent_events").fetchone()[0]
+        click.echo(f"[ok] FTS5 index rebuilt — {count} rows indexed.")
+    except Exception as exc:
+        click.echo(f"[error] rebuild-fts failed: {exc}", err=True)
+        sys.exit(1)
+    finally:
+        conn.close()
+
+
+# ---------------------------------------------------------------------------
+# mas db migrate-graph
+# ---------------------------------------------------------------------------
+
+@db.command("migrate-graph")
+@click.option("--dry-run", is_flag=True, default=False,
+              help="Show what would be migrated without writing to SQLite.")
+def migrate_graph(dry_run: bool):
+    """Migrate global_graph.yaml nodes/edges into agent_graph SQLite tables.
+
+    Creates agent_graph and agent_graph_edges tables if they do not exist.
+    Migration is idempotent (INSERT OR IGNORE).
+
+    Example:
+        mas db migrate-graph
+        mas db migrate-graph --dry-run
+    """
+    import yaml as _yaml
+    from core.utils.log_helpers import _get_connection, DB_PATH
+
+    graph_path = ROOT / "data" / "global_graph.yaml"
+    if not graph_path.exists():
+        click.echo(f"[warn] {graph_path} not found — nothing to migrate.")
+        return
+
+    with open(graph_path, encoding="utf-8") as f:
+        graph_data = _yaml.safe_load(f) or {}
+
+    nodes = graph_data.get("nodes", [])
+    edges = graph_data.get("edges", [])
+
+    if dry_run:
+        click.echo(f"[dry-run] Would migrate {len(nodes)} nodes, {len(edges)} edges.")
+        return
+
+    conn = _get_connection(DB_PATH)
+    try:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS agent_graph (
+                id      TEXT PRIMARY KEY,
+                type    TEXT,
+                label   TEXT,
+                meta    TEXT
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS agent_graph_edges (
+                id          TEXT PRIMARY KEY,
+                source      TEXT,
+                target      TEXT,
+                relation    TEXT,
+                meta        TEXT
+            )
+        """)
+
+        import json as _json
+        node_count = 0
+        for node in nodes:
+            nid = node.get("id") or node.get("node_id", "")
+            if not nid:
+                continue
+            conn.execute(
+                "INSERT OR IGNORE INTO agent_graph(id, type, label, meta) VALUES (?, ?, ?, ?)",
+                (nid, node.get("type", ""), node.get("label", nid),
+                 _json.dumps({k: v for k, v in node.items() if k not in ("id", "node_id", "type", "label")})),
+            )
+            node_count += 1
+
+        edge_count = 0
+        for edge in edges:
+            eid = edge.get("id") or edge.get("edge_id", "")
+            if not eid:
+                continue
+            conn.execute(
+                "INSERT OR IGNORE INTO agent_graph_edges(id, source, target, relation, meta) VALUES (?, ?, ?, ?, ?)",
+                (eid, edge.get("source", ""), edge.get("target", ""),
+                 edge.get("relation", edge.get("type", "")),
+                 _json.dumps({k: v for k, v in edge.items()
+                              if k not in ("id", "edge_id", "source", "target", "relation", "type")})),
+            )
+            edge_count += 1
+
+        conn.commit()
+        click.echo(f"[ok] Graph migrated — {node_count} nodes, {edge_count} edges written to {DB_PATH}.")
+    except Exception as exc:
+        click.echo(f"[error] migrate-graph failed: {exc}", err=True)
+        sys.exit(1)
+    finally:
+        conn.close()
 
 
 # ---------------------------------------------------------------------------

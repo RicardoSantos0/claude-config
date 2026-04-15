@@ -24,6 +24,40 @@ if Windows App Store Python is active. Prefer the activated venv.
 
 ---
 
+## Live Run Quickstart
+
+To run agents with a real Anthropic API key (live mode — agents make actual LLM calls):
+
+```powershell
+# 1. Set your API key (Windows — PowerShell)
+$env:ANTHROPIC_API_KEY = "sk-ant-..."
+
+# Or add to .env at repo root (key name must be ANTHROPIC_API_KEY):
+#   ANTHROPIC_API_KEY=sk-ant-...
+
+# 2. Activate venv (if not already active)
+C:\Users\ricar\Documents\claude-config\.venv\Scripts\activate
+
+# 3. Start a project — agents will make live calls
+mas init my-project
+
+# 4. Check token usage after a run
+mas tokens proj-YYYYMMDD-NNN-my-project
+
+# 5. Rebuild FTS index after a batch of events
+mas db rebuild-fts
+
+# 6. Migrate graph relationships to SQLite (run once after setup)
+mas db migrate-graph
+```
+
+> **Note:** Without `ANTHROPIC_API_KEY`, all `agent_runner` calls are dry-run.
+> The engine still works — state is populated by the human acting as orchestrator —
+> but evaluation metrics will score `not_applicable` for metrics that require real
+> agent output (goal_achievement, AC pass rate, scope adherence, decision quality).
+
+---
+
 ## Quick Reference
 
 ```bash

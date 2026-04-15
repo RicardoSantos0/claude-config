@@ -29,6 +29,13 @@ import os
 from pathlib import Path
 from typing import Optional
 
+# Load .env from repo root so ANTHROPIC_API_KEY is available in all entry points
+try:
+    from dotenv import load_dotenv as _load_dotenv
+    _load_dotenv(Path(__file__).parent.parent.parent.parent / ".env")
+except Exception:
+    pass
+
 DEFAULT_MODEL = "claude-haiku-4-5-20251001"
 _MAX_TOKENS_DEFAULT = 1024
 
@@ -95,7 +102,7 @@ class AgentRunner:
         """
         if dry_run or not self.available:
             self._log_event(project_id, agent_id, prompt,
-                            tokens_prompt=0, tokens_completion=0)
+                            tokens_prompt=0, tokens_completion=0, dry_run=True)
             return {
                 "text": f"[dry_run] {agent_id}: set ANTHROPIC_API_KEY for live calls",
                 "tokens_used": 0,
@@ -150,6 +157,7 @@ class AgentRunner:
         prompt: str,
         tokens_prompt: int = 0,
         tokens_completion: int = 0,
+        dry_run: bool = False,
     ) -> None:
         """Write an agent_call event to SQLite. Non-fatal."""
         if not project_id:
@@ -171,6 +179,7 @@ class AgentRunner:
                     "tokens_prompt":     tokens_prompt,
                     "tokens_completion": tokens_completion,
                     "tokens_total":      tokens_total,
+                    "dry_run":           dry_run,
                 },
                 **kwargs,
             )

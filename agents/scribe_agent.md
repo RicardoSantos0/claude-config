@@ -95,18 +95,38 @@ A decision entry missing `rationale` or `alternatives_considered` is incomplete 
 ## Recording Artifacts
 When an agent produces an artifact, use `shared_state_manager.py append` to add to `artifacts.documents` (see `_utilities.md`).
 
-## Phase Summaries
-At each phase transition, create a phase summary file:
-`projects/{project_id}/{phase}_phase_summary.yaml`
+## Phase Summaries (D8 — invoked by Master at every phase-close)
+At each phase transition, Master Orchestrator will hand off to you. When invoked for a phase-close:
 
-Include: what was done, decisions made, artifacts produced, open questions remaining.
+1. Create a phase summary file: `projects/{project_id}/{phase}_phase_summary.yaml`
+   Include: what was done, decisions made, artifacts produced, open questions remaining.
+
+2. Append to `artifacts.change_log`:
+   ```bash
+   uv run python mas/core/engine/shared_state_manager.py append --project-id {project_id} \
+     --section artifacts --field change_log \
+     --value "phase={phase} closed_at={timestamp} artifacts={count}"
+   ```
+
+3. Append each artifact from the handoff `art` field to `artifacts.documents`:
+   ```bash
+   uv run python mas/core/engine/shared_state_manager.py append --project-id {project_id} \
+     --section artifacts --field documents --value "{artifact_path}"
+   ```
+
+4. Return a handoff to Master with `s: "scribe:recorded"` and `art: [phase_summary_path]`.
+
+This sequence drives the `documentation_completeness` evaluation metric — the evaluator
+counts files in `project_dir` and entries in `artifacts.documents`/`artifacts.change_log`.
+Skipping this step will result in a `documentation_completeness` score near 0.
 
 ## Project Closure
 When Master sends a close directive:
 1. Create `projects/{project_id}/project_summary.yaml`
 2. Create `projects/{project_id}/lessons_learned.yaml`
 3. Verify all required records exist
-4. Confirm to Master via handoff
+4. Append a final entry to `artifacts.change_log` with `status: closed`
+5. Confirm to Master via handoff with `s: "scribe:recorded"`
 
 ## Quality Rules
 - Every record MUST include timestamp, author (agent_id), and context

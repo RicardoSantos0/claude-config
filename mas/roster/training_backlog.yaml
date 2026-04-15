@@ -1,394 +1,460 @@
+last_updated: '2026-04-15T12:02:00.000000+00:00'
 proposals:
-- proposal_id: prop-8d1b86d2
-  proposal_type: efficiency_improvement
-  priority: 2
-  target_agent: system
-  target_artifact: agents/product_manager_agent.md
+- approved_at: '2026-04-11T11:57:20.098816+00:00'
+  approved_by: master_orchestrator
+  created_at: '2026-04-11T11:44:23.438840+00:00'
   description: 'Metric ''goal_achievement'' scored 50.0/100 (below threshold 70.0).
     Evidence: No success criteria defined in specification'
+  evidence:
+  - eval-proj-20260410-003-infarmed-workflow-opt-20260411T11435
+  minimum_evidence_met: true
+  original_proposal_id: ''
+  priority: 2
+  project_ids:
+  - proj-20260410-003-infarmed-workflow-opt
+  proposal_id: prop-8d1b86d2
+  proposal_type: efficiency_improvement
   recommended_change: Improve alignment between success criteria and task decomposition.
     Ensure task descriptions use keywords from success criteria.
-  evidence:
-  - eval-proj-20260410-003-infarmed-workflow-opt-20260411T11435
-  tradeoffs: No known tradeoffs for this metric.
-  minimum_evidence_met: true
-  systemic: false
-  status: approved
   rejection_reason: ''
-  original_proposal_id: ''
-  created_at: '2026-04-11T11:44:23.438840+00:00'
-  project_ids:
-  - proj-20260410-003-infarmed-workflow-opt
-  approved_by: master_orchestrator
-  approved_at: '2026-04-11T11:57:20.098816+00:00'
-- proposal_id: prop-90b0980f
-  proposal_type: repeated_quality_issue
-  priority: 3
+  status: approved
+  systemic: false
   target_agent: system
-  target_artifact: policies/
+  target_artifact: agents/product_manager_agent.md
+  tradeoffs: No known tradeoffs for this metric.
+- created_at: '2026-04-11T11:44:23.438840+00:00'
   description: 'Metric ''global_graph_contribution'' scored 30.0/100 (below threshold
     70.0). Evidence: contributed_entries=6'
+  evidence:
+  - eval-proj-20260410-003-infarmed-workflow-opt-20260411T11435
+  minimum_evidence_met: true
+  original_proposal_id: ''
+  priority: 3
+  project_ids:
+  - proj-20260410-003-infarmed-workflow-opt
+  proposal_id: prop-90b0980f
+  proposal_type: repeated_quality_issue
   recommended_change: 'Investigate and address low score for metric ''global_graph_contribution''
     (score: 30.0).'
-  evidence:
-  - eval-proj-20260410-003-infarmed-workflow-opt-20260411T11435
-  tradeoffs: No known tradeoffs for this metric.
-  minimum_evidence_met: true
-  systemic: false
-  status: deferred
   rejection_reason: Single-project data point; revisit after 3+ projects show the
     same pattern
-  original_proposal_id: ''
-  created_at: '2026-04-11T11:44:23.438840+00:00'
-  project_ids:
-  - proj-20260410-003-infarmed-workflow-opt
-- proposal_id: prop-4aa2b7c4
-  proposal_type: governance_failure
-  priority: 4
+  status: deferred
+  systemic: false
   target_agent: system
-  target_artifact: policies/governance_policy.yaml
+  target_artifact: policies/
+  tradeoffs: No known tradeoffs for this metric.
+- created_at: '2026-04-11T11:44:23.438840+00:00'
   description: 'Systemic finding: bottlenecks'
-  recommended_change: Review governance policy and update to address systemic pattern.
   evidence:
   - eval-proj-20260410-003-infarmed-workflow-opt-20260411T11435
-  tradeoffs: Policy changes may slow workflow if overly restrictive.
   minimum_evidence_met: true
-  systemic: true
-  status: rejected
+  original_proposal_id: ''
+  priority: 4
+  project_ids:
+  - proj-20260410-003-infarmed-workflow-opt
+  proposal_id: prop-4aa2b7c4
+  proposal_type: governance_failure
+  recommended_change: Review governance policy and update to address systemic pattern.
+  rejected_at: '2026-04-11T11:54:29.727871+00:00'
+  rejected_by: master_orchestrator
   rejection_reason: 'Engine artifact: generic pattern label ''bottlenecks'' from metrics
     intermediate state, not a real governance violation'
-  original_proposal_id: ''
-  created_at: '2026-04-11T11:44:23.438840+00:00'
-  project_ids:
-  - proj-20260410-003-infarmed-workflow-opt
-  rejected_by: master_orchestrator
-  rejected_at: '2026-04-11T11:54:29.727871+00:00'
-- proposal_id: prop-1e2e47b9
-  proposal_type: governance_failure
-  priority: 4
+  status: rejected
+  systemic: true
   target_agent: system
   target_artifact: policies/governance_policy.yaml
+  tradeoffs: Policy changes may slow workflow if overly restrictive.
+- created_at: '2026-04-11T11:44:23.438840+00:00'
   description: 'Systemic finding: drift_detected'
-  recommended_change: Review governance policy and update to address systemic pattern.
   evidence:
   - eval-proj-20260410-003-infarmed-workflow-opt-20260411T11435
-  tradeoffs: Policy changes may slow workflow if overly restrictive.
   minimum_evidence_met: true
-  systemic: true
-  status: rejected
+  original_proposal_id: ''
+  priority: 4
+  project_ids:
+  - proj-20260410-003-infarmed-workflow-opt
+  proposal_id: prop-1e2e47b9
+  proposal_type: governance_failure
+  recommended_change: Review governance policy and update to address systemic pattern.
+  rejected_at: '2026-04-11T11:54:29.884579+00:00'
+  rejected_by: master_orchestrator
   rejection_reason: 'Engine artifact: generic pattern label ''drift_detected'' from
     metrics intermediate state, not a real governance violation'
-  original_proposal_id: ''
-  created_at: '2026-04-11T11:44:23.438840+00:00'
-  project_ids:
-  - proj-20260410-003-infarmed-workflow-opt
-  rejected_by: master_orchestrator
-  rejected_at: '2026-04-11T11:54:29.884579+00:00'
-- proposal_id: prop-ba4ae8ce
-  proposal_type: governance_failure
-  priority: 4
+  status: rejected
+  systemic: true
   target_agent: system
   target_artifact: policies/governance_policy.yaml
+  tradeoffs: Policy changes may slow workflow if overly restrictive.
+- created_at: '2026-04-11T11:44:23.438840+00:00'
   description: 'Systemic finding: pattern_issues'
-  recommended_change: Review governance policy and update to address systemic pattern.
   evidence:
   - eval-proj-20260410-003-infarmed-workflow-opt-20260411T11435
-  tradeoffs: Policy changes may slow workflow if overly restrictive.
   minimum_evidence_met: true
-  systemic: true
-  status: rejected
+  original_proposal_id: ''
+  priority: 4
+  project_ids:
+  - proj-20260410-003-infarmed-workflow-opt
+  proposal_id: prop-ba4ae8ce
+  proposal_type: governance_failure
+  recommended_change: Review governance policy and update to address systemic pattern.
+  rejected_at: '2026-04-11T11:54:30.050535+00:00'
+  rejected_by: master_orchestrator
   rejection_reason: 'Engine artifact: generic pattern label ''pattern_issues'' from
     metrics intermediate state, not a real governance violation'
-  original_proposal_id: ''
-  created_at: '2026-04-11T11:44:23.438840+00:00'
-  project_ids:
-  - proj-20260410-003-infarmed-workflow-opt
-  rejected_by: master_orchestrator
-  rejected_at: '2026-04-11T11:54:30.050535+00:00'
-- proposal_id: prop-2238fa51
-  proposal_type: governance_failure
-  priority: 4
+  status: rejected
+  systemic: true
   target_agent: system
   target_artifact: policies/governance_policy.yaml
+  tradeoffs: Policy changes may slow workflow if overly restrictive.
+- created_at: '2026-04-11T11:44:23.438840+00:00'
   description: 'Systemic finding: total_violations'
-  recommended_change: Review governance policy and update to address systemic pattern.
   evidence:
   - eval-proj-20260410-003-infarmed-workflow-opt-20260411T11435
-  tradeoffs: Policy changes may slow workflow if overly restrictive.
   minimum_evidence_met: true
-  systemic: true
-  status: rejected
+  original_proposal_id: ''
+  priority: 4
+  project_ids:
+  - proj-20260410-003-infarmed-workflow-opt
+  proposal_id: prop-2238fa51
+  proposal_type: governance_failure
+  recommended_change: Review governance policy and update to address systemic pattern.
+  rejected_at: '2026-04-11T11:54:30.210202+00:00'
+  rejected_by: master_orchestrator
   rejection_reason: 'Engine artifact: generic pattern label ''total_violations'' from
     metrics intermediate state; only real violation already recorded separately'
+  status: rejected
+  systemic: true
+  target_agent: system
+  target_artifact: policies/governance_policy.yaml
+  tradeoffs: Policy changes may slow workflow if overly restrictive.
+- created_at: '2026-04-11T11:44:23.438840+00:00'
+  description: 'Improvement area identified: goal_achievement'
+  evidence:
+  - eval-proj-20260410-003-infarmed-workflow-opt-20260411T11435
+  minimum_evidence_met: true
   original_proposal_id: ''
-  created_at: '2026-04-11T11:44:23.438840+00:00'
+  priority: 2
   project_ids:
   - proj-20260410-003-infarmed-workflow-opt
-  rejected_by: master_orchestrator
-  rejected_at: '2026-04-11T11:54:30.210202+00:00'
-- proposal_id: prop-684af442
+  proposal_id: prop-684af442
   proposal_type: efficiency_improvement
-  priority: 2
-  target_agent: system
-  target_artifact: policies/
-  description: 'Improvement area identified: goal_achievement'
   recommended_change: Investigate and address 'goal_achievement' in the relevant agent
     or policy.
-  evidence:
-  - eval-proj-20260410-003-infarmed-workflow-opt-20260411T11435
-  tradeoffs: Investigation required before recommending specific change.
-  minimum_evidence_met: true
-  systemic: false
-  status: rejected
-  rejection_reason: Duplicate of prop-8d1b86d2 targeting the specific root cause
-  original_proposal_id: ''
-  created_at: '2026-04-11T11:44:23.438840+00:00'
-  project_ids:
-  - proj-20260410-003-infarmed-workflow-opt
-  rejected_by: master_orchestrator
   rejected_at: '2026-04-11T11:56:55.552891+00:00'
-- proposal_id: prop-ba2cadc9
-  proposal_type: efficiency_improvement
-  priority: 2
+  rejected_by: master_orchestrator
+  rejection_reason: Duplicate of prop-8d1b86d2 targeting the specific root cause
+  status: rejected
+  systemic: false
   target_agent: system
   target_artifact: policies/
+  tradeoffs: Investigation required before recommending specific change.
+- created_at: '2026-04-11T11:44:23.438840+00:00'
   description: 'Improvement area identified: global_graph_contribution'
-  recommended_change: Investigate and address 'global_graph_contribution' in the relevant
-    agent or policy.
   evidence:
   - eval-proj-20260410-003-infarmed-workflow-opt-20260411T11435
-  tradeoffs: Investigation required before recommending specific change.
   minimum_evidence_met: true
-  systemic: false
-  status: rejected
+  original_proposal_id: ''
+  priority: 2
+  project_ids:
+  - proj-20260410-003-infarmed-workflow-opt
+  proposal_id: prop-ba2cadc9
+  proposal_type: efficiency_improvement
+  recommended_change: Investigate and address 'global_graph_contribution' in the relevant
+    agent or policy.
+  rejected_at: '2026-04-11T11:56:55.710556+00:00'
+  rejected_by: master_orchestrator
   rejection_reason: Single-project evidence; needs multi-project pattern before warranting
     policy change
-  original_proposal_id: ''
-  created_at: '2026-04-11T11:44:23.438840+00:00'
-  project_ids:
-  - proj-20260410-003-infarmed-workflow-opt
-  rejected_by: master_orchestrator
-  rejected_at: '2026-04-11T11:56:55.710556+00:00'
-- proposal_id: prop-0515a6a5
-  proposal_type: repeated_quality_issue
-  priority: 3
+  status: rejected
+  systemic: false
   target_agent: system
   target_artifact: policies/
+  tradeoffs: Investigation required before recommending specific change.
+- approved_at: '2026-04-11T21:27:58.978615+00:00'
+  approved_by: master_orchestrator
+  created_at: '2026-04-11T21:26:43.807824+00:00'
   description: 'Metric ''global_graph_contribution'' scored 5.0/100 (below threshold
     70.0). Evidence: contributed_entries=1'
+  evidence:
+  - eval-proj-20260411-001-agent-knowledge-and-flow-opt-20260411T21261
+  minimum_evidence_met: true
+  original_proposal_id: ''
+  priority: 3
+  project_ids:
+  - proj-20260411-001-agent-knowledge-and-flow-opt
+  proposal_id: prop-0515a6a5
+  proposal_type: repeated_quality_issue
   recommended_change: 'Investigate and address low score for metric ''global_graph_contribution''
     (score: 5.0).'
-  evidence:
-  - eval-proj-20260411-001-agent-knowledge-and-flow-opt-20260411T21261
-  tradeoffs: No known tradeoffs for this metric.
-  minimum_evidence_met: true
-  systemic: false
-  status: approved
   rejection_reason: ''
-  original_proposal_id: ''
-  created_at: '2026-04-11T21:26:43.807824+00:00'
-  project_ids:
-  - proj-20260411-001-agent-knowledge-and-flow-opt
-  approved_by: master_orchestrator
-  approved_at: '2026-04-11T21:27:58.978615+00:00'
-- proposal_id: prop-c3e0b259
-  proposal_type: governance_failure
-  priority: 4
-  target_agent: system
-  target_artifact: policies/governance_policy.yaml
-  description: 'Systemic finding: bottlenecks'
-  recommended_change: Review governance policy and update to address systemic pattern.
-  evidence:
-  - eval-proj-20260411-001-agent-knowledge-and-flow-opt-20260411T21261
-  tradeoffs: Policy changes may slow workflow if overly restrictive.
-  minimum_evidence_met: true
-  systemic: true
-  status: rejected
-  rejection_reason: 'False positive: P4 systemic governance_failure fired on label
-    name without real evidence. Eval shows 0 violations, score 86.0.'
-  original_proposal_id: ''
-  created_at: '2026-04-11T21:26:43.807824+00:00'
-  project_ids:
-  - proj-20260411-001-agent-knowledge-and-flow-opt
-  rejected_by: master_orchestrator
-  rejected_at: '2026-04-11T21:27:55.454365+00:00'
-- proposal_id: prop-7ffb91aa
-  proposal_type: governance_failure
-  priority: 4
-  target_agent: system
-  target_artifact: policies/governance_policy.yaml
-  description: 'Systemic finding: drift_detected'
-  recommended_change: Review governance policy and update to address systemic pattern.
-  evidence:
-  - eval-proj-20260411-001-agent-knowledge-and-flow-opt-20260411T21261
-  tradeoffs: Policy changes may slow workflow if overly restrictive.
-  minimum_evidence_met: true
-  systemic: true
-  status: rejected
-  rejection_reason: 'False positive: P4 systemic governance_failure fired on label
-    name without real evidence. Eval shows 0 violations, score 86.0.'
-  original_proposal_id: ''
-  created_at: '2026-04-11T21:26:43.807824+00:00'
-  project_ids:
-  - proj-20260411-001-agent-knowledge-and-flow-opt
-  rejected_by: master_orchestrator
-  rejected_at: '2026-04-11T21:27:55.613318+00:00'
-- proposal_id: prop-402b84ef
-  proposal_type: governance_failure
-  priority: 4
-  target_agent: system
-  target_artifact: policies/governance_policy.yaml
-  description: 'Systemic finding: pattern_issues'
-  recommended_change: Review governance policy and update to address systemic pattern.
-  evidence:
-  - eval-proj-20260411-001-agent-knowledge-and-flow-opt-20260411T21261
-  tradeoffs: Policy changes may slow workflow if overly restrictive.
-  minimum_evidence_met: true
-  systemic: true
-  status: rejected
-  rejection_reason: 'False positive: P4 systemic governance_failure fired on label
-    name without real evidence. Eval shows 0 violations, score 86.0.'
-  original_proposal_id: ''
-  created_at: '2026-04-11T21:26:43.807824+00:00'
-  project_ids:
-  - proj-20260411-001-agent-knowledge-and-flow-opt
-  rejected_by: master_orchestrator
-  rejected_at: '2026-04-11T21:27:55.771856+00:00'
-- proposal_id: prop-6b723283
-  proposal_type: governance_failure
-  priority: 4
-  target_agent: system
-  target_artifact: policies/governance_policy.yaml
-  description: 'Systemic finding: total_violations'
-  recommended_change: Review governance policy and update to address systemic pattern.
-  evidence:
-  - eval-proj-20260411-001-agent-knowledge-and-flow-opt-20260411T21261
-  tradeoffs: Policy changes may slow workflow if overly restrictive.
-  minimum_evidence_met: true
-  systemic: true
-  status: rejected
-  rejection_reason: 'False positive: P4 systemic governance_failure fired on label
-    name without real evidence. Eval shows 0 violations, score 86.0.'
-  original_proposal_id: ''
-  created_at: '2026-04-11T21:26:43.807824+00:00'
-  project_ids:
-  - proj-20260411-001-agent-knowledge-and-flow-opt
-  rejected_by: master_orchestrator
-  rejected_at: '2026-04-11T21:27:55.935320+00:00'
-- proposal_id: prop-f3b3a7e9
-  proposal_type: efficiency_improvement
-  priority: 2
+  status: approved
+  systemic: false
   target_agent: system
   target_artifact: policies/
-  description: 'Improvement area identified: global_graph_contribution'
-  recommended_change: Investigate and address 'global_graph_contribution' in the relevant
-    agent or policy.
+  tradeoffs: No known tradeoffs for this metric.
+- created_at: '2026-04-11T21:26:43.807824+00:00'
+  description: 'Systemic finding: bottlenecks'
   evidence:
   - eval-proj-20260411-001-agent-knowledge-and-flow-opt-20260411T21261
-  tradeoffs: Investigation required before recommending specific change.
   minimum_evidence_met: true
-  systemic: false
-  status: approved
-  rejection_reason: ''
   original_proposal_id: ''
-  created_at: '2026-04-11T21:26:43.807824+00:00'
+  priority: 4
   project_ids:
   - proj-20260411-001-agent-knowledge-and-flow-opt
-  approved_by: master_orchestrator
-  approved_at: '2026-04-11T21:27:59.138458+00:00'
-- proposal_id: prop-true-mas-001
+  proposal_id: prop-c3e0b259
   proposal_type: governance_failure
-  priority: 2
+  recommended_change: Review governance policy and update to address systemic pattern.
+  rejected_at: '2026-04-11T21:27:55.454365+00:00'
+  rejected_by: master_orchestrator
+  rejection_reason: 'False positive: P4 systemic governance_failure fired on label
+    name without real evidence. Eval shows 0 violations, score 86.0.'
+  status: rejected
+  systemic: true
   target_agent: system
-  target_artifact: mas/core/engine/access_control.py
+  target_artifact: policies/governance_policy.yaml
+  tradeoffs: Policy changes may slow workflow if overly restrictive.
+- created_at: '2026-04-11T21:26:43.807824+00:00'
+  description: 'Systemic finding: drift_detected'
+  evidence:
+  - eval-proj-20260411-001-agent-knowledge-and-flow-opt-20260411T21261
+  minimum_evidence_met: true
+  original_proposal_id: ''
+  priority: 4
+  project_ids:
+  - proj-20260411-001-agent-knowledge-and-flow-opt
+  proposal_id: prop-7ffb91aa
+  proposal_type: governance_failure
+  recommended_change: Review governance policy and update to address systemic pattern.
+  rejected_at: '2026-04-11T21:27:55.613318+00:00'
+  rejected_by: master_orchestrator
+  rejection_reason: 'False positive: P4 systemic governance_failure fired on label
+    name without real evidence. Eval shows 0 violations, score 86.0.'
+  status: rejected
+  systemic: true
+  target_agent: system
+  target_artifact: policies/governance_policy.yaml
+  tradeoffs: Policy changes may slow workflow if overly restrictive.
+- created_at: '2026-04-11T21:26:43.807824+00:00'
+  description: 'Systemic finding: pattern_issues'
+  evidence:
+  - eval-proj-20260411-001-agent-knowledge-and-flow-opt-20260411T21261
+  minimum_evidence_met: true
+  original_proposal_id: ''
+  priority: 4
+  project_ids:
+  - proj-20260411-001-agent-knowledge-and-flow-opt
+  proposal_id: prop-402b84ef
+  proposal_type: governance_failure
+  recommended_change: Review governance policy and update to address systemic pattern.
+  rejected_at: '2026-04-11T21:27:55.771856+00:00'
+  rejected_by: master_orchestrator
+  rejection_reason: 'False positive: P4 systemic governance_failure fired on label
+    name without real evidence. Eval shows 0 violations, score 86.0.'
+  status: rejected
+  systemic: true
+  target_agent: system
+  target_artifact: policies/governance_policy.yaml
+  tradeoffs: Policy changes may slow workflow if overly restrictive.
+- created_at: '2026-04-11T21:26:43.807824+00:00'
+  description: 'Systemic finding: total_violations'
+  evidence:
+  - eval-proj-20260411-001-agent-knowledge-and-flow-opt-20260411T21261
+  minimum_evidence_met: true
+  original_proposal_id: ''
+  priority: 4
+  project_ids:
+  - proj-20260411-001-agent-knowledge-and-flow-opt
+  proposal_id: prop-6b723283
+  proposal_type: governance_failure
+  recommended_change: Review governance policy and update to address systemic pattern.
+  rejected_at: '2026-04-11T21:27:55.935320+00:00'
+  rejected_by: master_orchestrator
+  rejection_reason: 'False positive: P4 systemic governance_failure fired on label
+    name without real evidence. Eval shows 0 violations, score 86.0.'
+  status: rejected
+  systemic: true
+  target_agent: system
+  target_artifact: policies/governance_policy.yaml
+  tradeoffs: Policy changes may slow workflow if overly restrictive.
+- approved_at: '2026-04-11T21:27:59.138458+00:00'
+  approved_by: master_orchestrator
+  created_at: '2026-04-11T21:26:43.807824+00:00'
+  description: 'Improvement area identified: global_graph_contribution'
+  evidence:
+  - eval-proj-20260411-001-agent-knowledge-and-flow-opt-20260411T21261
+  minimum_evidence_met: true
+  original_proposal_id: ''
+  priority: 2
+  project_ids:
+  - proj-20260411-001-agent-knowledge-and-flow-opt
+  proposal_id: prop-f3b3a7e9
+  proposal_type: efficiency_improvement
+  recommended_change: Investigate and address 'global_graph_contribution' in the relevant
+    agent or policy.
+  rejection_reason: ''
+  status: approved
+  systemic: false
+  target_agent: system
+  target_artifact: policies/
+  tradeoffs: Investigation required before recommending specific change.
+- applied_at: '2026-04-15T00:00:00.000000+00:00'
+  applied_by: master_orchestrator
+  applied_in_project: proj-20260415-001-db-semantic-and-acl-fix
+  created_at: '2026-04-14T21:59:00.000000+00:00'
   description: 'Recurring: inquirer_agent and master_orchestrator produce unauthorized_write
     violations on fields they legitimately own in the workflow. 28 violations recorded
     in proj-20260414-001-true-mas-integration.'
+  evidence:
+  - proj-20260414-001-true-mas-integration
+  minimum_evidence_met: true
+  original_proposal_id: ''
+  priority: 2
+  project_ids:
+  - proj-20260414-001-true-mas-integration
+  proposal_id: prop-true-mas-001
+  proposal_type: governance_failure
   recommended_change: Update access_control.py to grant inquirer_agent write rights
     on project_definition goal/problem/scope/criteria fields, and master_orchestrator
     on artifacts.deliverables and decisions.decision_log.
-  evidence:
-  - proj-20260414-001-true-mas-integration
+  rejection_reason: ''
+  status: applied
+  systemic: true
+  target_agent: system
+  target_artifact: mas/core/engine/access_control.py
   tradeoffs: Broadening write rights reduces governance strictness; mitigated by keeping
     co-ownership (not replacing existing owners).
-  minimum_evidence_met: true
-  systemic: true
-  status: applied
-  rejection_reason: ''
-  original_proposal_id: ''
+- applied_at: '2026-04-15T12:02:00.000000+00:00'
+  applied_by: master_orchestrator
+  applied_in_project: proj-20260415-002-db-ops-and-librarian
   created_at: '2026-04-14T21:59:00.000000+00:00'
+  description: Token usage from live Anthropic responses not wired into communication.tokens_by_agent.
+    wire_compliance_rate stays 0% for all projects using dry-run mode.
+  evidence:
+  - proj-20260414-001-true-mas-integration
+  minimum_evidence_met: true
+  notes: 'Fully applied in proj-20260415-002: mas tokens CLI added, dry_run field
+    in agent_call payload, dry_calls/live_calls in query_token_usage(), ratio in mas
+    status.'
+  original_proposal_id: ''
+  priority: 3
   project_ids:
   - proj-20260414-001-true-mas-integration
-  applied_by: master_orchestrator
-  applied_at: '2026-04-15T00:00:00.000000+00:00'
-  applied_in_project: proj-20260415-001-db-semantic-and-acl-fix
-- proposal_id: prop-true-mas-002
+  proposal_id: prop-true-mas-002
   proposal_type: efficiency_improvement
-  priority: 3
-  target_agent: master_orchestrator
-  target_artifact: mas/core/engine/agent_runner.py
-  description: 'Token usage from live Anthropic responses not wired into communication.tokens_by_agent.
-    wire_compliance_rate stays 0% for all projects using dry-run mode.'
   recommended_change: After a live agent_runner call, read token_usage from the response
     and write to communication.tokens_by_agent via shared state. Add a CLI summary
     command (mas tokens <project-id>).
-  evidence:
-  - proj-20260414-001-true-mas-integration
+  rejection_reason: ''
+  status: applied
+  systemic: false
+  target_agent: master_orchestrator
+  target_artifact: mas/core/engine/agent_runner.py
   tradeoffs: Requires shared state write from agent_runner (non-fatal); communication
     section ownership may need expansion.
+- applied_at: '2026-04-15T12:02:00.000000+00:00'
+  applied_by: master_orchestrator
+  applied_in_project: proj-20260415-002-db-ops-and-librarian
+  created_at: '2026-04-15T10:05:00.000000+00:00'
+  description: No CLI command to backfill the FTS5 index for large existing databases.
+    After init_db() adds the FTS5 table, existing rows are not automatically indexed
+    (trigger only fires on new inserts). Manual Python invocation required.
+  evidence:
+  - proj-20260415-001-db-semantic-and-acl-fix
   minimum_evidence_met: true
-  systemic: false
-  status: partial
-  rejection_reason: ''
   original_proposal_id: ''
-  created_at: '2026-04-14T21:59:00.000000+00:00'
-  project_ids:
-  - proj-20260414-001-true-mas-integration
-  notes: 'Partially addressed in proj-20260415-001-db-semantic-and-acl-fix: agent_runner
-    now logs tokens_prompt/completion/total to agent_events SQLite. Shared state write
-    and CLI command remain pending.'
-- proposal_id: prop-acl-001
-  proposal_type: efficiency_improvement
   priority: 3
+  project_ids:
+  - proj-20260415-001-db-semantic-and-acl-fix
+  proposal_id: prop-acl-001
+  proposal_type: efficiency_improvement
+  recommended_change: Add `mas db rebuild-fts` subcommand that runs `INSERT INTO agent_events_fts(agent_events_fts)
+    VALUES ("rebuild")` against episodic.db. Safe to run multiple times (idempotent
+    rebuild).
+  rejection_reason: ''
+  status: applied
+  systemic: false
   target_agent: system
   target_artifact: mas/core/cli.py
-  description: 'No CLI command to backfill the FTS5 index for large existing databases.
-    After init_db() adds the FTS5 table, existing rows are not automatically indexed
-    (trigger only fires on new inserts). Manual Python invocation required.'
-  recommended_change: Add `mas db rebuild-fts` subcommand that runs `INSERT INTO
-    agent_events_fts(agent_events_fts) VALUES ("rebuild")` against episodic.db. Safe
-    to run multiple times (idempotent rebuild).
+  tradeoffs: "Minimal \u2014 CLI surface area increases by one command. Rebuild on\
+    \ 619 rows takes < 1s."
+- applied_at: '2026-04-15T12:02:00.000000+00:00'
+  applied_by: master_orchestrator
+  applied_in_project: proj-20260415-002-db-ops-and-librarian
+  created_at: '2026-04-15T10:05:00.000000+00:00'
+  description: No visibility into real-vs-dry-run ratio for agent_runner calls. All
+    calls are currently dry-run (no ANTHROPIC_API_KEY in test runs), but this is not
+    surfaced in project metrics or mas status.
   evidence:
   - proj-20260415-001-db-semantic-and-acl-fix
-  tradeoffs: Minimal — CLI surface area increases by one command. Rebuild on 619 rows
-    takes < 1s.
-  minimum_evidence_met: true
-  systemic: false
-  status: pending
-  rejection_reason: ''
+  minimum_evidence_met: false
   original_proposal_id: ''
-  created_at: '2026-04-15T10:05:00.000000+00:00'
+  priority: 4
   project_ids:
   - proj-20260415-001-db-semantic-and-acl-fix
-- proposal_id: prop-acl-002
+  proposal_id: prop-acl-002
   proposal_type: efficiency_improvement
-  priority: 4
-  target_agent: system
-  target_artifact: mas/core/engine/agent_runner.py
-  description: 'No visibility into real-vs-dry-run ratio for agent_runner calls. All
-    calls are currently dry-run (no ANTHROPIC_API_KEY in test runs), but this is not
-    surfaced in project metrics or mas status.'
   recommended_change: Add a dry_run_count / live_count field to agent_call events
     payload. Surface as a ratio in `mas status` output alongside wire_compliance_rate.
-  evidence:
-  - proj-20260415-001-db-semantic-and-acl-fix
-  tradeoffs: Low priority — only meaningful once live agent calls are used regularly.
-  minimum_evidence_met: false
-  systemic: false
-  status: pending
   rejection_reason: ''
+  status: applied
+  systemic: false
+  target_agent: system
+  target_artifact: mas/core/engine/agent_runner.py
+  tradeoffs: "Low priority \u2014 only meaningful once live agent calls are used regularly."
+- created_at: '2026-04-15T14:38:15.516969+00:00'
+  description: "Systemic finding: goal_achievement scored 0.0 \u2014 dry-run project\
+    \ with no success criteria defined in state"
+  evidence:
+  - eval-proj-20260415-004-mas-improvements-full
+  minimum_evidence_met: true
   original_proposal_id: ''
-  created_at: '2026-04-15T10:05:00.000000+00:00'
+  priority: 4
   project_ids:
-  - proj-20260415-001-db-semantic-and-acl-fix
-last_updated: '2026-04-15T10:05:00.000000+00:00'
+  - proj-20260415-004-mas-improvements-full
+  proposal_id: prop-85472733
+  proposal_type: governance_failure
+  recommended_change: Review governance policy and update to address systemic pattern.
+  rejection_reason: ''
+  status: pending
+  systemic: true
+  target_agent: system
+  target_artifact: policies/governance_policy.yaml
+  tradeoffs: Policy changes may slow workflow if overly restrictive.
+- created_at: '2026-04-15T14:38:15.516999+00:00'
+  description: "Systemic finding: documentation_completeness 0.0 \u2014 scribe not\
+    \ invoked in simulated phases"
+  evidence:
+  - eval-proj-20260415-004-mas-improvements-full
+  minimum_evidence_met: true
+  original_proposal_id: ''
+  priority: 4
+  project_ids:
+  - proj-20260415-004-mas-improvements-full
+  proposal_id: prop-3a881566
+  proposal_type: governance_failure
+  recommended_change: Review governance policy and update to address systemic pattern.
+  rejection_reason: ''
+  status: pending
+  systemic: true
+  target_agent: system
+  target_artifact: policies/governance_policy.yaml
+  tradeoffs: Policy changes may slow workflow if overly restrictive.
+- created_at: '2026-04-15T14:38:15.517007+00:00'
+  description: "Systemic finding: global_graph_contribution 20.0 \u2014 EpisodeWriter\
+    \ not yet run at closure"
+  evidence:
+  - eval-proj-20260415-004-mas-improvements-full
+  minimum_evidence_met: true
+  original_proposal_id: ''
+  priority: 4
+  project_ids:
+  - proj-20260415-004-mas-improvements-full
+  proposal_id: prop-f53c0198
+  proposal_type: governance_failure
+  recommended_change: Review governance policy and update to address systemic pattern.
+  rejection_reason: ''
+  status: pending
+  systemic: true
+  target_agent: system
+  target_artifact: policies/governance_policy.yaml
+  tradeoffs: Policy changes may slow workflow if overly restrictive.

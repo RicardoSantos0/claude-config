@@ -273,6 +273,28 @@ class HandoffEngine:
                 )
             except Exception:
                 pass
+
+            # D1 (AC1): auto-append compact 'dec' items → decisions.decision_log (non-fatal)
+            try:
+                state = sm.load()
+                history = state.get("workflow", {}).get("handoff_history", [])
+                ho = next((h for h in history
+                           if (h.get("handoff_id") or h.get("id")) == handoff_id), None)
+                if ho:
+                    payload_dec = ho.get("payload", {}).get("dec", [])
+                    now_ts = datetime.now(timezone.utc).isoformat()
+                    for item in payload_dec:
+                        if isinstance(item, dict) and item.get("id"):
+                            entry = {
+                                "decision_id": item["id"],
+                                "value": item.get("v", ""),
+                                "source_handoff": handoff_id,
+                                "recorded_at": now_ts,
+                            }
+                            sm.system_append("decisions", "decision_log", entry)
+            except Exception:
+                pass  # decision_log population must never block acceptance
+
         return ok
 
     def reject(self, sm: SharedStateManager, handoff_id: str,
