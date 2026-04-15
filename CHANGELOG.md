@@ -4,6 +4,52 @@ All notable changes to this repository are documented here.
 
 ---
 
+## [2026-04-15] proj-20260415-005-mas-run-orchestration-loop — Autonomous Orchestration Loop
+
+### New Modules
+
+**`mas/core/engine/response_parser.py`** — Wire protocol parser:
+- Extracts last JSON fence from raw LLM text as the authoritative wire block
+- Maps `s` (status) to `next_action`: `task:complete` → `advance_phase`, `escalate` → `escalate`, etc.
+- Extracts `dec`, `art`, `rsn`, `consultation_trigger`, `KNOWLEDGE_REQUEST` blocks
+- Accumulates parse errors (no_wire_block_found, parse_error, rsn_exceeds_100_words)
+
+**`mas/core/engine/orchestration_loop.py`** — Autonomous loop engine:
+- `LoopConfig`: `project_id`, `max_steps=50`, `dry_run`, `auto`, `target_phase`, `max_agent_retries`
+- `StopReason` enum: MAX_STEPS, UNANIMOUS_RISK, HUMAN_ESCALATION, PROJECT_CLOSED, PHASE_CHECKPOINT, TARGET_REACHED, ERROR
+- `_determine_next_agent(state)`: reads last handoff; pending → `to_agent`; accepted → `master_orchestrator`
+- `_run_consultation(trigger, state)`: delegates to ConsultationEngine, dispatches consultant panel
+- `_handle_knowledge_request(kr_block)`: calls `skills/notebooklm/scripts/ask_question.py` via subprocess
+- `_human_checkpoint(phase, state)`: pauses at phase boundaries (bypassed with `--auto`)
+- `_build_extra_context()`: injects consultation synthesis + grounded NotebookLM answers
+
+### CLI Extension
+
+**`mas/core/cli.py`** — Added `mas run` command:
+```
+mas run <project-id> [--dry-run] [--auto] [--max-steps N] [--target-phase PHASE]
+```
+
+### Agent Documentation
+
+**`agents/master_orchestrator.md`** — Documented wire protocol extension keys:
+- `next_action`, `next_agent`, `consultation_trigger` in JSON wire block
+- `KNOWLEDGE_REQUEST` pattern for grounded knowledge queries
+
+### Tests
+
+- `mas/tests/unit/test_response_parser.py`: 24 tests covering wire extraction, status mapping, dec/art, KNOWLEDGE_REQUEST, rsn word limit
+- `mas/tests/unit/test_orchestration_loop.py`: 24 tests covering LoopConfig, phase progression, agent determination, loop control, human checkpoints, NotebookLM handler, target phase stop
+
+**Suite: 1008 tests passing.**
+
+### Bug Fixes
+
+- `orchestration_loop.py`: Removed invalid `phase=` kwarg from `PromptAssembler.assemble()` call
+- `orchestration_loop.py`: Fixed `agents_dir` to resolve to repo-root `agents/` (not `mas/agents/`)
+
+---
+
 ## [2026-04-15] Trainer proposal implementation (6 proposals applied)
 
 ### Applied training proposals from proj-20260414 and proj-20260415-004
