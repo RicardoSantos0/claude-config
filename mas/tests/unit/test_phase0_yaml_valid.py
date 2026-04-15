@@ -58,7 +58,7 @@ def test_system_config_paths():
 
 
 def test_handoff_protocol_has_required_fields():
-    data = load_yaml(ROOT / "foundation/handoff_protocol.yaml")
+    data = load_yaml(ROOT / "policies/handoff_protocol.yaml")
     assert "handoff_protocol" in data
     protocol = data["handoff_protocol"]
     assert "handoff_record" in protocol

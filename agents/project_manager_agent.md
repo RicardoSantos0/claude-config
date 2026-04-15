@@ -27,15 +27,15 @@ All commands run from the system root where `system_config.yaml` lives.
 
 ### Task Board Commands (PM-specific)
 ```bash
-uv run python mas/core/task_board.py create-milestone --project-id {project_id} --milestone-json '{json}'
-uv run python mas/core/task_board.py create-task --project-id {project_id} --task-json '{json}'
-uv run python mas/core/task_board.py update-status --project-id {project_id} --task-id {id} --status {status}
-uv run python mas/core/task_board.py list --project-id {project_id} [--status {status}] [--milestone {ms_id}]
-uv run python mas/core/task_board.py blocked --project-id {project_id}
-uv run python mas/core/task_board.py milestone-status --project-id {project_id} --milestone-id {ms_id}
-uv run python mas/core/task_board.py progress-report --project-id {project_id} [--milestone-id {ms_id}]
-uv run python mas/core/task_board.py deps --project-id {project_id} --task-id {id}
-uv run python mas/core/task_board.py plan --project-id {project_id} --product-plan-path "{path}"
+uv run python mas/core/engine/task_board.py create-milestone --project-id {project_id} --milestone-json '{json}'
+uv run python mas/core/engine/task_board.py create-task --project-id {project_id} --task-json '{json}'
+uv run python mas/core/engine/task_board.py update-status --project-id {project_id} --task-id {id} --status {status}
+uv run python mas/core/engine/task_board.py list --project-id {project_id} [--status {status}] [--milestone {ms_id}]
+uv run python mas/core/engine/task_board.py blocked --project-id {project_id}
+uv run python mas/core/engine/task_board.py milestone-status --project-id {project_id} --milestone-id {ms_id}
+uv run python mas/core/engine/task_board.py progress-report --project-id {project_id} [--milestone-id {ms_id}]
+uv run python mas/core/engine/task_board.py deps --project-id {project_id} --task-id {id}
+uv run python mas/core/engine/task_board.py plan --project-id {project_id} --product-plan-path "{path}"
 ```
 
 ## Execution Planning Lifecycle
@@ -60,7 +60,7 @@ Group the work into logical milestones. Each milestone is a coherent delivery un
 
 Create each milestone:
 ```bash
-uv run python mas/core/task_board.py create-milestone \
+uv run python mas/core/engine/task_board.py create-milestone \
   --project-id {project_id} \
   --milestone-json '{
     "name": "M1: Foundation",
@@ -80,7 +80,7 @@ For each `must_have` requirement in the product plan, decompose into discrete, a
 - `should_have` and `could_have` items can be tasks if scope allows
 
 ```bash
-uv run python mas/core/task_board.py create-task \
+uv run python mas/core/engine/task_board.py create-task \
   --project-id {project_id} \
   --task-json '{
     "description": "Set up AWS VPC and networking",
@@ -110,7 +110,7 @@ Build a resource request for each distinct capability need:
 
 Append each request to shared state:
 ```bash
-uv run python mas/core/shared_state_manager.py append \
+uv run python mas/core/engine/shared_state_manager.py append \
   --project-id {project_id} \
   --section execution \
   --field resource_requests \
@@ -123,7 +123,7 @@ Then return to Master requesting HR capability discovery for each need.
 ### Step 5 — Produce Execution Plan
 After resources are identified (or HR results are received), compile the execution plan:
 ```bash
-uv run python mas/core/task_board.py plan \
+uv run python mas/core/engine/task_board.py plan \
   --project-id {project_id} \
   --product-plan-path "projects/{project_id}/planning/product_plan.yaml"
 ```
@@ -146,17 +146,17 @@ When Master assigns tasks and agents report completion back through you:
 
 ```bash
 # Task started
-uv run python mas/core/task_board.py update-status \
+uv run python mas/core/engine/task_board.py update-status \
   --project-id {project_id} --task-id {task_id} --status in_progress
 
 # Task blocked
-uv run python mas/core/task_board.py update-status \
+uv run python mas/core/engine/task_board.py update-status \
   --project-id {project_id} --task-id {task_id} \
   --status blocked \
   --blocker "Missing Salesforce API credentials — requires stakeholder action"
 
 # Task complete
-uv run python mas/core/task_board.py update-status \
+uv run python mas/core/engine/task_board.py update-status \
   --project-id {project_id} --task-id {task_id} \
   --status completed --actual-effort small
 ```
@@ -171,7 +171,7 @@ Escalate to Master immediately if:
 ### Progress Reports
 Produce a progress report at each milestone boundary:
 ```bash
-uv run python mas/core/task_board.py progress-report \
+uv run python mas/core/engine/task_board.py progress-report \
   --project-id {project_id} \
   --milestone-id {ms_id}
 ```

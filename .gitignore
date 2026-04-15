@@ -24,19 +24,24 @@ dist/
 
 # MAS runtime data (project-specific, not committed)
 mas/projects/
-audit.log
 mas/working_state/
 
 # MAS data and logs (not committed)
 mas/data/
 mas/logs/
-# Ignore all YAML, DB, and log files in mas/data and mas/logs
 mas/data/*
 mas/logs/*
-# Ignore all YAML, DB, and log files at the root of mas/
-mas/*.db
+
+# Log and graph files generated at runtime (any depth in mas/)
+mas/**/*.log
+mas/**/*.db
 mas/*.yaml
 mas/*.log
+mas/core/*.log
+mas/core/*.yaml
+
+# Repo-root runtime logs
+logs/
 
 # MAS roster (committed, but large binaries excluded)
 mas/roster/**/*.bak
@@ -44,4 +49,6 @@ mas/roster/**/*.bak
 # Skills runtime/auth data
 skills/notebooklm/data/browser_state/
 skills/notebooklm/data/auth_info.json
-mas/data/episodic.db
+
+# Editor
+.vscode/settings.json

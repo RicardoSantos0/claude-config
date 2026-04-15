@@ -6,7 +6,7 @@ No live LLM calls. No disk writes beyond tmp_path.
 import pytest
 import yaml
 from pathlib import Path
-from core.spawn_policy import (
+from core.engine.spawn_policy import (
     SpawnPolicyEngine,
     LimitCheckResult,
     CertificateCheckResult,

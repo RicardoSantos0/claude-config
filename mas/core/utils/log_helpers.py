@@ -81,6 +81,40 @@ def init_db(db_path: Path = DB_PATH) -> None:
             CREATE INDEX IF NOT EXISTS idx_agent     ON agent_events(agent_id);
             CREATE INDEX IF NOT EXISTS idx_action    ON agent_events(action_type);
             CREATE INDEX IF NOT EXISTS idx_timestamp ON agent_events(timestamp);
+
+            -- FTS5 virtual table for semantic (full-text) search over intent + payload.
+            -- content=agent_events keeps the FTS index in sync with the base table
+            -- when rows are inserted via the trigger below.
+            CREATE VIRTUAL TABLE IF NOT EXISTS agent_events_fts
+                USING fts5(
+                    intent,
+                    payload,
+                    content='agent_events',
+                    content_rowid='id'
+                );
+
+            -- Trigger: keep FTS index current on every new event.
+            CREATE TRIGGER IF NOT EXISTS agent_events_fts_insert
+                AFTER INSERT ON agent_events
+                BEGIN
+                    INSERT INTO agent_events_fts(rowid, intent, payload)
+                    VALUES (NEW.id, NEW.intent, NEW.payload);
+                END;
+
+            -- Graph tables: nodes and edges migrated from global_graph.yaml
+            CREATE TABLE IF NOT EXISTS agent_graph (
+                id      TEXT PRIMARY KEY,
+                type    TEXT,
+                label   TEXT,
+                meta    TEXT
+            );
+            CREATE TABLE IF NOT EXISTS agent_graph_edges (
+                id          TEXT PRIMARY KEY,
+                source      TEXT,
+                target      TEXT,
+                relation    TEXT,
+                meta        TEXT
+            );
         """)
 
 

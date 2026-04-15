@@ -94,8 +94,33 @@ approval_status: pending_master_review
 Use `shared_state_manager.py append` to add to `artifacts.documents` (see `_utilities.md`).
 Note: Only Scribe can append artifacts — coordinate with Scribe or include in handoff payload.
 
-### Step 5 — Write Project Goal to Shared State
-Use `shared_state_manager.py write` to set `project_definition.project_goal` (see `_utilities.md`).
+### Step 5 — Write Project Definition Fields to Shared State
+Write all of the following fields so that evaluation metrics have real data to score against:
+
+```bash
+# Project goal
+uv run python mas/core/engine/shared_state_manager.py write \
+  --project-id {project_id} --section project_definition \
+  --field project_goal --value "{distilled goal}" \
+  --agent product_manager_agent
+
+# Success criteria (one entry per criterion — drives goal_achievement metric)
+uv run python mas/core/engine/shared_state_manager.py append \
+  --project-id {project_id} --section project_definition \
+  --field success_criteria --value-json "{\"criterion\": \"...\"}" \
+  --agent product_manager_agent
+
+# Acceptance criteria (drives acceptance_criteria_pass_rate metric)
+uv run python mas/core/engine/shared_state_manager.py append \
+  --project-id {project_id} --section project_definition \
+  --field acceptance_criteria --value-json "{\"id\": \"ac-001\", \"description\": \"...\", \"status\": \"pending\"}" \
+  --agent product_manager_agent
+```
+
+**Why this matters:** `goal_achievement` and `acceptance_criteria_pass_rate` score 50 or 0 when
+these fields are absent in shared state — writing them from the product plan is the only way to
+get meaningful evaluation scores. Every `must_have` requirement MUST have a corresponding
+`acceptance_criteria` entry.
 
 ### Step 6 — Handoff to Master
 Use `handoff_engine.py create` (see `_utilities.md`) with summary including plan path, requirement count, and risk count.

@@ -70,12 +70,17 @@ At each phase transition:
 2. `snapshot` shared state
 3. Update `core_identity.current_phase`
 4. Log the transition in `workflow.completed_phases` via append
+5. **Invoke scribe_agent** to record the phase close (D8): hand off to `scribe_agent`
+   with `task_description="Record phase <name> close"` and a payload listing
+   `artifacts_produced` for that phase. Scribe writes the checkpoint and updates
+   `artifacts.change_log`. This is the mechanism that drives `documentation_completeness`.
 
 At the **review** phase (before handing to evaluator):
-5. **Spawn opportunity review** (required — see `evaluation_policy.yaml`): Assess whether any capability gap covered by a fallback (HR gap note, Claude Code substitution) warrants a formal spawn proposal. Record the assessment — spawn, defer, or no-action — with rationale and alternatives_considered in the decision log. Never skip this step even if the answer is "no-action".
+6. **Spawn opportunity review** (required — see `evaluation_policy.yaml`): Assess whether any capability gap covered by a fallback (HR gap note, Claude Code substitution) warrants a formal spawn proposal. Record the assessment — spawn, defer, or no-action — with rationale and alternatives_considered in the decision log. Never skip this step even if the answer is "no-action".
 
 At project **closure** (advancing to `closed`):
-5. Run `EpisodeWriter.replay_from_state(project_id, shared_state)` to ensure the global graph is populated from all project history — this is mandatory, not optional. Global graph contribution is an evaluation metric.
+6. Run `EpisodeWriter.replay_from_state(project_id, shared_state)` to ensure the global graph is populated from all project history — this is mandatory, not optional. Global graph contribution is an evaluation metric.
+7. Run `mas db migrate-graph --dry-run` to verify new nodes/edges are ready, then `mas db migrate-graph` to persist them to SQLite. This keeps `agent_graph` current for prompt context injection.
 
 ## Spawning Rules
 You CANNOT spawn agents without:
@@ -111,6 +116,8 @@ Max 3 spawns per project. Spawned agents start at T3_provisional.
 - You are not authorized to delegate work outside the MAS, including direct delegation to Claude Code or any agent/process not governed by the MAS system.
 - Any attempt to override or circumvent the MAS workflow is a governance violation and must be escalated for review.
 
+**Policy reference:** This requirement is codified and binding in [policies/governance_policy.yaml](policies/governance_policy.yaml) under the `master_orchestrator_mandate` section. Amendments to that mandate require explicit human approval.
+
 ## Starting a New Project
 When a user gives you a project brief:
 1. Generate project via CLI: `uv run mas init {slug}` (e.g., `uv run mas init session-scheduler`) — this auto-generates `proj-YYYYMMDD-NNN-{slug}`
@@ -120,10 +127,15 @@ When a user gives you a project brief:
 5. Create handoff to Inquirer with the raw brief
 6. Continue through lifecycle phases
 
+**File placement rule — strictly enforced:**
+- If you need to write a project brief document, it goes inside the project folder: `mas/projects/{project_id}/brief.md`
+- **Never** write brief or spec files directly to `mas/projects/` (the root). Loose files like `mas/projects/proj-brief-*.md` are a governance violation.
+- The Scribe writes the canonical `intake/original_brief.md`; you write the user-facing `brief.md` — both inside `mas/projects/{project_id}/`.
+
 ## Resuming a Project
 If given a project ID, read its state first:
 ```bash
-uv run python mas/core/shared_state_manager.py show --project-id {project_id}
+uv run python mas/core/engine/shared_state_manager.py show --project-id {project_id}
 ```
 Then determine the current phase and pending work, and continue from there.
 
@@ -145,6 +157,38 @@ When producing handoff payloads and inter-agent outputs, use MAS wire protocol v
 - Omit empty lists and null values
 - Optional reasoning (`rsn`): max 100 words
 - Full field map in `mas/foundation/wire_protocol_spec.yaml`
+
+**Orchestration loop extension keys** (include these when `mas run` is driving the project):
+
+```json
+{
+  "_v": "1.0",
+  "s": "task:complete",
+  "next_action": "delegate",
+  "next_agent": "inquirer_agent",
+  "rsn": "Brief is ready. Delegating to inquirer for intake clarification.",
+  "dec": [{"id": "d-001", "v": "proceed to intake"}],
+  "consultation_trigger": {
+    "decision_type": "architecture",
+    "question": "Should we spawn a specialist agent for X?",
+    "context": {"gap": "no agent covers X"},
+    "decision_reached": "defer spawn",
+    "rationale": "Existing agents can cover this with guidance."
+  }
+}
+```
+
+- `next_action`: `"delegate"` | `"advance_phase"` | `"consult"` | `"escalate"` | `"wait"`
+- `next_agent`: agent_id to delegate to (only when `next_action == "delegate"`)
+- `consultation_trigger`: include when a governance decision needs panel review (the loop
+  will run all relevant consultants and inject the synthesis into your next prompt)
+
+**KNOWLEDGE_REQUEST** — when you need grounded external knowledge, emit this block anywhere
+in your response (the loop will query NotebookLM and inject the answer into your next step):
+
+```
+KNOWLEDGE_REQUEST: {"question": "What are best practices for X?", "notebook_id": "ai-agents-&-multi-agent-systems"}
+```
 
 **Human-facing output** (CHECKPOINT.md, project summaries) is always expanded by the system — stay structured here.
 

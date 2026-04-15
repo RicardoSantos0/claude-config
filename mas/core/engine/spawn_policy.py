@@ -395,6 +395,55 @@ class SpawnPolicyEngine:
         if phase is None:
             phase = spawn_request.get("phase", "unknown")
 
+        # Lite mode: spawning is not available — return immediate DENY
+        state_file = project_dir / "shared_state.yaml"
+        if state_file.exists():
+            try:
+                import yaml as _yaml
+                with open(state_file, encoding="utf-8") as _f:
+                    _state = _yaml.safe_load(_f) or {}
+                if _state.get("workflow", {}).get("mode") == "lite":
+                    lite_violation = PolicyViolation(
+                        code="LITE_MODE_NO_SPAWN",
+                        message=(
+                            "Spawning is disabled in lite-mode projects. "
+                            "Use 'mas init' (without --mode=lite) for projects that require agents."
+                        ),
+                    )
+                    _empty_limit = LimitCheckResult(
+                        within_project_limit=False,
+                        within_phase_limit=False,
+                        project_spawn_count=0,
+                        phase_spawn_count=0,
+                        violations=[lite_violation],
+                    )
+                    _empty_cert = CertificateCheckResult(
+                        certificate_present=False,
+                        master_approved=False,
+                        violations=[],
+                    )
+                    _empty_rec = RecursiveSpawnCheckResult(
+                        requester_is_spawned=False,
+                        requester_agent_id="",
+                        violations=[],
+                    )
+                    _empty_worth = WorthinessResult(
+                        bounded=False, recurring=False,
+                        verifiable=False, no_existing_match=False,
+                        violations=[],
+                    )
+                    return ValidationResult(
+                        decision=DENY,
+                        rationale=lite_violation.message,
+                        limit_check=_empty_limit,
+                        certificate_check=_empty_cert,
+                        recursive_check=_empty_rec,
+                        worthiness=_empty_worth,
+                        all_violations=[lite_violation],
+                    )
+            except Exception:
+                pass  # if state can't be read, continue with normal validation
+
         requester = spawn_request.get("requested_by", "")
         history = _load_history(project_dir)
 

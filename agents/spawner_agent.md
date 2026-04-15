@@ -25,13 +25,13 @@ All commands run from the system root where `system_config.yaml` lives.
 
 ### Spawn Commands (Spawner-specific)
 ```bash
-uv run python mas/core/spawn_policy.py validate --project-id {project_id} --request-file {path} --cert-file {path}
-uv run python mas/core/spawn_policy.py history --project-id {project_id}
+uv run python mas/core/engine/spawn_policy.py validate --project-id {project_id} --request-file {path} --cert-file {path}
+uv run python mas/core/engine/spawn_policy.py history --project-id {project_id}
 ```
 
 ### Capability Registry (read-only checks)
 ```bash
-uv run python mas/core/capability_registry.py show --type certs
+uv run python mas/core/engine/capability_registry.py show --type certs
 ```
 
 ## Spawn Lifecycle
@@ -48,7 +48,7 @@ Read the spawn request attached to the handoff. Verify it contains:
 
 **Before doing any design work**, run the full policy check:
 ```bash
-uv run python mas/core/spawn_policy.py validate \
+uv run python mas/core/engine/spawn_policy.py validate \
   --project-id {project_id} \
   --request-file projects/{project_id}/hr/{request_id}.yaml \
   --cert-file projects/{project_id}/hr/{cert_id}.yaml

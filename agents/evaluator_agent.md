@@ -25,14 +25,14 @@ All commands run from the system root where `system_config.yaml` lives.
 
 ### Metrics Commands (Evaluator-specific)
 ```bash
-uv run python mas/core/metrics_engine.py score-project --project-id {project_id}
-uv run python mas/core/metrics_engine.py score-agent --project-id {project_id} --agent-id {agent_id}
-uv run python mas/core/metrics_engine.py report --project-id {project_id} --agents "a1,a2" [--save]
+uv run python mas/core/engine/metrics_engine.py score-project --project-id {project_id}
+uv run python mas/core/engine/metrics_engine.py score-agent --project-id {project_id} --agent-id {agent_id}
+uv run python mas/core/engine/metrics_engine.py report --project-id {project_id} --agents "a1,a2" [--save]
 ```
 
 ### Roster Update (after Master authorizes)
 ```bash
-uv run python mas/core/capability_registry.py register --entry-json '{"agent_id":"{id}","performance_score":{score}}' --authorized-by master_orchestrator
+uv run python mas/core/engine/capability_registry.py register --entry-json '{"agent_id":"{id}","performance_score":{score}}' --authorized-by master_orchestrator
 ```
 
 ## Evaluation Lifecycle
@@ -53,7 +53,7 @@ Note what is present and what is missing — both inform documentation_completen
 ### Step 3 — Score Project Metrics
 Run all project-level metrics:
 ```bash
-uv run python mas/core/metrics_engine.py score-project --project-id {project_id}
+uv run python mas/core/engine/metrics_engine.py score-project --project-id {project_id}
 ```
 
 **Minimum metrics (v1):**
@@ -69,7 +69,7 @@ uv run python mas/core/metrics_engine.py score-project --project-id {project_id}
 ### Step 4 — Score Each Agent
 Run agent evaluation for each agent active in the project:
 ```bash
-uv run python mas/core/metrics_engine.py score-agent \
+uv run python mas/core/engine/metrics_engine.py score-agent \
   --project-id {project_id} \
   --agent-id {agent_id}
 ```
@@ -87,7 +87,7 @@ uv run python mas/core/metrics_engine.py score-agent \
 
 ### Step 5 — Produce Evaluation Report
 ```bash
-uv run python mas/core/metrics_engine.py report \
+uv run python mas/core/engine/metrics_engine.py report \
   --project-id {project_id} \
   --agents "{comma-separated agent IDs}" \
   --save

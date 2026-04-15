@@ -12,6 +12,10 @@ from typing import Any
 import yaml
 
 from core.utils.token_counter import TokenCounter
+from core.engine.context_compressor import compress, estimate_tokens
+
+# Threshold (tokens) above which we compress the state projection before injection
+_COMPRESSION_TOKEN_THRESHOLD = 2000
 
 _token_counter = TokenCounter()
 
@@ -226,6 +230,12 @@ class PromptAssembler:
         projected = _project_state(state, agent_id)
         compact = _compact_projection(projected)
 
+        # Compress large state projections to stay within token budget
+        state_yaml = yaml.dump(compact, default_flow_style=False,
+                               allow_unicode=True, sort_keys=False)
+        if estimate_tokens(state_yaml) > _COMPRESSION_TOKEN_THRESHOLD:
+            compact = compress(compact, mode="summary")
+
         # Wire protocol instruction (agent-to-agent outputs only; never for human-facing)
         # Inquirer is excluded — its output is natural language for humans.
         _WIRE_INSTRUCTION = (
@@ -280,6 +290,15 @@ class PromptAssembler:
         if graph_context:
             context["injected_graph_context"] = graph_context
 
+        # SQLite recent-events injection — agents see what happened before them.
+        # Phase is passed as the semantic search query: finds relevant past events
+        # from the same phase across projects, not just the most recent ones.
+        project_id = state.get("core_identity", {}).get("project_id", "")
+        phase = state.get("core_identity", {}).get("current_phase", "")
+        sqlite_ctx = self._sqlite_context(project_id, phase=phase)
+        if sqlite_ctx:
+            context["injected_recent_events"] = sqlite_ctx
+
         if extra_context:
             context.update(extra_context)
 
@@ -287,14 +306,71 @@ class PromptAssembler:
         self.last_token_count: int = _token_counter.count(prompt)
         return prompt
 
+    def _sqlite_context(self, project_id: str, phase: str = "") -> str:
+        """
+        Query relevant agent events from SQLite for prompt injection.
+
+        Strategy (D3/AC3):
+          1. If a phase context is provided, try semantic search scoped to this project.
+             If ≥ 2 semantically relevant results found, use those.
+          2. Cross-project fallback: if < 2 local hits, search across ALL projects
+             (project_id=None) — gives agents genuine cross-project context.
+          3. Final fallback: 5 most recent events for this project (chronological).
+
+        Returns a compact formatted string, or "" if no events or DB unavailable.
+        Never raises — all errors are swallowed to protect prompt assembly.
+        """
+        if not project_id:
+            return ""
+        try:
+            from core.db import semantic_search, query_project_history, format_events_for_prompt
+            events: list[dict] = []
+            if phase:
+                # Step 1: scoped search
+                events = semantic_search(phase, project_id=project_id, limit=5)
+                if len(events) < 2:
+                    # Step 2: cross-project fallback (D3)
+                    cross = semantic_search(phase, project_id=None, limit=5)
+                    # Prefer cross-project hits from other projects only
+                    other = [e for e in cross if e.get("project_id") != project_id]
+                    if len(other) >= 2:
+                        events = other
+            if len(events) < 2:
+                # Step 3: recent history fallback
+                events = query_project_history(project_id, limit=5)
+            return format_events_for_prompt(events)
+        except Exception:
+            return ""
+
     def _graph_context(self, agent_id: str, state: dict) -> str:
         """
-        Query graph memory for agent-relevant facts.
-        Returns a compact string for prompt injection, or "" if unavailable.
-        Requires graph to have ≥ 5 nodes to be useful.
+        Inject agent graph context into the prompt (D5/AC5).
+
+        Strategy:
+          1. Query agent_graph SQLite table for this agent's node + direct edges.
+          2. Fall back to GraphMemory YAML backend if SQLite has < 2 results.
+        Returns a compact string or "" if unavailable.
+        Never raises.
         """
         try:
-            from core.graph_memory import GraphMemory
+            from core.db import query_graph_node, query_graph_edges
+            node = query_graph_node(agent_id)
+            edges = query_graph_edges(agent_id, limit=5)
+            if node or edges:
+                lines = ["## Agent Graph Context"]
+                if node:
+                    lines.append(f"Node: {node.get('label', agent_id)} (type={node.get('type', '?')})")
+                for e in edges:
+                    rel = e.get("relation", "?")
+                    other = e.get("target") if e.get("source") == agent_id else e.get("source")
+                    lines.append(f"  → {rel} → {other}")
+                return "\n".join(lines)
+        except Exception:
+            pass
+
+        # Fallback: YAML-backed GraphMemory
+        try:
+            from core.engine.graph_memory import GraphMemory
             project_id = state.get("core_identity", {}).get("project_id", "")
             if not project_id:
                 return ""

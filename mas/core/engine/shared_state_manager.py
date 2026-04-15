@@ -4,12 +4,12 @@ Single source of truth for any active project.
 Enforces access control, mutability, and append-only rules on every write.
 
 Usage as library:
-    from core.shared_state_manager import SharedStateManager
+    from core.engine.shared_state_manager import SharedStateManager
     sm = SharedStateManager("proj-20260409-001")
     sm.initialize(request_id="req-001")
 
 Usage as CLI:
-    uv run python core/shared_state_manager.py init --project-id proj-001 --request-id req-001
+    uv run python mas/core/engine/shared_state_manager.py init --project-id proj-001 --request-id req-001
     uv run python core/shared_state_manager.py read --project-id proj-001 --path core_identity.current_phase
     uv run python core/shared_state_manager.py write --project-id proj-001 --section core_identity --field status --value active --agent master_orchestrator
     uv run python core/shared_state_manager.py append --project-id proj-001 --section decisions --field assumptions --value-json '{"assumption_id":"a-001","stated_by":"master_orchestrator","description":"..."}' --agent master_orchestrator
@@ -31,12 +31,12 @@ import yaml
 
 ROOT = Path(__file__).parent.parent.parent
 
-from core.access_control import (
+from core.engine.access_control import (
     ACCESS_CONTROL, is_authorized, get_mode, get_mutability,
     requires_append_only, is_immutable, is_immutable_after_approval,
     SYSTEM, ANY_AGENT,
 )
-from core.audit_logger import AuditLogger, get_logger
+from core.engine.audit_logger import AuditLogger, get_logger
 
 
 @dataclass
@@ -50,7 +50,24 @@ class WriteResult:
 
 # --- INITIAL STATE FACTORY ---
 
-def create_initial_state(project_id: str, request_id: str) -> dict:
+LITE_PHASES = ("intake", "execution", "closed")
+STANDARD_PHASES = (
+    "intake", "specification", "planning", "capability_discovery",
+    "execution", "review", "evaluation", "improvement", "closed",
+)
+
+
+def create_initial_state(project_id: str, request_id: str,
+                         mode: str = "standard") -> dict:
+    """
+    Build the initial shared state for a new project.
+
+    mode="lite"     → 3-phase lifecycle (intake → execution → closed).
+                      No capability discovery, no consultation, no HR handoff.
+    mode="standard" → full 9-phase lifecycle (default).
+    """
+    if mode not in ("standard", "lite"):
+        mode = "standard"
     now = datetime.now(timezone.utc).isoformat()
     return {
         "core_identity": {
@@ -74,6 +91,7 @@ def create_initial_state(project_id: str, request_id: str) -> dict:
             "priority": None,
         },
         "workflow": {
+            "mode": mode,
             "active_agents": [],
             "completed_phases": [],
             "pending_assignments": [],
@@ -158,16 +176,17 @@ class SharedStateManager:
 
     # --- LIFECYCLE ---
 
-    def initialize(self, request_id: str) -> None:
+    def initialize(self, request_id: str, mode: str = "standard") -> None:
         """Create project directory and initialize shared state. Idempotent."""
         self.project_dir.mkdir(parents=True, exist_ok=True)
         if not self.state_path.exists():
-            state = create_initial_state(self.project_id, request_id)
+            state = create_initial_state(self.project_id, request_id, mode=mode)
             self._save(state)
             self.logger.log(
                 "project_initialized",
                 project_id=self.project_id,
                 request_id=request_id,
+                mode=mode,
             )
 
     def exists(self) -> bool:
@@ -248,7 +267,7 @@ class SharedStateManager:
         # 6. Checkpoint after phase transitions
         if field_path == "core_identity.current_phase":
             try:
-                from core.checkpoint_writer import CheckpointWriter
+                from core.engine.checkpoint_writer import CheckpointWriter
                 CheckpointWriter(self.project_id).write()
             except Exception:
                 pass  # checkpoint failure must never block state writes

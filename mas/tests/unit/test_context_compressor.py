@@ -3,7 +3,7 @@
 import json
 import pytest
 
-from core.context_compressor import (
+from core.engine.context_compressor import (
     compress,
     compression_ratio,
     estimate_tokens,

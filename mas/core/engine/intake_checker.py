@@ -16,13 +16,13 @@ Recommended items (5):
     quality_expectations, prior_art
 
 Usage as library:
-    from core.intake_checker import IntakeChecker
+    from core.engine.intake_checker import IntakeChecker
     checker = IntakeChecker()
     result = checker.analyze(spec)
 
 Usage as CLI:
-    uv run python core/intake_checker.py analyze --spec-json '{...}'
-    uv run python core/intake_checker.py score --spec-json '{...}'
+    uv run python mas/core/engine/intake_checker.py analyze --spec-json '{...}'
+    uv run python mas/core/engine/intake_checker.py score --spec-json '{...}'
     uv run python core/intake_checker.py record-qa --project-id proj-001 --round 1 --qa-json '[...]'
     uv run python core/intake_checker.py write-spec --project-id proj-001 --spec-json '{...}'
 """

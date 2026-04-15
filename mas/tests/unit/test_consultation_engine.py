@@ -14,6 +14,8 @@ from core.engine.consultation_engine import (
     ConsultationSynthesis,
     ALL_CONSULTANTS,
     MANDATORY_DECISION_TYPES,
+    CORE_THREE_DECISION_TYPES,
+    CORE_THREE_CONSULTANTS,
     MAX_RESPONSE_WORDS,
     FOLLOW_UP_ROUNDS_MAX,
 )
@@ -90,10 +92,11 @@ class TestCreateRequest:
                                     consultants=["risk_advisor"])  # only 1 — too few
         assert set(req.consultants_selected) == set(ALL_CONSULTANTS)
 
-    def test_mandatory_overrides_subset(self, engine):
+    def test_core_three_type_overrides_subset(self, engine):
+        # governance is now a CORE_THREE type — uses 3 consultants, ignores caller subset
         req = engine.create_request("proj-1", "question", {}, "governance",
                                     consultants=["risk_advisor"])
-        assert set(req.consultants_selected) == set(ALL_CONSULTANTS)
+        assert set(req.consultants_selected) == set(CORE_THREE_CONSULTANTS)
 
     def test_request_id_format(self, engine):
         req = engine.create_request("proj-abc", "q", {}, "spawn")

@@ -93,6 +93,19 @@ class TrainingEngine:
     # Analysis: single report
     # ------------------------------------------------------------------
 
+    def _is_duplicate(self, description: str, backlog_proposals: list[dict]) -> bool:
+        """
+        D6 (AC6): Return True if the same description already exists in the backlog
+        with status 'applied' or 'approved'. Prevents re-generating identical proposals
+        that have already been actioned.
+        """
+        for existing in backlog_proposals:
+            if existing.get("status") not in ("applied", "approved"):
+                continue
+            if existing.get("description", "").strip() == description.strip():
+                return True
+        return False
+
     def analyze_evaluation_report(
         self,
         report_data: dict,
@@ -101,28 +114,39 @@ class TrainingEngine:
         """
         Produce proposals from a single evaluation report.
         Returns proposals for: low metrics, probation-risk agents, systemic findings.
+        Skips proposals whose description already exists in the backlog as applied/approved.
         """
         proposals: list[TrainingProposal] = []
         report_id = report_data.get("report_id", "unknown")
         pid = project_id or report_data.get("project_id", "unknown")
 
+        # D6: load backlog once for deduplication check
+        existing_backlog = self.load_backlog().get("proposals", [])
+
         # --- 1. Project metrics below threshold ---
         for m in report_data.get("project_metrics", []):
             score = float(m.get("score", 100))
             metric = m.get("metric", "unknown")
+            # D2: skip not_applicable metrics (dry-run projects)
+            if m.get("mode") == "not_applicable":
+                continue
             if score < LOW_THRESHOLD:
                 ptype = self._metric_to_proposal_type(metric, score)
+                description = (
+                    f"Metric '{metric}' scored {score:.1f}/100 "
+                    f"(below threshold {LOW_THRESHOLD}). "
+                    f"Evidence: {m.get('evidence', 'none')}"
+                )
+                # D6 (AC6): skip if identical description already applied/approved
+                if self._is_duplicate(description, existing_backlog):
+                    continue
                 proposals.append(TrainingProposal(
                     proposal_id=f"prop-{uuid.uuid4().hex[:8]}",
                     proposal_type=ptype,
                     priority=PRIORITY_SCORES[ptype],
                     target_agent="system",
                     target_artifact=self._metric_to_artifact(metric),
-                    description=(
-                        f"Metric '{metric}' scored {score:.1f}/100 "
-                        f"(below threshold {LOW_THRESHOLD}). "
-                        f"Evidence: {m.get('evidence', 'none')}"
-                    ),
+                    description=description,
                     recommended_change=self._recommend_for_metric(metric, score, m),
                     evidence=[report_id],
                     tradeoffs=self._tradeoffs_for_metric(metric),
@@ -161,13 +185,16 @@ class TrainingEngine:
         # --- 3. Systemic findings from report ---
         for finding in report_data.get("systemic_findings", []):
             finding_text = str(finding)
+            description = f"Systemic finding: {finding_text}"
+            if self._is_duplicate(description, existing_backlog):
+                continue
             proposals.append(TrainingProposal(
                 proposal_id=f"prop-{uuid.uuid4().hex[:8]}",
                 proposal_type="governance_failure",
                 priority=PRIORITY_SCORES["governance_failure"],
                 target_agent="system",
                 target_artifact="policies/governance_policy.yaml",
-                description=f"Systemic finding: {finding_text}",
+                description=description,
                 recommended_change=(
                     "Review governance policy and update to address systemic pattern."
                 ),
@@ -181,13 +208,16 @@ class TrainingEngine:
         # --- 4. Improvement areas from recommendations ---
         recs = report_data.get("recommendations", {}) or {}
         for area in recs.get("improvement_areas", []):
+            description = f"Improvement area identified: {area}"
+            if self._is_duplicate(description, existing_backlog):
+                continue
             proposals.append(TrainingProposal(
                 proposal_id=f"prop-{uuid.uuid4().hex[:8]}",
                 proposal_type="efficiency_improvement",
                 priority=PRIORITY_SCORES["efficiency_improvement"],
                 target_agent="system",
                 target_artifact="policies/",
-                description=f"Improvement area identified: {area}",
+                description=description,
                 recommended_change=(
                     f"Investigate and address '{area}' in the relevant agent or policy."
                 ),

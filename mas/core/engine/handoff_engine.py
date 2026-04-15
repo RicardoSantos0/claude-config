@@ -4,15 +4,15 @@ Creates, validates, accepts, and rejects formal agent-to-agent handoffs.
 Every handoff is recorded in shared_state.workflow.handoff_history.
 
 Usage as library:
-    from core.handoff_engine import HandoffEngine
-    from core.shared_state_manager import SharedStateManager
+    from core.engine.handoff_engine import HandoffEngine
+    from core.engine.shared_state_manager import SharedStateManager
     engine = HandoffEngine()
     sm = SharedStateManager("proj-20260410-001-session-scheduler")
     handoff = engine.create(sm, from_agent="master_orchestrator",
                             to_agent="scribe_agent", ...)
 
 Usage as CLI:
-    uv run python core/handoff_engine.py create --project-id proj-20260410-001-session-scheduler --from master_orchestrator --to scribe_agent --phase intake --task "Initialize project folder" --summary "Starting project"
+    uv run python mas/core/engine/handoff_engine.py create --project-id proj-20260410-001-session-scheduler --from master_orchestrator --to scribe_agent --phase intake --task "Initialize project folder" --summary "Starting project"
     uv run python core/handoff_engine.py accept --handoff-id ho-proj-20260410-001-session-scheduler-001 --project-id proj-20260410-001-session-scheduler
     uv run python core/handoff_engine.py reject --handoff-id ho-proj-20260410-001-session-scheduler-001 --project-id proj-20260410-001-session-scheduler --reason "Missing required fields"
     uv run python core/handoff_engine.py pending --project-id proj-20260410-001-session-scheduler
@@ -31,9 +31,9 @@ import yaml
 ROOT = Path(__file__).parent.parent.parent
 
 from .shared_state_manager import SharedStateManager
-from core.audit_logger import get_logger
-from core.checkpoint_writer import CheckpointWriter
-from core.wire_protocol import WireValidator as _WireValidator
+from core.engine.audit_logger import get_logger
+from core.engine.checkpoint_writer import CheckpointWriter
+from core.utils.wire_protocol import WireValidator as _WireValidator
 
 _wire_validator = _WireValidator()
 
@@ -146,8 +146,33 @@ class HandoffEngine:
 
         # Record handoff episode in graph memory (non-fatal)
         try:
-            from core.graph_memory import EpisodeWriter as _EpisodeWriter
+            from core.engine.graph_memory import EpisodeWriter as _EpisodeWriter
             _EpisodeWriter(sm.project_id).record_handoff(handoff)
+        except Exception:
+            pass
+
+        # Persist to SQLite event log (non-fatal)
+        try:
+            from core.db import append_event
+            append_event(
+                project_id=sm.project_id,
+                agent_id=from_agent,
+                action_type="handoff_created",
+                intent=task_description,
+                result_shape="handoff",
+                payload={
+                    "handoff_id": handoff_id,
+                    "to_agent": to_agent,
+                    "phase": phase,
+                },
+            )
+        except Exception:
+            pass
+
+        # Audit skill usage on artifacts (non-fatal)
+        try:
+            from core.engine.skill_bridge import SkillBridge as _SkillBridge
+            _SkillBridge().audit_handoff(handoff)
         except Exception:
             pass
 
@@ -235,6 +260,41 @@ class HandoffEngine:
                 CheckpointWriter(sm.project_id).write()
             except Exception:
                 pass  # checkpoint failure must never block handoff acceptance
+
+            # Persist to SQLite event log (non-fatal)
+            try:
+                from core.db import append_event
+                append_event(
+                    project_id=sm.project_id,
+                    agent_id="system",
+                    action_type="handoff_accepted",
+                    intent=f"{handoff_id} status={status}",
+                    payload={"handoff_id": handoff_id, "status": status},
+                )
+            except Exception:
+                pass
+
+            # D1 (AC1): auto-append compact 'dec' items → decisions.decision_log (non-fatal)
+            try:
+                state = sm.load()
+                history = state.get("workflow", {}).get("handoff_history", [])
+                ho = next((h for h in history
+                           if (h.get("handoff_id") or h.get("id")) == handoff_id), None)
+                if ho:
+                    payload_dec = ho.get("payload", {}).get("dec", [])
+                    now_ts = datetime.now(timezone.utc).isoformat()
+                    for item in payload_dec:
+                        if isinstance(item, dict) and item.get("id"):
+                            entry = {
+                                "decision_id": item["id"],
+                                "value": item.get("v", ""),
+                                "source_handoff": handoff_id,
+                                "recorded_at": now_ts,
+                            }
+                            sm.system_append("decisions", "decision_log", entry)
+            except Exception:
+                pass  # decision_log population must never block acceptance
+
         return ok
 
     def reject(self, sm: SharedStateManager, handoff_id: str,
@@ -253,6 +313,17 @@ class HandoffEngine:
                 to_agent="",
                 reason=reason,
             )
+            try:
+                from core.db import append_event
+                append_event(
+                    project_id=sm.project_id,
+                    agent_id="system",
+                    action_type="handoff_rejected",
+                    intent=f"{handoff_id} reason={reason}",
+                    payload={"handoff_id": handoff_id, "reason": reason},
+                )
+            except Exception:
+                pass
         return ok
 
     # --- QUERY ---

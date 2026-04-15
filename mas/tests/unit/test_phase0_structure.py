@@ -41,7 +41,6 @@ def test_required_foundation_files_exist():
     required = [
         "foundation/memory_types.yaml",
         "foundation/shared_state_schema.yaml",
-        "foundation/handoff_protocol.yaml",
         "foundation/folder_structure.yaml",
     ]
     for f in required:

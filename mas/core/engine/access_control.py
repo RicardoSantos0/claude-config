@@ -40,19 +40,22 @@ ACCESS_CONTROL: dict[str, dict] = {
     "project_definition.original_brief":          {"write": ["inquirer_agent"],         "mutability": "immutable_after_approval"},
     "project_definition.brief_summary":          {"write": ["inquirer_agent"],         "mutability": "immutable_after_approval"},
     "project_definition.clarified_specification": {"write": ["inquirer_agent"],         "mutability": "immutable_after_approval"},
-    "project_definition.project_goal":            {"write": ["product_manager_agent"],  "mutability": "immutable_after_approval"},
-    "project_definition.problem_statement":       {"write": ["product_manager_agent"],  "mutability": "immutable_after_approval"},
-    "project_definition.scope":                   {"write": ["product_manager_agent"],  "mode": "append_only_after_approval"},
-    "project_definition.constraints":             {"write": ["product_manager_agent"],  "mode": "append_only_after_approval"},
-    "project_definition.success_criteria":        {"write": ["product_manager_agent"],  "mutability": "immutable_after_approval"},
-    "project_definition.acceptance_criteria":     {"write": ["product_manager_agent"],  "mutability": "immutable_after_approval"},
+    # inquirer_agent is co-owner: it clarifies the spec and must record these during intake
+    # product_manager_agent remains co-owner for PM-driven rewrites post-intake
+    "project_definition.project_goal":            {"write": ["inquirer_agent", "product_manager_agent"],  "mutability": "immutable_after_approval"},
+    "project_definition.problem_statement":       {"write": ["inquirer_agent", "product_manager_agent"],  "mutability": "immutable_after_approval"},
+    "project_definition.scope":                   {"write": ["inquirer_agent", "product_manager_agent"],  "mode": "append_only_after_approval"},
+    "project_definition.constraints":             {"write": ["inquirer_agent", "product_manager_agent"],  "mode": "append_only_after_approval"},
+    "project_definition.success_criteria":        {"write": ["inquirer_agent", "product_manager_agent"],  "mutability": "immutable_after_approval"},
+    "project_definition.acceptance_criteria":     {"write": ["inquirer_agent", "product_manager_agent"],  "mutability": "immutable_after_approval"},
     "project_definition.expected_outputs":        {"write": ["product_manager_agent"],  "mutability": "immutable_after_approval"},
     "project_definition.risk_classification":     {"write": ["product_manager_agent", "master_orchestrator"]},
     "project_definition.priority":                {"write": ["product_manager_agent", "master_orchestrator"]},
 
     # === WORKFLOW ===
     "workflow.active_agents":       {"write": ["master_orchestrator"]},
-    "workflow.completed_phases":    {"write": ["master_orchestrator"],                    "mode": "append_only"},
+    # system sentinel added: programmatic phase advances (e.g. CLI, tests) use agent_id="system"
+    "workflow.completed_phases":    {"write": ["master_orchestrator", SYSTEM],            "mode": "append_only"},
     "workflow.pending_assignments": {"write": ["master_orchestrator"]},
     "workflow.current_owner":       {"write": ["master_orchestrator"]},
     "workflow.handoff_history":     {"write": [SYSTEM],                                   "mode": "append_only"},
@@ -60,7 +63,9 @@ ACCESS_CONTROL: dict[str, dict] = {
     "workflow.resource_allocations":{"write": ["hr_agent"],                               "mode": "append_only"},
 
     # === DECISIONS ===
-    "decisions.decision_log":    {"write": ["scribe_agent"],   "mode": "append_only"},
+    # master_orchestrator co-owns decision_log: it records coordination decisions during execution
+    # SYSTEM added so handoff_engine.accept() can auto-populate dec items (AC1)
+    "decisions.decision_log":    {"write": ["scribe_agent", "master_orchestrator", SYSTEM],   "mode": "append_only"},
     "decisions.assumptions":     {"write": [ANY_AGENT],        "mode": "append_only"},
     "decisions.open_questions":  {"write": [ANY_AGENT],        "mode": "append_only_with_resolution"},
     "decisions.approvals":       {"write": ["master_orchestrator"], "mode": "append_only"},
@@ -84,9 +89,10 @@ ACCESS_CONTROL: dict[str, dict] = {
     "execution.delivery_risks":      {"write": ["project_manager_agent"],                    "mode": "append_only"},
 
     # === ARTIFACTS ===
-    "artifacts.documents":    {"write": ["scribe_agent"], "mode": "append_only"},
-    "artifacts.deliverables": {"write": ["scribe_agent"], "mode": "append_only"},
-    "artifacts.change_log":   {"write": ["scribe_agent"], "mode": "append_only"},
+    # master_orchestrator co-owns: it records deliverables at execution close
+    "artifacts.documents":    {"write": ["scribe_agent", "master_orchestrator"], "mode": "append_only"},
+    "artifacts.deliverables": {"write": ["scribe_agent", "master_orchestrator"], "mode": "append_only"},
+    "artifacts.change_log":   {"write": ["scribe_agent", "master_orchestrator"], "mode": "append_only"},
 
     # === EVALUATION ===
     "evaluation.performance_metrics":   {"write": ["evaluator_agent"], "mode": "append_only"},
@@ -107,6 +113,11 @@ ACCESS_CONTROL: dict[str, dict] = {
     "communication.wire_compliance_rate":   {"write": [SYSTEM]},
     "communication.wire_compliant_count":   {"write": [SYSTEM]},
     "communication.wire_total_count":       {"write": [SYSTEM]},
+
+    # === LIBRARIAN (db_operations — T2 supervised) ===
+    # librarian_agent has write access to its own status/log fields only.
+    # Actual DB writes go through mas db CLI (no shared state fields needed).
+    "governance.consultation_outcome":      {"write": ["master_orchestrator"]},
 }
 
 

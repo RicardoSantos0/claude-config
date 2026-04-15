@@ -4,7 +4,7 @@
 
 system:
   name: "Governed Multi-Agent Delivery System"
-  version: "0.1.0"
+  version: "0.2.0"
   created_at: "2026-04-09T00:00:00Z"
   governance_mode: "strict"  # strict | permissive
 
@@ -51,17 +51,22 @@ llm:
 
 # --- TRUST TIERS ---
 trust_tiers:
+  # Canonical trust tier definitions — registry_index.yaml is the single source of truth
+  # for per-agent tier assignments. This block exists for documentation only.
   T0_core:
     name: "Core"
-    agents: ["master_orchestrator", "hr_agent", "scribe_agent"]
+    agents: ["master_orchestrator", "scribe_agent"]
     can_do: "Full authority within role boundaries"
     cannot_do: "N/A within role"
   T1_established:
     name: "Established"
     agents:
+      - "hr_agent"
+      - "inquirer_agent"
       - "product_manager_agent"
       - "project_manager_agent"
       - "evaluator_agent"
+      - "trainer_agent"
       - "risk_advisor"
       - "quality_advisor"
       - "devils_advocate"
@@ -71,7 +76,7 @@ trust_tiers:
     cannot_do: "Spawn, change governance, modify other agents"
   T2_supervised:
     name: "Supervised"
-    agents: ["trainer_agent", "spawner_agent"]
+    agents: ["spawner_agent"]
     can_do: "Operate with Master oversight"
     cannot_do: "Act without Master confirmation on high-impact actions"
   T3_provisional:

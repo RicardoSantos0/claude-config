@@ -18,14 +18,14 @@ Additional v1 metrics:
   - phase_efficiency              (dict of phase→ratio)
 
 Usage as library:
-    from core.metrics_engine import MetricsEngine
+    from core.engine.metrics_engine import MetricsEngine
     engine = MetricsEngine()
     score = engine.score_goal_achievement(success_criteria, task_outcomes)
 
 Usage as CLI:
-    uv run python core/metrics_engine.py score-project --project-id proj-001
-    uv run python core/metrics_engine.py score-agent  --project-id proj-001 --agent-id hr_agent
-    uv run python core/metrics_engine.py report       --project-id proj-001 [--save]
+    uv run python mas/core/engine/metrics_engine.py score-project --project-id proj-001
+    uv run python mas/core/engine/metrics_engine.py score-agent  --project-id proj-001 --agent-id hr_agent
+    uv run python mas/core/engine/metrics_engine.py report       --project-id proj-001 [--save]
 """
 
 import sys
@@ -55,11 +55,12 @@ PROBATION_THRESHOLD = 60.0    # Agent score below this → recommend probation
 @dataclass
 class MetricResult:
     metric: str
-    score: float              # 0-100
+    score: float              # 0-100; -1.0 when mode='not_applicable'
     evidence: str
     findings: str
     exemplary: bool = False   # True if score > EXEMPLARY_THRESHOLD
     breakdown: dict = field(default_factory=dict)  # optional detailed data
+    mode: str = "live"        # 'live' | 'not_applicable' (excluded from average)
 
 
 @dataclass
@@ -121,6 +122,7 @@ class EvaluationReport:
                     "evidence": m.evidence,
                     "findings": m.findings,
                     "exemplary": m.exemplary,
+                    "mode": m.mode,
                 }
                 for m in self.project_metrics
             ],
@@ -706,16 +708,32 @@ class MetricsEngine:
     # ------------------------------------------------------------------
 
     def aggregate_project_score(self, metric_results: list) -> float:
-        """Equal-weight average of all project metric scores."""
-        if not metric_results:
+        """Equal-weight average of applicable project metric scores.
+        Metrics with mode='not_applicable' are excluded from the average."""
+        applicable = [m for m in metric_results if m.mode != "not_applicable"]
+        if not applicable:
             return 0.0
-        return sum(m.score for m in metric_results) / len(metric_results)
+        return sum(m.score for m in applicable) / len(applicable)
 
     def aggregate_agent_score(self, metric_results: list) -> float:
-        """Equal-weight average of all agent metric scores."""
-        if not metric_results:
+        """Equal-weight average of applicable agent metric scores."""
+        applicable = [m for m in metric_results if m.mode != "not_applicable"]
+        if not applicable:
             return 0.0
-        return sum(m.score for m in metric_results) / len(metric_results)
+        return sum(m.score for m in applicable) / len(applicable)
+
+    def _is_dry_run_state(self, shared_state: dict) -> bool:
+        """True when no live agent calls have been made (all agent_call events are dry-run).
+        Used to promote 50-default metrics to 'not_applicable' mode."""
+        try:
+            from core.db import query_token_usage
+            project_id = shared_state.get("core_identity", {}).get("project_id", "")
+            if not project_id:
+                return False
+            usage = query_token_usage(project_id)
+            return usage.get("live_calls", 0) == 0 and usage.get("calls", 0) >= 0
+        except Exception:
+            return False
 
     # ------------------------------------------------------------------
     # Full report construction
@@ -764,7 +782,7 @@ class MetricsEngine:
             elif planned > 0:
                 passed_ac = int(total_ac * (completed / planned))
 
-        return [
+        metrics = [
             self.score_goal_achievement(success_criteria, completed_descs),
             self.score_acceptance_criteria_pass_rate(total_ac, passed_ac),
             self.score_scope_adherence(planned, completed, blocked, failed, over_effort),
@@ -774,6 +792,36 @@ class MetricsEngine:
             self.score_record_integrity(handoff_history),
             self.score_global_graph_contribution(project_id),
         ]
+
+        # D2 (AC2): promote data-absent metrics to 'not_applicable' on dry-run projects.
+        # Metrics that default to 50.0 when input data is absent, and metrics that score 0.0
+        # purely because no live agent work was done, are uninformative in dry-run mode —
+        # exclude them from the project average so scores reflect real work only.
+        #
+        # prop-85472733: goal_achievement 0.0 on dry-run (no tasks matched criteria)
+        # prop-3a881566: documentation_completeness 0.0 on dry-run (scribe not invoked)
+        # prop-0515a6a5/f3b3a7e9: global_graph_contribution low on dry-run (EpisodeWriter not run)
+        _dry_run_na_at_50 = {
+            "acceptance_criteria_pass_rate", "scope_adherence", "decision_quality",
+        }
+        _dry_run_na_at_zero_or_50 = {
+            "goal_achievement", "documentation_completeness",
+        }
+        _dry_run_na_graph_threshold = 25.0  # below this, graph score reflects absent EpisodeWriter
+
+        if self._is_dry_run_state(shared_state):
+            for m in metrics:
+                if m.metric in _dry_run_na_at_50 and m.score == 50.0:
+                    m.mode = "not_applicable"
+                    m.findings = (m.findings or "") + " [not_applicable: dry-run — no live agent calls]"
+                elif m.metric in _dry_run_na_at_zero_or_50 and m.score <= 50.0:
+                    m.mode = "not_applicable"
+                    m.findings = (m.findings or "") + " [not_applicable: dry-run — no live agent output to assess]"
+                elif m.metric == "global_graph_contribution" and m.score <= _dry_run_na_graph_threshold:
+                    m.mode = "not_applicable"
+                    m.findings = (m.findings or "") + " [not_applicable: dry-run — EpisodeWriter not run; run 'mas db migrate-graph' at closure]"
+
+        return metrics
 
     def evaluate_agent(
         self,

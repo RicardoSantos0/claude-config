@@ -20,14 +20,14 @@ MAS_ROOT = Path(__file__).parent.parent.parent   # mas/
 
 @pytest.fixture(autouse=True)
 def patch_root(tmp_path, monkeypatch):
-    import core.graph_memory as gm_mod
+    import core.engine.graph_memory as gm_mod
     monkeypatch.setattr(gm_mod, "ROOT", tmp_path)
     return tmp_path
 
 
 def _run(args: list[str], cwd=MAS_ROOT) -> subprocess.CompletedProcess:
     return subprocess.run(
-        [sys.executable, "-m", "core.graph_memory"] + args,
+        [sys.executable, "-m", "core.engine.graph_memory"] + args,
         capture_output=True, text=True, cwd=str(cwd),
     )
 

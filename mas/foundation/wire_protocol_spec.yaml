@@ -181,4 +181,4 @@ backward_compatibility:
   legacy_format: "expanded — no _v field, full field names"
   detection: "absence of _v field indicates legacy format"
   handling: "decode() and expand() accept both formats transparently"
-  existing_tests: "use expand() — all 620+ tests unaffected"
+  existing_tests: "use expand() — all 1013+ tests unaffected"

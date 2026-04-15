@@ -315,7 +315,7 @@ class TestCLI:
         import subprocess, sys, json
         payload = json.dumps({"summary": "task:complete"})
         result = subprocess.run(
-            [sys.executable, "-m", "core.wire_protocol", "encode", payload],
+            [sys.executable, "-m", "core.utils.wire_protocol", "encode", payload],
             capture_output=True, text=True,
             cwd=str(__import__("pathlib").Path(__file__).parent.parent.parent)
         )
@@ -328,7 +328,7 @@ class TestCLI:
         import subprocess, sys, json
         wire = json.dumps({"_v": "1.0", "s": "task:complete"})
         result = subprocess.run(
-            [sys.executable, "-m", "core.wire_protocol", "decode", wire],
+            [sys.executable, "-m", "core.utils.wire_protocol", "decode", wire],
             capture_output=True, text=True,
             cwd=str(__import__("pathlib").Path(__file__).parent.parent.parent)
         )
@@ -340,7 +340,7 @@ class TestCLI:
         import subprocess, sys, json
         wire = json.dumps({"_v": "1.0", "s": "ok"})
         result = subprocess.run(
-            [sys.executable, "-m", "core.wire_protocol", "validate", wire],
+            [sys.executable, "-m", "core.utils.wire_protocol", "validate", wire],
             capture_output=True, text=True,
             cwd=str(__import__("pathlib").Path(__file__).parent.parent.parent)
         )
@@ -351,7 +351,7 @@ class TestCLI:
         import subprocess, sys, json
         legacy = json.dumps({"summary": "prose text here"})
         result = subprocess.run(
-            [sys.executable, "-m", "core.wire_protocol", "validate", legacy],
+            [sys.executable, "-m", "core.utils.wire_protocol", "validate", legacy],
             capture_output=True, text=True,
             cwd=str(__import__("pathlib").Path(__file__).parent.parent.parent)
         )
@@ -361,7 +361,7 @@ class TestCLI:
     def test_codes_cli(self):
         import subprocess, sys
         result = subprocess.run(
-            [sys.executable, "-m", "core.wire_protocol", "codes"],
+            [sys.executable, "-m", "core.utils.wire_protocol", "codes"],
             capture_output=True, text=True,
             cwd=str(__import__("pathlib").Path(__file__).parent.parent.parent)
         )
