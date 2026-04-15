@@ -306,7 +306,7 @@ def snapshot(project_id: str, phase: str):
     Example: mas snapshot proj-20260409-001 --phase pre-planning
     """
     _require_project(project_id)
-    from core.shared_state_manager import SharedStateManager
+    from core.engine.shared_state_manager import SharedStateManager
 
     sm = SharedStateManager(project_id)
     snap_path = sm.snapshot(phase=phase)

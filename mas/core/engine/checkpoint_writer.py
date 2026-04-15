@@ -8,12 +8,12 @@ Called automatically after:
   - every phase transition write() in SharedStateManager
 
 Usage as library:
-    from core.checkpoint_writer import CheckpointWriter
+    from core.engine.checkpoint_writer import CheckpointWriter
     cw = CheckpointWriter("proj-20260410-001-session-scheduler")
     cw.write()
 
 Usage as CLI:
-    uv run python mas/core/checkpoint_writer.py --project-id proj-20260410-001-session-scheduler
+    uv run python mas/core/engine/checkpoint_writer.py --project-id proj-20260410-001-session-scheduler
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ from typing import Any
 import yaml
 
 try:
-    from core.wire_protocol import WireDecoder as _WireDecoder
+    from core.utils.wire_protocol import WireDecoder as _WireDecoder
     _wire_decoder = _WireDecoder()
 except ImportError:
     _wire_decoder = None  # type: ignore

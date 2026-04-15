@@ -20,15 +20,15 @@ Relationship types:
   spawned_from, related_to
 
 Usage as library:
-    from core.graph_memory import GraphMemory
+    from core.engine.graph_memory import GraphMemory
     gm = GraphMemory("proj-20260410-001-session-scheduler")
     gm.write_episode("handoff", {"from": "master_orchestrator", "to": "scribe_agent", ...})
     results = gm.query("scribe_agent", context="intake phase artifacts")
 
 Usage as CLI:
-    uv run python mas/core/graph_memory.py stats --project-id proj-001
-    uv run python mas/core/graph_memory.py query --project-id proj-001 --agent scribe_agent --context "artifacts"
-    uv run python mas/core/graph_memory.py episodes --project-id proj-001
+    uv run python mas/core/engine/graph_memory.py stats --project-id proj-001
+    uv run python mas/core/engine/graph_memory.py query --project-id proj-001 --agent scribe_agent --context "artifacts"
+    uv run python mas/core/engine/graph_memory.py episodes --project-id proj-001
 """
 
 from __future__ import annotations

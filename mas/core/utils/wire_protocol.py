@@ -1,7 +1,8 @@
 """
-Wire Protocol (utils copy)
+Wire Protocol
 
-Copied into `core.utils` as part of the incremental refactor.
+Encodes, decodes, and validates MAS wire-format payloads.
+Canonical location: core.utils.wire_protocol
 """
 
 from __future__ import annotations

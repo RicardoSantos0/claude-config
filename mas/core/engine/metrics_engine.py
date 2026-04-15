@@ -18,14 +18,14 @@ Additional v1 metrics:
   - phase_efficiency              (dict of phase→ratio)
 
 Usage as library:
-    from core.metrics_engine import MetricsEngine
+    from core.engine.metrics_engine import MetricsEngine
     engine = MetricsEngine()
     score = engine.score_goal_achievement(success_criteria, task_outcomes)
 
 Usage as CLI:
-    uv run python core/metrics_engine.py score-project --project-id proj-001
-    uv run python core/metrics_engine.py score-agent  --project-id proj-001 --agent-id hr_agent
-    uv run python core/metrics_engine.py report       --project-id proj-001 [--save]
+    uv run python mas/core/engine/metrics_engine.py score-project --project-id proj-001
+    uv run python mas/core/engine/metrics_engine.py score-agent  --project-id proj-001 --agent-id hr_agent
+    uv run python mas/core/engine/metrics_engine.py report       --project-id proj-001 [--save]
 """
 
 import sys

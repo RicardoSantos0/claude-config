@@ -4,12 +4,12 @@ Single source of truth for any active project.
 Enforces access control, mutability, and append-only rules on every write.
 
 Usage as library:
-    from core.shared_state_manager import SharedStateManager
+    from core.engine.shared_state_manager import SharedStateManager
     sm = SharedStateManager("proj-20260409-001")
     sm.initialize(request_id="req-001")
 
 Usage as CLI:
-    uv run python core/shared_state_manager.py init --project-id proj-001 --request-id req-001
+    uv run python mas/core/engine/shared_state_manager.py init --project-id proj-001 --request-id req-001
     uv run python core/shared_state_manager.py read --project-id proj-001 --path core_identity.current_phase
     uv run python core/shared_state_manager.py write --project-id proj-001 --section core_identity --field status --value active --agent master_orchestrator
     uv run python core/shared_state_manager.py append --project-id proj-001 --section decisions --field assumptions --value-json '{"assumption_id":"a-001","stated_by":"master_orchestrator","description":"..."}' --agent master_orchestrator

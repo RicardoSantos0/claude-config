@@ -12,7 +12,7 @@ Milestone statuses: pending → in_progress → (completed | blocked)
 Effort tiers:       trivial | small | medium | large | extra-large
 
 Usage as library:
-    from core.task_board import TaskBoard
+    from core.engine.task_board import TaskBoard
     board = TaskBoard("proj-001")
     ms_id = board.create_milestone({...})
     task_id = board.create_task({...})

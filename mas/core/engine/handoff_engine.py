@@ -4,15 +4,15 @@ Creates, validates, accepts, and rejects formal agent-to-agent handoffs.
 Every handoff is recorded in shared_state.workflow.handoff_history.
 
 Usage as library:
-    from core.handoff_engine import HandoffEngine
-    from core.shared_state_manager import SharedStateManager
+    from core.engine.handoff_engine import HandoffEngine
+    from core.engine.shared_state_manager import SharedStateManager
     engine = HandoffEngine()
     sm = SharedStateManager("proj-20260410-001-session-scheduler")
     handoff = engine.create(sm, from_agent="master_orchestrator",
                             to_agent="scribe_agent", ...)
 
 Usage as CLI:
-    uv run python core/handoff_engine.py create --project-id proj-20260410-001-session-scheduler --from master_orchestrator --to scribe_agent --phase intake --task "Initialize project folder" --summary "Starting project"
+    uv run python mas/core/engine/handoff_engine.py create --project-id proj-20260410-001-session-scheduler --from master_orchestrator --to scribe_agent --phase intake --task "Initialize project folder" --summary "Starting project"
     uv run python core/handoff_engine.py accept --handoff-id ho-proj-20260410-001-session-scheduler-001 --project-id proj-20260410-001-session-scheduler
     uv run python core/handoff_engine.py reject --handoff-id ho-proj-20260410-001-session-scheduler-001 --project-id proj-20260410-001-session-scheduler --reason "Missing required fields"
     uv run python core/handoff_engine.py pending --project-id proj-20260410-001-session-scheduler
@@ -33,7 +33,7 @@ ROOT = Path(__file__).parent.parent.parent
 from .shared_state_manager import SharedStateManager
 from core.engine.audit_logger import get_logger
 from core.engine.checkpoint_writer import CheckpointWriter
-from core.wire_protocol import WireValidator as _WireValidator
+from core.utils.wire_protocol import WireValidator as _WireValidator
 
 _wire_validator = _WireValidator()
 
