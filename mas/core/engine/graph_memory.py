@@ -208,13 +208,78 @@ class GraphStore:
     # ------------------------------------------------------------------
 
     def save(self) -> None:
-        """Persist graph to YAML."""
-        self.graph_path.parent.mkdir(parents=True, exist_ok=True)
+        """Persist graph to SQLite (primary) and YAML (compatibility copy)."""
         data = self._to_dict()
-        with self.graph_path.open("w", encoding="utf-8") as f:
-            yaml.dump(data, f, default_flow_style=False, sort_keys=False)
+        # Primary: SQLite
+        self._save_to_sqlite(data)
+        # Compatibility: YAML (kept so old tools still work; will be removed once
+        # all readers use SQLite)
+        try:
+            self.graph_path.parent.mkdir(parents=True, exist_ok=True)
+            with self.graph_path.open("w", encoding="utf-8") as f:
+                yaml.dump(data, f, default_flow_style=False, sort_keys=False)
+        except Exception:
+            pass  # YAML write failure is non-fatal; SQLite is authoritative
+
+    def _save_to_sqlite(self, data: dict) -> None:
+        """Upsert all nodes and edges into the agent_graph SQLite tables."""
+        import json
+        try:
+            from core.db import _get_connection, DB_PATH, init_db
+            init_db()
+            with _get_connection(DB_PATH) as conn:
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS agent_graph (
+                        id TEXT PRIMARY KEY,
+                        type TEXT,
+                        label TEXT,
+                        meta TEXT
+                    )""")
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS agent_graph_edges (
+                        id TEXT PRIMARY KEY,
+                        source TEXT,
+                        target TEXT,
+                        relation TEXT,
+                        meta TEXT
+                    )""")
+                for node in data.get("nodes", []):
+                    nid = node.get("id")
+                    if not nid:
+                        continue
+                    meta = {k: v for k, v in node.items()
+                            if k not in ("id", "entity_type")}
+                    conn.execute(
+                        "INSERT OR REPLACE INTO agent_graph(id, type, label, meta) "
+                        "VALUES (?, ?, ?, ?)",
+                        (nid,
+                         node.get("entity_type", ""),
+                         node.get("label", nid),
+                         json.dumps(meta)),
+                    )
+                for edge in data.get("edges", []):
+                    src = edge.get("source")
+                    tgt = edge.get("target")
+                    if not src or not tgt:
+                        continue
+                    edge_id = f"{src}__{edge.get('rel_type', 'related_to')}__{tgt}"
+                    meta = {k: v for k, v in edge.items()
+                            if k not in ("source", "target", "rel_type")}
+                    conn.execute(
+                        "INSERT OR REPLACE INTO agent_graph_edges"
+                        "(id, source, target, relation, meta) VALUES (?, ?, ?, ?, ?)",
+                        (edge_id, src, tgt,
+                         edge.get("rel_type", "related_to"),
+                         json.dumps(meta)),
+                    )
+        except Exception:
+            pass  # DB write failure is non-fatal; in-memory graph remains valid
 
     def _load(self) -> None:
+        """Load from SQLite first; fall back to YAML for legacy projects."""
+        if self._load_from_sqlite():
+            return
+        # YAML fallback (legacy projects that pre-date SQLite persistence)
         if not self.graph_path.exists():
             return
         try:
@@ -223,6 +288,56 @@ class GraphStore:
             self._from_dict(data)
         except Exception:
             pass  # corrupt file — start fresh
+
+    def _load_from_sqlite(self) -> bool:
+        """Load nodes and edges from SQLite. Returns True if data was found."""
+        import json
+        try:
+            from core.db import _get_connection, DB_PATH
+            with _get_connection(DB_PATH) as conn:
+                # Check tables exist
+                tables = {r[0] for r in conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                ).fetchall()}
+                if "agent_graph" not in tables:
+                    return False
+
+                # For project-scoped graphs, filter by project_id in meta
+                # For the global graph, load everything
+                if self.project_id == GLOBAL_PROJECT_ID:
+                    node_rows = conn.execute(
+                        "SELECT id, type, label, meta FROM agent_graph"
+                    ).fetchall()
+                    edge_rows = conn.execute(
+                        "SELECT source, target, relation, meta FROM agent_graph_edges"
+                    ).fetchall()
+                else:
+                    node_rows = conn.execute(
+                        "SELECT id, type, label, meta FROM agent_graph "
+                        "WHERE meta LIKE ?",
+                        (f'%"project_id": "{self.project_id}"%',),
+                    ).fetchall()
+                    edge_rows = conn.execute(
+                        "SELECT source, target, relation, meta "
+                        "FROM agent_graph_edges "
+                        "WHERE meta LIKE ?",
+                        (f'%"project_id": "{self.project_id}"%',),
+                    ).fetchall()
+
+                if not node_rows and not edge_rows:
+                    return False
+
+                for row in node_rows:
+                    meta = json.loads(row["meta"] or "{}")
+                    self.add_node(row["id"], row["type"] or "related_to",
+                                  label=row["label"], **meta)
+                for row in edge_rows:
+                    meta = json.loads(row["meta"] or "{}")
+                    self.add_edge(row["source"], row["target"],
+                                  row["relation"] or "related_to", **meta)
+                return True
+        except Exception:
+            return False
 
     def _to_dict(self) -> dict:
         if _NX_AVAILABLE and self._g is not None:

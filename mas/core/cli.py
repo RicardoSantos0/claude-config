@@ -427,10 +427,14 @@ def rebuild_fts():
 @click.option("--dry-run", is_flag=True, default=False,
               help="Show what would be migrated without writing to SQLite.")
 def migrate_graph(dry_run: bool):
-    """Migrate global_graph.yaml nodes/edges into agent_graph SQLite tables.
+    """One-time import of legacy global_graph.yaml into agent_graph SQLite tables.
+
+    GraphStore now writes to SQLite directly on every save() — this command is
+    only needed to seed the tables from any pre-existing YAML that was written
+    before the DB consolidation (proj-007).
 
     Creates agent_graph and agent_graph_edges tables if they do not exist.
-    Migration is idempotent (INSERT OR IGNORE).
+    Migration is idempotent (INSERT OR REPLACE).
 
     Example:
         mas db migrate-graph
@@ -439,9 +443,13 @@ def migrate_graph(dry_run: bool):
     import yaml as _yaml
     from core.utils.log_helpers import _get_connection, DB_PATH
 
-    graph_path = ROOT / "data" / "global_graph.yaml"
+    # Try mas/global_graph.yaml first, then mas/data/global_graph.yaml (legacy)
+    graph_path = ROOT / "global_graph.yaml"
     if not graph_path.exists():
-        click.echo(f"[warn] {graph_path} not found — nothing to migrate.")
+        graph_path = ROOT / "data" / "global_graph.yaml"
+    if not graph_path.exists():
+        click.echo("[warn] No global_graph.yaml found — nothing to migrate. "
+                   "(GraphStore now writes to SQLite directly on every save.)")
         return
 
     with open(graph_path, encoding="utf-8") as f:

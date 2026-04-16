@@ -143,6 +143,15 @@ class OrchestrationLoop:
                 agent_resp = self._dispatch_agent(agent_id, state)
                 parsed = self._parse_response(agent_resp.raw_text)
 
+                # Print result summary
+                dry_tag = " dry" if agent_resp.dry_run else ""
+                tok_tag = f" tok={agent_resp.tokens_used}" if agent_resp.tokens_used else ""
+                status_tag = f" [{parsed.status}]" if parsed.status else ""
+                action_tag = f" -> {parsed.next_action}" if parsed.next_action not in ("", "wait") else ""
+                agent_tag = f":{parsed.next_agent}" if parsed.next_agent else ""
+                print(f"  tokens={agent_resp.tokens_used}{dry_tag}"
+                      f"{status_tag}{action_tag}{agent_tag}")
+
                 # Log any parse warnings
                 for err in parsed.parse_errors:
                     print(f"  [parse_warn] {err}")
@@ -160,8 +169,9 @@ class OrchestrationLoop:
                     if stop:
                         return stop
                 else:
-                    # Sub-agent completed — accept the handoff it was working on
+                    # Sub-agent completed — accept handoff and record its output
                     self._accept_pending_handoff(state, agent_id, parsed)
+                    self._record_subagent_output(agent_id, parsed)
 
                 # Phase boundary check
                 new_state = self._load_state()
@@ -208,6 +218,14 @@ class OrchestrationLoop:
         phase = state.get("core_identity", {}).get("current_phase", "intake")
         extra_ctx = self._build_extra_context()
 
+        # Inject pending handoff task description for sub-agents
+        if agent_id != "master_orchestrator":
+            task_ctx = self._pending_handoff_context(agent_id, state)
+            if task_ctx:
+                if extra_ctx is None:
+                    extra_ctx = {}
+                extra_ctx["pending_task"] = task_ctx
+
         prompt = self._assembler.assemble(agent_id, state,
                                           extra_context=extra_ctx)
 
@@ -236,8 +254,6 @@ class OrchestrationLoop:
         else:
             self._agent_error_counts.pop(agent_id, None)
 
-        print(f"  tokens={tokens}  dry={is_dry}")
-
         return _AgentResponse(agent_id=agent_id, raw_text=text,
                               tokens_used=tokens, dry_run=is_dry)
 
@@ -262,6 +278,23 @@ class OrchestrationLoop:
         if acc_status == "pending":
             return last.get("to_agent", "master_orchestrator")
         return "master_orchestrator"
+
+    def _pending_handoff_context(self, agent_id: str, state: dict) -> str:
+        """Return the task_description from the pending handoff for this agent."""
+        history = state.get("workflow", {}).get("handoff_history", [])
+        for ho in reversed(history):
+            try:
+                from core.engine.handoff_engine import HandoffEngine
+                expanded = HandoffEngine.expand(ho)
+            except Exception:
+                expanded = ho
+            if (expanded.get("to_agent") == agent_id and
+                    expanded.get("acceptance", {}).get("status") == "pending"):
+                task = expanded.get("task_description", "")
+                payload_summary = expanded.get("payload", {}).get("summary", "")
+                parts = [p for p in (task, payload_summary) if p]
+                return "\n".join(parts)
+        return ""
 
     # ------------------------------------------------------------------
     # Response parsing
@@ -321,8 +354,10 @@ class OrchestrationLoop:
         # 5. Phase advance
         if parsed.next_action == "advance_phase":
             new_phase = _next_phase(phase, state.get("workflow", {}).get("mode", "standard"))
+            sm.snapshot(phase)                         # checkpoint before leaving phase
             sm.write("master_orchestrator", "core_identity", "current_phase", new_phase)
             sm.system_append("workflow", "completed_phases", phase)
+            print(f"  [snapshot] {phase} saved")
 
         # 6. Delegate to next agent
         if parsed.next_action == "delegate" and parsed.next_agent:
@@ -357,6 +392,38 @@ class OrchestrationLoop:
                 he.accept(sm, expanded["handoff_id"])
                 print(f"  [accept] {expanded['handoff_id']}")
                 break
+
+    def _record_subagent_output(self, agent_id: str,
+                                parsed: "ParsedResponse") -> None:
+        """Write sub-agent dec/art from wire response into shared state."""
+        from core.engine.shared_state_manager import SharedStateManager
+
+        sm = SharedStateManager(self.config.project_id)
+        now = datetime.now(timezone.utc).isoformat()
+
+        for dec in parsed.decisions:
+            if isinstance(dec, dict) and dec.get("id"):
+                try:
+                    sm.append("scribe_agent", "decisions", "decision_log", {
+                        "decision_id": dec.get("id"),
+                        "decided_by": agent_id,
+                        "value": dec.get("v", ""),
+                        "recorded_at": now,
+                        "source": "orchestration_loop",
+                    })
+                except Exception:
+                    pass
+
+        for art in parsed.artifacts:
+            try:
+                sm.append("scribe_agent", "artifacts", "change_log", {
+                    "change_id": f"chg-{agent_id}-{now[:10]}",
+                    "phase": "execution",
+                    "description": art,
+                    "author": agent_id,
+                })
+            except Exception:
+                pass
 
     # ------------------------------------------------------------------
     # Consultation

@@ -4,6 +4,37 @@ All notable changes to this repository are documented here.
 
 ---
 
+## [2026-04-16] proj-20260415-007-mas-run-fixes-db-consolidation — Loop Fixes + DB Consolidation
+
+### Bug Fixes
+
+**`mas/core/engine/orchestration_loop.py`**:
+- Phase snapshot now called (`sm.snapshot(phase)`) before every `advance_phase` action — closes the gap where a phase could be abandoned without a checkpoint
+- New `_record_subagent_output(agent_id, parsed)`: after accepting a sub-agent handoff, saves the agent's `dec`/`art` fields to shared state (previously discarded)
+- New `_pending_handoff_context(agent_id, state)`: injects the pending handoff `task_description` into sub-agent prompts via `extra_ctx["pending_task"]`
+- Richer step output: `[status] -> next_action:agent` replacing bare `tokens=0 dry=True`
+
+**`mas/core/engine/graph_memory.py`** — DB consolidation (stops dual YAML+SQLite maintenance):
+- `GraphStore.save()` now upserts to SQLite (primary) and writes YAML as a compatibility copy
+- `GraphStore._load()` reads SQLite first, falls back to YAML for legacy projects
+- New `_save_to_sqlite(data)` and `_load_from_sqlite()` private methods
+
+**`mas/core/cli.py`** — Updated `migrate-graph` docstring: migration is now a one-time bootstrap; GraphStore writes SQLite on every save going forward
+
+### Tests
+
+**`mas/tests/integration/test_mas_run_loop.py`** (new, 9 tests):
+- Full loop lifecycle against a real tmp_path project directory with mocked `_dispatch_agent`
+- Covers: phase advance → state write, snapshot creation, target phase stop, decisions/artifacts to state, delegate → handoff creation, `project_closed` early halt, `max_steps` enforcement, escalation stop
+
+**`mas/tests/prompts/test_prompt_assembler.py`** — two tests updated:
+- `test_graph_context_injected_when_dense`: accepts either SQLite or YAML context header (SQLite now has real data from project runs)
+- `test_graph_context_never_raises`: patches both `db.query_graph_node`/`query_graph_edges` and `GraphMemory.query` to raise; asserts `isinstance(result, str)` (contract: never raises)
+
+**Suite: 1017 tests passing.**
+
+---
+
 ## [2026-04-15] proj-20260415-005-mas-run-orchestration-loop — Autonomous Orchestration Loop
 
 ### New Modules
