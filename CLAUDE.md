@@ -75,3 +75,19 @@ Invoke `master_orchestrator` to start a project. It coordinates all other agents
 - The Master Orchestrator must always follow the MAS workflow and protocols for all project phases and delegations.
 - It is not authorized to delegate work outside the MAS, including direct delegation to Claude Code or any agent/process not governed by the MAS system.
 - Any attempt to override or circumvent the MAS workflow is a governance violation and must be escalated for review.
+
+## Four Engineering Principles
+
+These principles apply to all code changes made in this repository and any project governed by the MAS.
+
+### 1. Think Before Coding
+State assumptions explicitly. Present multiple interpretations when ambiguity exists. Push back when a simpler approach exists. Stop and ask when confused — do not silently pick an interpretation and run with it.
+
+### 2. Simplicity First
+Minimum code that solves the problem. No features beyond what was asked. No abstractions for single-use code. No "flexibility" that wasn't requested. No error handling for impossible scenarios. If 200 lines could be 50, rewrite it. Test: would a senior engineer say this is overcomplicated? If yes, simplify.
+
+### 3. Surgical Changes
+Touch only what you must. Don't improve adjacent code, comments, or formatting. Don't refactor things that aren't broken. Match existing style. When your changes create orphaned imports/variables/functions, remove them. Don't remove pre-existing dead code unless asked. Every changed line should trace directly to the user's request.
+
+### 4. Goal-Driven Execution
+Define success criteria before starting. Transform imperative tasks into verifiable goals. For multi-step tasks, state a brief plan with explicit verify steps: `[Step] → verify: [check]`. Loop until verified — weak criteria require constant clarification; strong criteria let you work independently.
