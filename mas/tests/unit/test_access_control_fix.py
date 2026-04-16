@@ -88,3 +88,53 @@ class TestInquirerProjectDefinition:
 
     def test_evaluator_cannot_write_project_goal(self):
         assert is_authorized("evaluator_agent", "project_definition.project_goal") is False
+
+
+class TestMasterOrchestratorProjectDefinition:
+    """AC5 (proj-007): master_orchestrator may write project_definition fields.
+
+    Master is the offline coordinator — it must be able to set brief, spec, and
+    criteria when inquirer/PM agents haven't run (dry-run / offline projects).
+    """
+
+    def test_master_can_write_original_brief(self):
+        assert is_authorized("master_orchestrator", "project_definition.original_brief") is True
+
+    def test_master_can_write_brief_summary(self):
+        assert is_authorized("master_orchestrator", "project_definition.brief_summary") is True
+
+    def test_master_can_write_clarified_specification(self):
+        assert is_authorized("master_orchestrator", "project_definition.clarified_specification") is True
+
+    def test_master_can_write_project_goal(self):
+        assert is_authorized("master_orchestrator", "project_definition.project_goal") is True
+
+    def test_master_can_write_problem_statement(self):
+        assert is_authorized("master_orchestrator", "project_definition.problem_statement") is True
+
+    def test_master_can_write_scope(self):
+        assert is_authorized("master_orchestrator", "project_definition.scope") is True
+
+    def test_master_can_write_constraints(self):
+        assert is_authorized("master_orchestrator", "project_definition.constraints") is True
+
+    def test_master_can_write_success_criteria(self):
+        assert is_authorized("master_orchestrator", "project_definition.success_criteria") is True
+
+    def test_master_can_write_acceptance_criteria(self):
+        assert is_authorized("master_orchestrator", "project_definition.acceptance_criteria") is True
+
+    def test_master_can_write_expected_outputs(self):
+        assert is_authorized("master_orchestrator", "project_definition.expected_outputs") is True
+
+    def test_inquirer_still_authorized_original_brief(self):
+        """Existing inquirer_agent ownership must not be removed."""
+        assert is_authorized("inquirer_agent", "project_definition.original_brief") is True
+
+    def test_pm_still_authorized_success_criteria(self):
+        """product_manager_agent co-ownership must be preserved."""
+        assert is_authorized("product_manager_agent", "project_definition.success_criteria") is True
+
+    def test_evaluator_still_cannot_write_original_brief(self):
+        """Adding master must not open the field to unrelated agents."""
+        assert is_authorized("evaluator_agent", "project_definition.original_brief") is False

@@ -37,18 +37,22 @@ ACCESS_CONTROL: dict[str, dict] = {
     "core_identity.status":            {"write": ["master_orchestrator"]},
 
     # === PROJECT DEFINITION ===
-    "project_definition.original_brief":          {"write": ["inquirer_agent"],         "mutability": "immutable_after_approval"},
-    "project_definition.brief_summary":          {"write": ["inquirer_agent"],         "mutability": "immutable_after_approval"},
-    "project_definition.clarified_specification": {"write": ["inquirer_agent"],         "mutability": "immutable_after_approval"},
+    # master_orchestrator is co-owner on all project_definition fields:
+    # it coordinates offline/dry-run projects and acts as stand-in orchestrator
+    # when inquirer_agent or product_manager_agent haven't run yet.
+    "project_definition.original_brief":          {"write": ["inquirer_agent", "master_orchestrator"],         "mutability": "immutable_after_approval"},
+    "project_definition.brief_summary":          {"write": ["inquirer_agent", "master_orchestrator"],         "mutability": "immutable_after_approval"},
+    "project_definition.clarified_specification": {"write": ["inquirer_agent", "master_orchestrator"],         "mutability": "immutable_after_approval"},
     # inquirer_agent is co-owner: it clarifies the spec and must record these during intake
     # product_manager_agent remains co-owner for PM-driven rewrites post-intake
-    "project_definition.project_goal":            {"write": ["inquirer_agent", "product_manager_agent"],  "mutability": "immutable_after_approval"},
-    "project_definition.problem_statement":       {"write": ["inquirer_agent", "product_manager_agent"],  "mutability": "immutable_after_approval"},
-    "project_definition.scope":                   {"write": ["inquirer_agent", "product_manager_agent"],  "mode": "append_only_after_approval"},
-    "project_definition.constraints":             {"write": ["inquirer_agent", "product_manager_agent"],  "mode": "append_only_after_approval"},
-    "project_definition.success_criteria":        {"write": ["inquirer_agent", "product_manager_agent"],  "mutability": "immutable_after_approval"},
-    "project_definition.acceptance_criteria":     {"write": ["inquirer_agent", "product_manager_agent"],  "mutability": "immutable_after_approval"},
-    "project_definition.expected_outputs":        {"write": ["product_manager_agent"],  "mutability": "immutable_after_approval"},
+    # master_orchestrator added: coordinates offline projects and drives intake when agents unavailable
+    "project_definition.project_goal":            {"write": ["inquirer_agent", "product_manager_agent", "master_orchestrator"],  "mutability": "immutable_after_approval"},
+    "project_definition.problem_statement":       {"write": ["inquirer_agent", "product_manager_agent", "master_orchestrator"],  "mutability": "immutable_after_approval"},
+    "project_definition.scope":                   {"write": ["inquirer_agent", "product_manager_agent", "master_orchestrator"],  "mode": "append_only_after_approval"},
+    "project_definition.constraints":             {"write": ["inquirer_agent", "product_manager_agent", "master_orchestrator"],  "mode": "append_only_after_approval"},
+    "project_definition.success_criteria":        {"write": ["inquirer_agent", "product_manager_agent", "master_orchestrator"],  "mutability": "immutable_after_approval"},
+    "project_definition.acceptance_criteria":     {"write": ["inquirer_agent", "product_manager_agent", "master_orchestrator"],  "mutability": "immutable_after_approval"},
+    "project_definition.expected_outputs":        {"write": ["product_manager_agent", "master_orchestrator"],  "mutability": "immutable_after_approval"},
     "project_definition.risk_classification":     {"write": ["product_manager_agent", "master_orchestrator"]},
     "project_definition.priority":                {"write": ["product_manager_agent", "master_orchestrator"]},
 

@@ -314,6 +314,50 @@ def snapshot(project_id: str, phase: str):
 
 
 # ---------------------------------------------------------------------------
+# mas close
+# ---------------------------------------------------------------------------
+
+@main.command()
+@click.argument("project_id")
+def close(project_id: str):
+    """Close a project and replay episodes into the graph.
+
+    Sets project status to 'closed', snapshots current state, then runs
+    EpisodeWriter.replay_from_state() to back-populate the graph with all
+    handoffs, phases, artifacts, and decisions from the project history.
+
+    Example: mas close proj-20260415-007-mas-run-fixes-db-consolidation
+    """
+    _require_project(project_id)
+    from core.engine.shared_state_manager import SharedStateManager
+    from core.engine.graph_memory import EpisodeWriter
+
+    sm = SharedStateManager(project_id)
+    state = sm.load()
+
+    current_phase = state.get("core_identity", {}).get("current_phase", "")
+    current_status = state.get("core_identity", {}).get("status", "active")
+
+    if current_status == "closed":
+        click.echo(f"[info] Project is already closed — replaying episodes only.")
+    else:
+        sm.snapshot(current_phase or "pre-close")
+        sm.write("master_orchestrator", "core_identity", "status", "closed")
+        if current_phase not in ("closed", ""):
+            sm.write("master_orchestrator", "core_identity", "current_phase", "closed")
+            sm.system_append("workflow", "completed_phases", current_phase)
+        click.echo(f"[ok] Project closed.")
+
+    # Reload state after writes
+    state = sm.load()
+    try:
+        n = EpisodeWriter.replay_from_state(project_id, state)
+        click.echo(f"[ok] Graph updated: {n} episodes replayed.")
+    except Exception as e:
+        click.echo(f"[warn] Episode replay failed: {e}", err=True)
+
+
+# ---------------------------------------------------------------------------
 # mas roster
 # ---------------------------------------------------------------------------
 

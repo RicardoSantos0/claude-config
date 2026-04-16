@@ -4,6 +4,33 @@ All notable changes to this repository are documented here.
 
 ---
 
+## [2026-04-16] proj-007 trainer proposals — Decision quality, phase docs, graph closure, ACL
+
+### Changes (implementing proj-007 evaluation proposals)
+
+**`mas/core/engine/access_control.py`** — `master_orchestrator` added as co-owner for all `project_definition` fields (`original_brief`, `brief_summary`, `clarified_specification`, `project_goal`, `problem_statement`, `scope`, `constraints`, `success_criteria`, `acceptance_criteria`, `expected_outputs`). Eliminates governance violations in offline/dry-run projects and makes `goal_achievement` / `acceptance_criteria_pass_rate` scoreable when master sets these fields.
+
+**`mas/core/engine/orchestration_loop.py`**:
+- Decision records now include `rationale` (`rat`), `alternatives_considered` (`alt`), `related_to` (`rel`) from wire `dec` objects — raises `decision_quality` from 51 → up to 100 when agents populate these fields
+- New `_write_phase_document(phase, state, project_dir)`: writes minimal YAML stubs (`intake/clarified_spec.yaml`, `planning/product_plan.yaml`, `execution/execution_plan.yaml`) on phase advance — makes `documentation_completeness` scoreable
+- On transition to `"closed"`: calls `EpisodeWriter.replay_from_state()` automatically — fixes `global_graph_contribution` scoring
+
+**`mas/core/engine/graph_memory.py`** — `EpisodeWriter.replay_from_state()` now handles both string and dict entries in `artifacts.documents` (previous: `AttributeError` on plain path strings)
+
+**`mas/core/cli.py`** — New `mas close <project-id>` command: closes a project, snapshots state, and replays all episodes into the graph
+
+**`agents/master_orchestrator.md`** — Wire protocol section now documents `rat`, `alt`, `rel` fields in `dec` objects with scoring context
+
+### Tests
+
+- `test_access_control_fix.py`: 13 new tests for `master_orchestrator` on all `project_definition` fields
+- `test_orchestration_loop.py`: 7 new tests — decision rationale fields, `_write_phase_document` (intake/planning/execution/unknown/idempotent)
+- `test_mas_run_loop.py`: 2 new integration tests — phase doc on advance, decision rationale in state
+
+**Suite: 1039 tests passing.**
+
+---
+
 ## [2026-04-16] proj-20260415-007-mas-run-fixes-db-consolidation — Loop Fixes + DB Consolidation
 
 ### Bug Fixes

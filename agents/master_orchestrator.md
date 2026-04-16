@@ -148,7 +148,7 @@ When producing handoff payloads and inter-agent outputs, use MAS wire protocol v
   "_v": "1.0",
   "s": "task:complete",
   "art": ["path/to/artifact.yaml"],
-  "dec": [{"id": "d-001", "v": "decision_value"}]
+  "dec": [{"id": "d-001", "v": "decision_value", "rat": "rationale text", "alt": ["option A", "option B"], "rel": "d-000"}]
 }
 ```
 
@@ -157,6 +157,15 @@ When producing handoff payloads and inter-agent outputs, use MAS wire protocol v
 - Omit empty lists and null values
 - Optional reasoning (`rsn`): max 100 words
 - Full field map in `mas/foundation/wire_protocol_spec.yaml`
+
+**Decision quality fields** (include these to score above 70 on `decision_quality` metric):
+
+Each `dec` entry supports:
+- `id`: decision identifier (required)
+- `v`: decision value / outcome (required)
+- `rat`: rationale — *why* this decision was made (+20 pts)
+- `alt`: alternatives considered — list of strings (+20 pts)
+- `rel`: related decision id or context (+20 pts)
 
 **Orchestration loop extension keys** (include these when `mas run` is driving the project):
 

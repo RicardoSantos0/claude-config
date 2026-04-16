@@ -357,3 +357,147 @@ class TestTargetPhase:
         result = loop.run()
         assert result.reason == StopReason.TARGET_REACHED
         assert result.last_phase == "specification"
+
+
+# ---------------------------------------------------------------------------
+# Decision quality fields (proj-007)
+# ---------------------------------------------------------------------------
+
+class TestDecisionQualityFields:
+    """Decision records must carry rationale/alternatives_considered/related_to."""
+
+    def _wire_with_dec(self, dec_list: list) -> str:
+        import json
+        wire = {"_v": "1.0", "s": "task:complete", "dec": dec_list}
+        return f"reasoning\n\n```json\n{json.dumps(wire)}\n```"
+
+    def test_master_decision_includes_rationale(self, tmp_path):
+        from core.engine.shared_state_manager import SharedStateManager
+        from core.engine.audit_logger import AuditLogger
+
+        pid = "proj-loop-dec-001"
+        al = AuditLogger(log_path=tmp_path / pid / "audit.log")
+        sm = SharedStateManager(pid, projects_root=tmp_path, audit_logger=al)
+        sm.initialize(request_id="req-dec-001")
+
+        from core.engine.orchestration_loop import OrchestrationLoop, LoopConfig
+        cfg = LoopConfig(project_id=pid, max_steps=2, dry_run=True, auto=True)
+        loop = OrchestrationLoop(cfg)
+
+        dec = [{"id": "d-q-001", "v": "use postgres", "rat": "proven reliability",
+                "alt": ["sqlite", "mysql"], "rel": "d-prereq-001"}]
+
+        def _load():
+            return sm.load()
+
+        loop._load_state = _load
+
+        from core.engine.response_parser import ResponseParser
+        parsed = ResponseParser().parse(self._wire_with_dec(dec))
+
+        # Patch _execute_master_actions to call only decision recording
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc).isoformat()
+        for d in parsed.decisions:
+            if isinstance(d, dict) and d.get("id"):
+                sm.append("master_orchestrator", "decisions", "decision_log", {
+                    "decision_id":             d.get("id"),
+                    "value":                   d.get("v", ""),
+                    "rationale":               d.get("rat", ""),
+                    "alternatives_considered": d.get("alt", []),
+                    "related_to":              d.get("rel", ""),
+                    "recorded_at":             now,
+                    "source":                  "orchestration_loop",
+                })
+
+        state = sm.load()
+        log = state["decisions"]["decision_log"]
+        assert len(log) == 1
+        entry = log[0]
+        assert entry["rationale"] == "proven reliability"
+        assert entry["alternatives_considered"] == ["sqlite", "mysql"]
+        assert entry["related_to"] == "d-prereq-001"
+
+    def test_decision_without_optional_fields_still_recorded(self):
+        """Decisions without rat/alt/rel must still be recorded (fields default to empty)."""
+        import json
+        from core.engine.response_parser import ResponseParser
+        wire = {"_v": "1.0", "s": "task:complete", "dec": [{"id": "d-bare", "v": "bare value"}]}
+        text = f"reasoning\n\n```json\n{json.dumps(wire)}\n```"
+        parsed = ResponseParser().parse(text)
+        dec = parsed.decisions[0]
+        assert dec.get("rat", "") == ""
+        assert dec.get("alt", []) == []
+        assert dec.get("rel", "") == ""
+
+
+# ---------------------------------------------------------------------------
+# Phase document writing (proj-007)
+# ---------------------------------------------------------------------------
+
+class TestPhaseDocumentWriting:
+    """_write_phase_document must create YAML stubs on phase advance."""
+
+    def _make_state_with_spec(self, phase: str) -> dict:
+        return {
+            "core_identity": {"current_phase": phase, "status": "active"},
+            "project_definition": {
+                "clarified_specification": "Build a thing",
+                "project_goal": "Deliver value",
+                "problem_statement": "Current system is slow",
+                "success_criteria": ["criterion 1"],
+                "acceptance_criteria": ["AC1"],
+                "original_brief": "Original brief",
+                "scope": {},
+                "constraints": [],
+                "expected_outputs": [],
+            },
+            "execution": {"milestones": [], "tasks": [], "execution_plan_path": None},
+            "workflow": {"mode": "standard", "handoff_history": [], "completed_phases": []},
+        }
+
+    def test_intake_doc_created(self, tmp_path):
+        from core.engine.orchestration_loop import OrchestrationLoop, LoopConfig
+        loop = OrchestrationLoop(LoopConfig(project_id="p", dry_run=True))
+        state = self._make_state_with_spec("intake")
+        loop._write_phase_document("intake", state, tmp_path)
+        dest = tmp_path / "intake" / "clarified_spec.yaml"
+        assert dest.exists()
+        import yaml
+        content = yaml.safe_load(dest.read_text(encoding="utf-8"))
+        assert content["clarified_specification"] == "Build a thing"
+
+    def test_planning_doc_created(self, tmp_path):
+        from core.engine.orchestration_loop import OrchestrationLoop, LoopConfig
+        loop = OrchestrationLoop(LoopConfig(project_id="p", dry_run=True))
+        state = self._make_state_with_spec("planning")
+        loop._write_phase_document("planning", state, tmp_path)
+        dest = tmp_path / "planning" / "product_plan.yaml"
+        assert dest.exists()
+
+    def test_execution_doc_created(self, tmp_path):
+        from core.engine.orchestration_loop import OrchestrationLoop, LoopConfig
+        loop = OrchestrationLoop(LoopConfig(project_id="p", dry_run=True))
+        state = self._make_state_with_spec("execution")
+        loop._write_phase_document("execution", state, tmp_path)
+        dest = tmp_path / "execution" / "execution_plan.yaml"
+        assert dest.exists()
+
+    def test_unknown_phase_no_doc(self, tmp_path):
+        from core.engine.orchestration_loop import OrchestrationLoop, LoopConfig
+        loop = OrchestrationLoop(LoopConfig(project_id="p", dry_run=True))
+        state = self._make_state_with_spec("review")
+        loop._write_phase_document("review", state, tmp_path)
+        # No files created for unrecognised phases
+        assert not list(tmp_path.rglob("*.yaml"))
+
+    def test_idempotent_does_not_overwrite(self, tmp_path):
+        """Existing docs must not be overwritten."""
+        from core.engine.orchestration_loop import OrchestrationLoop, LoopConfig
+        loop = OrchestrationLoop(LoopConfig(project_id="p", dry_run=True))
+        state = self._make_state_with_spec("intake")
+        dest = tmp_path / "intake" / "clarified_spec.yaml"
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_text("original: content\n", encoding="utf-8")
+        loop._write_phase_document("intake", state, tmp_path)
+        assert dest.read_text(encoding="utf-8") == "original: content\n"

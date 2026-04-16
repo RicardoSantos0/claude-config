@@ -121,10 +121,13 @@ def _patched_loop(
             if isinstance(dec, dict) and dec.get("id"):
                 try:
                     sm.append("master_orchestrator", "decisions", "decision_log", {
-                        "decision_id": dec.get("id"),
-                        "value": dec.get("v", ""),
-                        "recorded_at": now,
-                        "source": "orchestration_loop",
+                        "decision_id":             dec.get("id"),
+                        "value":                   dec.get("v", ""),
+                        "rationale":               dec.get("rat", ""),
+                        "alternatives_considered": dec.get("alt", []),
+                        "related_to":              dec.get("rel", ""),
+                        "recorded_at":             now,
+                        "source":                  "orchestration_loop",
                     })
                 except Exception:
                     pass
@@ -140,6 +143,7 @@ def _patched_loop(
             sm.snapshot(phase)
             sm.write("master_orchestrator", "core_identity", "current_phase", new_phase)
             sm.system_append("workflow", "completed_phases", phase)
+            loop._write_phase_document(phase, state, tmp_path / project_id)
 
         if parsed.next_action == "delegate" and parsed.next_agent:
             payload = {
@@ -314,3 +318,50 @@ class TestLoopStopConditions:
         ], max_steps=5)
         result = loop.run()
         assert result.reason == StopReason.HUMAN_ESCALATION
+
+
+class TestPhaseDocumentsAndGraphReplay:
+    """Phase docs written on advance; EpisodeWriter called at closure (proj-007)."""
+
+    def test_intake_doc_written_on_advance(self, tmp_path):
+        pid = "proj-loop-int-010"
+        _make_project(tmp_path, pid)
+
+        # Set clarified_specification so the doc has content
+        al = AuditLogger(log_path=tmp_path / pid / "audit.log")
+        sm = SharedStateManager(pid, projects_root=tmp_path, audit_logger=al)
+        sm.write("master_orchestrator", "project_definition", "clarified_specification",
+                 "Build a test project")
+
+        loop = _patched_loop(pid, tmp_path, [
+            _wire("task:complete"),   # master signals phase complete → advance
+        ], max_steps=2)
+        loop.run()
+
+        # intake/clarified_spec.yaml should now exist
+        doc = tmp_path / pid / "intake" / "clarified_spec.yaml"
+        assert doc.exists(), "intake/clarified_spec.yaml not created on phase advance"
+        import yaml as _yaml
+        content = _yaml.safe_load(doc.read_text(encoding="utf-8"))
+        assert content.get("clarified_specification") == "Build a test project"
+
+    def test_decisions_include_rationale_fields(self, tmp_path):
+        pid = "proj-loop-int-011"
+        _make_project(tmp_path, pid)
+
+        loop = _patched_loop(pid, tmp_path, [
+            _wire("task:complete",
+                  dec=[{"id": "d-rat-001", "v": "use sqlite",
+                        "rat": "lightweight", "alt": ["postgres"], "rel": "d-000"}]),
+        ], max_steps=2)
+        loop.run()
+
+        al = AuditLogger(log_path=tmp_path / pid / "audit.log")
+        sm = SharedStateManager(pid, projects_root=tmp_path, audit_logger=al)
+        state = sm.load()
+        log = state["decisions"]["decision_log"]
+        entry = next((d for d in log if d.get("decision_id") == "d-rat-001"), None)
+        assert entry is not None
+        assert entry.get("rationale") == "lightweight"
+        assert entry.get("alternatives_considered") == ["postgres"]
+        assert entry.get("related_to") == "d-000"

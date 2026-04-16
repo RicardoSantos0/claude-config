@@ -770,8 +770,11 @@ class EpisodeWriter:
             count += 1
 
         for doc in artifacts_section.get("documents", []):
-            name = doc.get("name", "")
-            created_by = doc.get("created_by", "")
+            if isinstance(doc, str):
+                name, created_by = doc, ""
+            else:
+                name = doc.get("name", "")
+                created_by = doc.get("created_by", "")
             if name:
                 gm.write_episode("artifact", {
                     "name": name,

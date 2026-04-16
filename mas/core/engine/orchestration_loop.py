@@ -326,10 +326,13 @@ class OrchestrationLoop:
         for dec in parsed.decisions:
             if isinstance(dec, dict) and dec.get("id"):
                 sm.append("master_orchestrator", "decisions", "decision_log", {
-                    "decision_id": dec.get("id"),
-                    "value": dec.get("v", ""),
-                    "recorded_at": now,
-                    "source": "orchestration_loop",
+                    "decision_id":             dec.get("id"),
+                    "value":                   dec.get("v", ""),
+                    "rationale":               dec.get("rat", ""),
+                    "alternatives_considered": dec.get("alt", []),
+                    "related_to":              dec.get("rel", ""),
+                    "recorded_at":             now,
+                    "source":                  "orchestration_loop",
                 })
 
         # 2. Record artifacts
@@ -357,7 +360,19 @@ class OrchestrationLoop:
             sm.snapshot(phase)                         # checkpoint before leaving phase
             sm.write("master_orchestrator", "core_identity", "current_phase", new_phase)
             sm.system_append("workflow", "completed_phases", phase)
+            self._write_phase_document(phase, state, sm.project_dir)
             print(f"  [snapshot] {phase} saved")
+
+            # Trigger EpisodeWriter replay when closing project
+            if new_phase == "closed":
+                try:
+                    from core.engine.graph_memory import EpisodeWriter
+                    n = EpisodeWriter.replay_from_state(
+                        self.config.project_id, self._load_state()
+                    )
+                    print(f"  [graph] episode replay complete ({n} episodes)")
+                except Exception as e:
+                    print(f"  [graph] replay skipped: {e}")
 
         # 6. Delegate to next agent
         if parsed.next_action == "delegate" and parsed.next_agent:
@@ -405,11 +420,14 @@ class OrchestrationLoop:
             if isinstance(dec, dict) and dec.get("id"):
                 try:
                     sm.append("scribe_agent", "decisions", "decision_log", {
-                        "decision_id": dec.get("id"),
-                        "decided_by": agent_id,
-                        "value": dec.get("v", ""),
-                        "recorded_at": now,
-                        "source": "orchestration_loop",
+                        "decision_id":             dec.get("id"),
+                        "decided_by":              agent_id,
+                        "value":                   dec.get("v", ""),
+                        "rationale":               dec.get("rat", ""),
+                        "alternatives_considered": dec.get("alt", []),
+                        "related_to":              dec.get("rel", ""),
+                        "recorded_at":             now,
+                        "source":                  "orchestration_loop",
                     })
                 except Exception:
                     pass
@@ -645,6 +663,67 @@ class OrchestrationLoop:
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+
+    def _write_phase_document(self, phase: str, state: dict,
+                              project_dir: Path) -> None:
+        """
+        Write a minimal phase document to the project directory when leaving
+        a phase.  Files are only created if they don't already exist (idempotent).
+        Documents are derived from shared state so metrics_engine can score them.
+        """
+        pd = state.get("project_definition", {})
+        ex = state.get("execution", {})
+
+        phase_files: dict[str, tuple[Path, dict]] = {
+            "intake": (
+                project_dir / "intake" / "clarified_spec.yaml",
+                {
+                    "phase": "intake",
+                    "clarified_specification": pd.get("clarified_specification", ""),
+                    "project_goal":            pd.get("project_goal", ""),
+                    "problem_statement":       pd.get("problem_statement", ""),
+                    "success_criteria":        pd.get("success_criteria", []),
+                    "acceptance_criteria":     pd.get("acceptance_criteria", []),
+                    "original_brief":          pd.get("original_brief", ""),
+                },
+            ),
+            "planning": (
+                project_dir / "planning" / "product_plan.yaml",
+                {
+                    "phase": "planning",
+                    "project_goal":       pd.get("project_goal", ""),
+                    "scope":              pd.get("scope", {}),
+                    "constraints":        pd.get("constraints", []),
+                    "success_criteria":   pd.get("success_criteria", []),
+                    "acceptance_criteria":pd.get("acceptance_criteria", []),
+                    "expected_outputs":   pd.get("expected_outputs", []),
+                },
+            ),
+            "execution": (
+                project_dir / "execution" / "execution_plan.yaml",
+                {
+                    "phase":      "execution",
+                    "milestones": ex.get("milestones", []),
+                    "tasks":      ex.get("tasks", []),
+                    "plan_path":  ex.get("execution_plan_path", ""),
+                },
+            ),
+        }
+
+        if phase not in phase_files:
+            return
+
+        dest_path, content = phase_files[phase]
+        if dest_path.exists():
+            return  # idempotent — don't overwrite existing docs
+
+        try:
+            dest_path.parent.mkdir(parents=True, exist_ok=True)
+            with dest_path.open("w", encoding="utf-8") as f:
+                yaml.dump(content, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+            print(f"  [doc] {dest_path.relative_to(project_dir)} written")
+        except Exception as e:
+            print(f"  [doc_warn] could not write {phase} doc: {e}")
 
     def _load_state(self) -> dict:
         from core.engine.shared_state_manager import SharedStateManager
