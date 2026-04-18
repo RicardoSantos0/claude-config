@@ -6,7 +6,7 @@ import yaml
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from mas.core.engine.orchestration_loop import (
+from core.engine.orchestration_loop import (
     OrchestrationLoop, LoopConfig, LoopResult, StopReason,
     _next_phase,
 )
@@ -269,7 +269,7 @@ class TestNotebookLMHandler:
     def test_script_not_found_returns_unavailable(self, tmp_path, monkeypatch):
         loop = OrchestrationLoop(LoopConfig(project_id="p"))
         monkeypatch.setattr(
-            "mas.core.engine.orchestration_loop.ROOT",
+            "core.engine.orchestration_loop.ROOT",
             tmp_path,  # no skills/ folder here
         )
         result = loop._handle_knowledge_request({"question": "What is X?"})
@@ -285,7 +285,7 @@ class TestNotebookLMHandler:
         monkeypatch.setattr("subprocess.run", lambda *a, **kw: mock_result)
 
         # Make script appear to exist
-        import mas.core.engine.orchestration_loop as ol_mod
+        import core.engine.orchestration_loop as ol_mod
         fake_script = MagicMock()
         fake_script.exists.return_value = True
         fake_root = MagicMock()
@@ -308,7 +308,7 @@ class TestNotebookLMHandler:
 
         monkeypatch.setattr("subprocess.run", _raise_timeout)
 
-        import mas.core.engine.orchestration_loop as ol_mod
+        import core.engine.orchestration_loop as ol_mod
         fake_script = MagicMock()
         fake_script.exists.return_value = True
         fake_root = MagicMock()

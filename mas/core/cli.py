@@ -631,6 +631,56 @@ def run(project_id: str, max_steps: int, dry_run: bool,
 
 
 # ---------------------------------------------------------------------------
+# mas prompt — assemble the next agent prompt (for Claude Code mode)
+# ---------------------------------------------------------------------------
+
+@main.command()
+@click.argument("project_id")
+@click.argument("agent_id", required=False, default=None)
+def prompt(project_id: str, agent_id: str | None):
+    """Assemble and print the next agent's prompt for Claude Code mode.
+
+    When ANTHROPIC_API_KEY is unavailable (Claude Pro only), use this command
+    to get the assembled prompt, then spawn the agent manually via Agent() in
+    Claude Code. The agent's wire-format response can then be applied to state
+    using the shared_state_manager and handoff_engine directly.
+
+    If AGENT_ID is omitted, determines the next agent automatically from state.
+
+    Examples:
+
+    \b
+        mas prompt proj-20260418-001-mas-self-audit
+        mas prompt proj-20260418-001-mas-self-audit inquirer_agent
+    """
+    _require_project(project_id)
+
+    state = _load_state(project_id)
+
+    if agent_id is None:
+        from core.engine.orchestration_loop import OrchestrationLoop, LoopConfig
+        dummy = LoopConfig(project_id=project_id, dry_run=True)
+        loop = OrchestrationLoop(dummy)
+        agent_id = loop._determine_next_agent(state)
+
+    agents_dir = ROOT.parent / "agents"
+    from core.engine.prompt_assembler import PromptAssembler
+    assembler = PromptAssembler(agents_dir=agents_dir)
+
+    try:
+        assembled = assembler.assemble(agent_id, state)
+    except FileNotFoundError:
+        click.echo(f"[error] Agent template not found for '{agent_id}' in {agents_dir}", err=True)
+        sys.exit(1)
+
+    header = f"# Agent: {agent_id}  |  Project: {project_id}\n# Prompt length: {len(assembled)} chars\n#" + "-" * 60
+    # Write as UTF-8 bytes directly to avoid Windows cp1252 encoding errors
+    import sys as _sys
+    out = _sys.stdout.buffer if hasattr(_sys.stdout, "buffer") else _sys.stdout
+    out.write((header + "\n" + assembled + "\n").encode("utf-8", errors="replace"))
+
+
+# ---------------------------------------------------------------------------
 # Entry point guard (for `uv run python core/cli.py`)
 # ---------------------------------------------------------------------------
 

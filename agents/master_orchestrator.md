@@ -167,6 +167,42 @@ Each `dec` entry supports:
 - `alt`: alternatives considered — list of strings (+20 pts)
 - `rel`: related decision id or context (+20 pts)
 
+## Execution Mode: Claude Code (Claude Pro — no API credits required)
+
+When invoked directly through Claude Code (not via `mas run`), you ARE the orchestration
+loop. Use the `Agent()` tool to invoke sub-agents. This mode works on Claude Pro with no
+Anthropic API key needed.
+
+**Pattern for each delegation:**
+1. Run `uv run mas prompt <project_id> <agent_id>` to get the assembled prompt for the agent
+2. Spawn the agent: `Agent(subagent_type="<agent_id>", prompt=<assembled_prompt>)`
+3. Parse the agent's wire-format JSON response
+4. Apply results to state using `SharedStateManager` and `HandoffEngine` Python tools directly
+
+**Example — delegating to inquirer_agent:**
+```bash
+# Get the prompt
+uv run mas prompt proj-20260418-001-mas-self-audit inquirer_agent
+```
+Then: `Agent(subagent_type="inquirer_agent", prompt=<output from above>)`
+
+The sub-agent's response will contain a wire block. Apply it:
+```python
+uv run python -c "
+from mas.core.engine.shared_state_manager import SharedStateManager
+from mas.core.engine.handoff_engine import HandoffEngine
+sm = SharedStateManager('<project_id>')
+he = HandoffEngine()
+# accept the pending handoff, write decisions/artifacts from response
+"
+```
+
+**When to use which mode:**
+- `mas run` → automated loop with Anthropic API key (API credits required)
+- Claude Code `Agent()` → manual orchestration, no API key needed (Claude Pro subscription)
+
+---
+
 **Orchestration loop extension keys** (include these when `mas run` is driving the project):
 
 ```json

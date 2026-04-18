@@ -20,7 +20,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import yaml
 
-from mas.core.utils.log_helpers import init_db, _get_connection
+from core.utils.log_helpers import init_db, _get_connection
 
 
 # ---------------------------------------------------------------------------
@@ -63,8 +63,8 @@ class TestDecisionLogAutoPopulation:
 
     def test_dec_items_appended_on_accept(self, tmp_project):
         proj_dir, pid = tmp_project
-        from mas.core.engine.shared_state_manager import SharedStateManager
-        from mas.core.engine.handoff_engine import HandoffEngine
+        from core.engine.shared_state_manager import SharedStateManager
+        from core.engine.handoff_engine import HandoffEngine
 
         sm = SharedStateManager(pid, projects_root=proj_dir.parent, audit_logger=MagicMock())
 
@@ -86,8 +86,8 @@ class TestDecisionLogAutoPopulation:
 
     def test_multiple_dec_items_all_appended(self, tmp_project):
         proj_dir, pid = tmp_project
-        from mas.core.engine.shared_state_manager import SharedStateManager
-        from mas.core.engine.handoff_engine import HandoffEngine
+        from core.engine.shared_state_manager import SharedStateManager
+        from core.engine.handoff_engine import HandoffEngine
 
         sm = SharedStateManager(pid, projects_root=proj_dir.parent, audit_logger=MagicMock())
 
@@ -107,8 +107,8 @@ class TestDecisionLogAutoPopulation:
 
     def test_no_dec_no_decision_log_entries(self, tmp_project):
         proj_dir, pid = tmp_project
-        from mas.core.engine.shared_state_manager import SharedStateManager
-        from mas.core.engine.handoff_engine import HandoffEngine
+        from core.engine.shared_state_manager import SharedStateManager
+        from core.engine.handoff_engine import HandoffEngine
 
         sm = SharedStateManager(pid, projects_root=proj_dir.parent, audit_logger=MagicMock())
 
@@ -132,13 +132,13 @@ class TestMetricsNotApplicable:
     """AC2: MetricResult.mode='not_applicable' for dry-run 50-defaults."""
 
     def test_metric_result_has_mode_field(self):
-        from mas.core.engine.metrics_engine import MetricResult
+        from core.engine.metrics_engine import MetricResult
         m = MetricResult(metric="test", score=50.0, evidence="e", findings="f")
         assert hasattr(m, "mode")
         assert m.mode == "live"
 
     def test_not_applicable_mode_excluded_from_aggregate(self):
-        from mas.core.engine.metrics_engine import MetricsEngine, MetricResult
+        from core.engine.metrics_engine import MetricsEngine, MetricResult
         engine = MetricsEngine()
         metrics = [
             MetricResult(metric="a", score=80.0, evidence="", findings=""),
@@ -149,7 +149,7 @@ class TestMetricsNotApplicable:
         assert abs(score - 70.0) < 0.01, f"Expected 70.0 (avg of 80+60), got {score}"
 
     def test_all_not_applicable_returns_zero(self):
-        from mas.core.engine.metrics_engine import MetricsEngine, MetricResult
+        from core.engine.metrics_engine import MetricsEngine, MetricResult
         engine = MetricsEngine()
         metrics = [
             MetricResult(metric="a", score=50.0, evidence="", findings="", mode="not_applicable"),
@@ -157,7 +157,7 @@ class TestMetricsNotApplicable:
         assert engine.aggregate_project_score(metrics) == 0.0
 
     def test_is_dry_run_state_true_when_no_live_calls(self, tmp_db):
-        from mas.core.engine.metrics_engine import MetricsEngine
+        from core.engine.metrics_engine import MetricsEngine
         engine = MetricsEngine()
         state = {"core_identity": {"project_id": "proj-dry-test"}}
         # No events in db → live_calls=0 → dry-run
@@ -166,7 +166,7 @@ class TestMetricsNotApplicable:
         assert result is True
 
     def test_is_dry_run_state_false_when_live_calls_exist(self):
-        from mas.core.engine.metrics_engine import MetricsEngine
+        from core.engine.metrics_engine import MetricsEngine
         engine = MetricsEngine()
         state = {"core_identity": {"project_id": "proj-live-test"}}
         with patch("core.db.query_token_usage", return_value={"live_calls": 5, "calls": 5}):
@@ -182,7 +182,7 @@ class TestCrossProjectSemanticFallback:
     """AC3: _sqlite_context() falls back to cross-project search when local < 2."""
 
     def test_cross_project_fallback_called_when_local_empty(self):
-        from mas.core.engine.prompt_assembler import PromptAssembler
+        from core.engine.prompt_assembler import PromptAssembler
         assembler = PromptAssembler()
 
         calls = []
@@ -206,7 +206,7 @@ class TestCrossProjectSemanticFallback:
         assert None in calls, "Cross-project search (project_id=None) was not called"
 
     def test_uses_local_hits_when_sufficient(self):
-        from mas.core.engine.prompt_assembler import PromptAssembler
+        from core.engine.prompt_assembler import PromptAssembler
         assembler = PromptAssembler()
 
         local_events = [
@@ -237,27 +237,27 @@ class TestGraphQueryHelpers:
     """AC4: query_graph_node() and query_graph_edges() are exported from db.py."""
 
     def test_query_graph_node_exported(self):
-        from mas.core import db
+        from core import db
         assert hasattr(db, "query_graph_node")
         assert "query_graph_node" in db.__all__
 
     def test_query_graph_edges_exported(self):
-        from mas.core import db
+        from core import db
         assert hasattr(db, "query_graph_edges")
         assert "query_graph_edges" in db.__all__
 
     def test_query_graph_node_returns_none_when_missing(self, tmp_db):
-        from mas.core.db import query_graph_node
+        from core.db import query_graph_node
         result = query_graph_node("nonexistent-agent", db_path=tmp_db)
         assert result is None
 
     def test_query_graph_edges_returns_empty_when_none(self, tmp_db):
-        from mas.core.db import query_graph_edges
+        from core.db import query_graph_edges
         result = query_graph_edges("nonexistent-agent", db_path=tmp_db)
         assert result == []
 
     def test_query_graph_node_finds_inserted_row(self, tmp_db):
-        from mas.core.db import query_graph_node
+        from core.db import query_graph_node
         conn = _get_connection(tmp_db)
         conn.execute("INSERT INTO agent_graph(id, type, label, meta) VALUES (?,?,?,?)",
                      ("master_orchestrator", "agent", "Master Orchestrator", "{}"))
@@ -269,7 +269,7 @@ class TestGraphQueryHelpers:
         assert row["label"] == "Master Orchestrator"
 
     def test_query_graph_edges_finds_connected_edges(self, tmp_db):
-        from mas.core.db import query_graph_edges
+        from core.db import query_graph_edges
         conn = _get_connection(tmp_db)
         conn.execute("INSERT INTO agent_graph_edges(id, source, target, relation, meta) VALUES (?,?,?,?,?)",
                      ("e-001", "master_orchestrator", "scribe_agent", "delegates_to", "{}"))
@@ -289,7 +289,7 @@ class TestGraphContextInjection:
     """AC5: _graph_context() reads from agent_graph SQLite tables."""
 
     def test_graph_context_empty_when_no_data(self):
-        from mas.core.engine.prompt_assembler import PromptAssembler
+        from core.engine.prompt_assembler import PromptAssembler
         assembler = PromptAssembler()
         with patch("core.db.query_graph_node", return_value=None), \
              patch("core.db.query_graph_edges", return_value=[]):
@@ -298,7 +298,7 @@ class TestGraphContextInjection:
         assert isinstance(result, str)
 
     def test_graph_context_populated_from_sqlite(self):
-        from mas.core.engine.prompt_assembler import PromptAssembler
+        from core.engine.prompt_assembler import PromptAssembler
         assembler = PromptAssembler()
         node = {"id": "master_orchestrator", "type": "agent", "label": "Master Orchestrator", "meta": "{}"}
         edges = [{"id": "e-1", "source": "master_orchestrator", "target": "scribe_agent",
@@ -341,7 +341,7 @@ class TestTrainingProposalDeduplication:
         ]}
 
     def test_duplicate_applied_proposal_skipped(self, monkeypatch):
-        from mas.core.engine.training_engine import TrainingEngine
+        from core.engine.training_engine import TrainingEngine
         te = TrainingEngine()
         report = self._make_report()
         desc = ("Metric 'goal_achievement' scored 50.0/100 "
@@ -356,7 +356,7 @@ class TestTrainingProposalDeduplication:
         assert metric_props == [], "Duplicate applied proposal should be skipped"
 
     def test_non_duplicate_proposal_generated(self, monkeypatch):
-        from mas.core.engine.training_engine import TrainingEngine
+        from core.engine.training_engine import TrainingEngine
         te = TrainingEngine()
         report = self._make_report()
         backlog = {"proposals": []}  # empty backlog
@@ -368,7 +368,7 @@ class TestTrainingProposalDeduplication:
         assert len(metric_props) >= 1, "New proposal should be generated when backlog is empty"
 
     def test_pending_proposal_not_treated_as_duplicate(self, monkeypatch):
-        from mas.core.engine.training_engine import TrainingEngine
+        from core.engine.training_engine import TrainingEngine
         te = TrainingEngine()
         report = self._make_report()
         desc = ("Metric 'goal_achievement' scored 50.0/100 "
@@ -385,7 +385,7 @@ class TestTrainingProposalDeduplication:
         assert len(metric_props) >= 1, "Pending proposals should not block new generation"
 
     def test_not_applicable_metrics_skipped(self, monkeypatch):
-        from mas.core.engine.training_engine import TrainingEngine
+        from core.engine.training_engine import TrainingEngine
         te = TrainingEngine()
         report = {
             "project_id": "proj-dry",

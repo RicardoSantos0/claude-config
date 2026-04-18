@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mas.core.utils.log_helpers import init_db, query_events, _get_connection
+from core.utils.log_helpers import init_db, query_events, _get_connection
 
 
 @pytest.fixture()
@@ -25,7 +25,7 @@ class TestAgentRunnerDryLiveFlag:
     """AC4/AC5: agent_runner._log_event() includes dry_run flag in payload."""
 
     def test_dry_run_logs_dry_true(self, tmp_db):
-        from mas.core.engine.agent_runner import AgentRunner
+        from core.engine.agent_runner import AgentRunner
         runner = AgentRunner(db_path=tmp_db)
         runner._log_event("proj-test", "test_agent", "test prompt",
                           tokens_prompt=0, tokens_completion=0, dry_run=True)
@@ -41,7 +41,7 @@ class TestAgentRunnerDryLiveFlag:
         assert payload.get("dry_run") is True
 
     def test_live_run_logs_dry_false(self, tmp_db):
-        from mas.core.engine.agent_runner import AgentRunner
+        from core.engine.agent_runner import AgentRunner
         runner = AgentRunner(db_path=tmp_db)
         runner._log_event("proj-test", "test_agent", "test prompt",
                           tokens_prompt=100, tokens_completion=50, dry_run=False)
@@ -58,7 +58,7 @@ class TestAgentRunnerDryLiveFlag:
 
     def test_run_without_key_logs_dry_true(self, tmp_db):
         """When no API key is set, run() is a dry run and should log dry_run=True."""
-        from mas.core.engine.agent_runner import AgentRunner
+        from core.engine.agent_runner import AgentRunner
         with patch.dict("os.environ", {}, clear=True):
             # Remove API key if present
             import os
@@ -78,8 +78,8 @@ class TestAgentRunnerDryLiveFlag:
 
     def test_query_token_usage_dry_live_split(self, tmp_db):
         """query_token_usage correctly splits dry/live calls."""
-        from mas.core.db import query_token_usage
-        from mas.core.engine.agent_runner import AgentRunner
+        from core.db import query_token_usage
+        from core.engine.agent_runner import AgentRunner
         runner = AgentRunner(db_path=tmp_db)
 
         runner._log_event("proj-split", "a1", "p1", tokens_prompt=100, tokens_completion=50, dry_run=False)
@@ -94,7 +94,7 @@ class TestAgentRunnerDryLiveFlag:
 
     def test_dry_run_row_has_zero_tokens(self, tmp_db):
         """Dry-run calls always have zero tokens."""
-        from mas.core.engine.agent_runner import AgentRunner
+        from core.engine.agent_runner import AgentRunner
         runner = AgentRunner(db_path=tmp_db)
         runner._log_event("proj-zero", "a", "p", tokens_prompt=0, tokens_completion=0, dry_run=True)
 

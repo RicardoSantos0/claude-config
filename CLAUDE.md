@@ -37,7 +37,22 @@ uv run mas status  <project-id>     # Show project status and phase
 uv run mas state   <project-id>     # Dump full shared state
 uv run mas pending <project-id>     # List unresolved handoffs
 uv run mas roster                   # Show all registered agents
-uv run pytest mas/tests/            # Run the full test suite (1013 tests)
+uv run pytest mas/tests/            # Run the full test suite (1040 tests)
+```
+
+### Two execution modes
+
+| Mode | How | When |
+|------|-----|------|
+| **Claude Code** | Invoke `master_orchestrator` agent in Claude Code; it spawns sub-agents via `Agent()` | Claude Pro subscription — no API credits needed |
+| **`mas run` CLI** | `uv run mas run <project-id>` drives the loop autonomously | Requires `ANTHROPIC_API_KEY` with credits |
+
+**Claude Code mode** is the primary workflow for this environment. The Python engine (state, handoffs, governance) runs as the backend; Claude Code is the agent invoker.
+
+To get the assembled prompt for any agent (useful in Claude Code mode):
+```bash
+uv run mas prompt <project-id>                # next agent auto-detected
+uv run mas prompt <project-id> inquirer_agent # specific agent
 ```
 
 ## Agent Network

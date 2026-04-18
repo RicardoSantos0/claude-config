@@ -12,8 +12,8 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from mas.core.cli import main
-from mas.core.utils.log_helpers import init_db, _get_connection
+from core.cli import main
+from core.utils.log_helpers import init_db, _get_connection
 
 
 @pytest.fixture()
@@ -73,12 +73,12 @@ class TestRebuildFts:
     """AC3: mas db rebuild-fts rebuilds the FTS5 index."""
 
     def test_rebuild_fts_succeeds(self, runner, tmp_db, monkeypatch):
-        import mas.core.utils.log_helpers as lh
+        import core.utils.log_helpers as lh
         monkeypatch.setattr(lh, "DB_PATH", tmp_db)
 
-        import mas.core.cli as cli_mod
+        import core.cli as cli_mod
         # Patch _get_connection and DB_PATH used in the CLI
-        monkeypatch.setattr("mas.core.cli.db", cli_mod.db)  # no-op, just ensure group exists
+        monkeypatch.setattr("core.cli.db", cli_mod.db)  # no-op, just ensure group exists
 
         # Directly test rebuild via patching the DB_PATH in log_helpers
         result = runner.invoke(main, ["db", "rebuild-fts"])

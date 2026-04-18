@@ -232,11 +232,15 @@ class OrchestrationLoop:
         model = get_model_for_agent(agent_id)
         runner = AgentRunner(model=model)
 
+        from core.utils.config import load_config
+        max_tokens = load_config().get("llm", {}).get("max_tokens", 4096)
+
         result = runner.run(
             agent_id=agent_id,
             prompt=prompt,
             project_id=self.config.project_id,
             dry_run=self.config.dry_run,
+            max_tokens=max_tokens,
         )
 
         text = result.get("text", "")

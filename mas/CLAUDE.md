@@ -24,37 +24,49 @@ if Windows App Store Python is active. Prefer the activated venv.
 
 ---
 
-## Live Run Quickstart
+## Execution Modes
 
-To run agents with a real Anthropic API key (live mode — agents make actual LLM calls):
+### Mode 1 — Claude Code (Claude Pro, no API credits needed) ✅ Primary
 
-```powershell
-# 1. Set your API key (Windows — PowerShell)
-$env:ANTHROPIC_API_KEY = "sk-ant-..."
+Invoke `master_orchestrator` from Claude Code. It orchestrates sub-agents using
+Claude Code's `Agent()` tool — no `ANTHROPIC_API_KEY` required.
 
-# Or add to .env at repo root (key name must be ANTHROPIC_API_KEY):
-#   ANTHROPIC_API_KEY=sk-ant-...
+The Python engine handles all state, handoffs, and governance. Claude Code is the runtime.
 
-# 2. Activate venv (if not already active)
-C:\Users\ricar\Documents\claude-config\.venv\Scripts\activate
-
-# 3. Start a project — agents will make live calls
+```bash
+# 1. Initialize project
 mas init my-project
 
-# 4. Check token usage after a run
+# 2. Invoke master_orchestrator in Claude Code — it will spawn sub-agents automatically
+
+# 3. Get the assembled prompt for any agent (useful for debugging or manual spawning)
+mas prompt proj-YYYYMMDD-NNN-my-project               # next agent auto-detected
+mas prompt proj-YYYYMMDD-NNN-my-project inquirer_agent
+
+# 4. Check status
+mas status proj-YYYYMMDD-NNN-my-project
+```
+
+### Mode 2 — `mas run` CLI (requires ANTHROPIC_API_KEY with credits)
+
+```powershell
+# 1. Set your API key
+$env:ANTHROPIC_API_KEY = "sk-ant-..."
+# Or: add ANTHROPIC_API_KEY=sk-ant-... to .env at repo root
+
+# 2. Run the loop
+mas run proj-YYYYMMDD-NNN-my-project
+
+# 3. Token usage
 mas tokens proj-YYYYMMDD-NNN-my-project
 
-# 5. Rebuild FTS index after a batch of events
+# 4. Maintenance
 mas db rebuild-fts
-
-# 6. Migrate graph relationships to SQLite (run once after setup)
 mas db migrate-graph
 ```
 
-> **Note:** Without `ANTHROPIC_API_KEY`, all `agent_runner` calls are dry-run.
-> The engine still works — state is populated by the human acting as orchestrator —
-> but evaluation metrics will score `not_applicable` for metrics that require real
-> agent output (goal_achievement, AC pass rate, scope adherence, decision quality).
+> **Note:** Without `ANTHROPIC_API_KEY`, `mas run` falls back to dry-run mode.
+> Use Claude Code mode (Mode 1) instead — it is fully functional without API credits.
 
 ---
 
@@ -69,9 +81,10 @@ mas state   <project-id>              # Full shared state dump
 mas pending <project-id>              # Unresolved handoffs
 mas snapshot <project-id>             # Snapshot state at current phase
 mas roster                            # All registered agents
+mas prompt  <project-id> [agent-id]   # Assemble agent prompt (Claude Code mode)
 
 # Tests
-pytest mas/tests/                     # Full suite
+pytest mas/tests/                     # Full suite (1040 tests)
 pytest mas/tests/unit/                # Unit tests only
 pytest mas/tests/integration/         # Integration tests only
 pytest mas/tests/integration/test_full_lifecycle.py  # End-to-end lifecycle test

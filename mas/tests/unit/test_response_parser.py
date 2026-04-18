@@ -2,7 +2,7 @@
 
 import json
 import pytest
-from mas.core.engine.response_parser import ResponseParser, ParsedResponse
+from core.engine.response_parser import ResponseParser, ParsedResponse
 
 
 def _make_wire(**kwargs) -> str:
