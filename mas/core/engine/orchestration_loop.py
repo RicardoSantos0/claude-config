@@ -244,6 +244,8 @@ class OrchestrationLoop:
         is_dry = result.get("dry_run", True)
 
         if result.get("error"):
+            if not result.get("retryable", True):
+                raise Exception(f"Non-retryable error from '{agent_id}': {result['error']}")
             self._agent_error_counts[agent_id] = self._agent_error_counts.get(agent_id, 0) + 1
             if self._agent_error_counts[agent_id] > self.config.max_agent_retries:
                 raise Exception(f"Agent '{agent_id}' failed {self.config.max_agent_retries+1} "

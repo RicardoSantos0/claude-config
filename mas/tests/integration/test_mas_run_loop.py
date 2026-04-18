@@ -365,3 +365,45 @@ class TestPhaseDocumentsAndGraphReplay:
         assert entry.get("rationale") == "lightweight"
         assert entry.get("alternatives_considered") == ["postgres"]
         assert entry.get("related_to") == "d-000"
+
+
+class TestNonRetryableErrors:
+    """Non-retryable API errors (credit balance, auth) must stop the loop immediately."""
+
+    def test_credit_error_stops_without_retry(self, tmp_path):
+        from unittest.mock import patch as _patch
+        pid = "proj-loop-int-012"
+        _make_project(tmp_path, pid)
+
+        cfg = LoopConfig(project_id=pid, max_steps=10, dry_run=False, auto=True)
+        loop = OrchestrationLoop(cfg)
+
+        def _load():
+            al = AuditLogger(log_path=tmp_path / pid / "audit.log")
+            sm = SharedStateManager(pid, projects_root=tmp_path, audit_logger=al)
+            return sm.load()
+        loop._load_state = _load
+
+        call_count = 0
+
+        def _fake_run(self_runner, agent_id, prompt, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            return {
+                "text": "",
+                "tokens_used": 0,
+                "model": "claude-opus-4-6",
+                "dry_run": False,
+                "error": "Error code: 400 - credit balance is too low to access the Anthropic API.",
+                "retryable": False,
+            }
+
+        dummy_prompt = "System prompt.\n\nProject brief: self-audit."
+        with _patch("core.engine.agent_runner.AgentRunner.run", _fake_run), \
+             _patch("core.engine.prompt_assembler.PromptAssembler.assemble",
+                    return_value=dummy_prompt):
+            result = loop.run()
+
+        assert result.reason == StopReason.ERROR
+        assert call_count == 1, f"Expected 1 call (no retries), got {call_count}"
+        assert "Non-retryable" in result.message

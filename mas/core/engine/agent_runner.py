@@ -39,6 +39,14 @@ except Exception:
 DEFAULT_MODEL = "claude-haiku-4-5-20251001"
 _MAX_TOKENS_DEFAULT = 1024
 
+# Errors that will not resolve on retry — fail fast
+_NON_RETRYABLE = (
+    "credit balance is too low",
+    "authentication_error",
+    "permission_error",
+    "your account has been",
+)
+
 
 class AgentRunner:
     """
@@ -138,12 +146,15 @@ class AgentRunner:
             }
 
         except Exception as exc:
+            error_str = str(exc)
+            retryable = not any(msg in error_str.lower() for msg in _NON_RETRYABLE)
             return {
                 "text": "",
                 "tokens_used": 0,
                 "model": self.model,
                 "dry_run": False,
-                "error": str(exc),
+                "error": error_str,
+                "retryable": retryable,
             }
 
     # ------------------------------------------------------------------

@@ -63,6 +63,33 @@ governance_policy:
     - "Governance policy change requested"
     - "Trainer L1 or L2 promotion requested"
 
+  # --- FIELD OWNERSHIP — common violation patterns (prop-1451d23c, prop-a3c10b35, prop-ff0c52b0, prop-6d61732c) ---
+  field_ownership_guidance:
+    description: >
+      SharedStateManager.write/append require a valid agent_id that owns the target field.
+      Using a section name (e.g. "project_definition") as agent_id causes unauthorized_write
+      violations. Always pass the governing agent's id (e.g. "master_orchestrator",
+      "scribe_agent", "product_manager_agent") — not the section name.
+    ownership_quick_reference:
+      project_definition.success_criteria: "inquirer_agent | product_manager_agent | master_orchestrator"
+      project_definition.acceptance_criteria: "inquirer_agent | product_manager_agent | master_orchestrator"
+      decisions.decision_log: "scribe_agent | master_orchestrator | __system__"
+      workflow.completed_phases: "append_only — use SharedStateManager.append with master_orchestrator"
+    common_mistakes:
+      - "Using section name as agent_id ('project_definition', 'decisions')"
+      - "Calling .write() on append_only fields — use .append() instead"
+      - "Using master_orchestrator for fields exclusively owned by specialist agents"
+
+  # --- GRAPH CONTRIBUTION — closure requirement (prop-1d62c672, prop-c3778a9a) ---
+  graph_contribution_policy:
+    description: >
+      Run 'mas db migrate-graph' at project closure to write episode nodes and edges
+      to episodic.db. Skipping this causes global_graph_contribution to score below
+      threshold (target ≥70). The EpisodeWriter is not invoked automatically — it is
+      a manual closure step owned by the Master Orchestrator.
+    required_at: "project closure (before status → closed)"
+    command: "uv run mas db migrate-graph"
+
   # --- VIOLATION HANDLING ---
   violations:
     logging: "All violations are logged with full context"
