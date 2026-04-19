@@ -4,6 +4,44 @@ All notable changes to this repository are documented here.
 
 ---
 
+## [2026-04-19] Follow-through hardening: doctor/resume CLI, status fix, live-evidence wording
+
+### Changes
+
+**Operational CLI hardening:**
+- Added **`mas doctor`** in **`mas/core/cli.py`** to validate env/config/runtime readiness:
+  - API key and `.env` presence checks
+  - required folder/template checks
+  - active DB backend validation (SQLite init or PostgreSQL connection test)
+  - vector backend validation (disabled/chromadb-ready checks)
+- Added **`mas resume <project-id> [--show-prompt]`** in **`mas/core/cli.py`**:
+  - generates/reads checkpoint
+  - reports phase/status/pending handoffs
+  - blocks orchestration continuation when pending handoffs exist
+  - resolves next agent action from current state and can print assembled prompt
+
+**Status correctness fix:**
+- **`mas status`** in **`mas/core/cli.py`** now uses the canonical handoff acceptance field (`acceptance.status`) and robust compact-key fallbacks.
+- Updated timestamp resolution to use `core_identity.updated_at` for consistent project activity reporting.
+
+**Live-evidence wording normalization:**
+- Reworded active runtime/policy language from "dry-run evidence" framing to **"no live execution evidence"** where behaviorally applicable:
+  - **`mas/core/engine/metrics_engine.py`**
+  - **`mas/core/engine/access_control.py`**
+  - **`mas/core/engine/training_engine.py`**
+  - **`mas/policies/evaluation_policy.yaml`** (compatibility keys retained where needed)
+- Token CLI output now labels historical simulation ratios explicitly as **`Historical dry-call ratio`**.
+
+### Tests
+
+- Added **`mas/tests/unit/test_cli_doctor_resume.py`**
+- Added **`mas/tests/unit/test_cli_smoke.py`**
+- Added **`mas/tests/unit/test_cli_status.py`**
+- Verified targeted CLI stack:
+  - `uv run pytest mas/tests/unit/test_cli_doctor_resume.py mas/tests/unit/test_cli_smoke.py mas/tests/unit/test_cli_status.py -q`
+
+---
+
 ## [2026-04-19] SQL-first migration, autonomous resume flow, live-only execution
 
 ### Changes
