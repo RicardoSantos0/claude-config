@@ -7,7 +7,7 @@ Tests cover:
 - count_dict(): JSON serialization path
 - Module-level convenience functions
 - Tiktoken optional: import failure gracefully falls back to heuristic
-- CLI smoke test
+- CLI integration test
 """
 
 import math
@@ -200,7 +200,7 @@ class TestConsistency:
 
 
 # ---------------------------------------------------------------------------
-# CLI smoke test
+# CLI integration test
 # ---------------------------------------------------------------------------
 
 class TestCLI:

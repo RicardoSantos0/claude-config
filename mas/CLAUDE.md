@@ -93,6 +93,36 @@ Resume across sessions is local to this repository via `/resume-mas <project-id>
 
 ---
 
+## Claude Code Mode — Governance Checklist
+
+When running projects in Claude Code manual mode (no API credits), enforce these
+steps to keep evaluation metrics meaningful:
+
+**Before advancing to execution phase:**
+- [ ] `project_definition.success_criteria` — at least 1 entry
+- [ ] `project_definition.acceptance_criteria` — at least 1 entry
+- [ ] `intake/clarified_spec.yaml` written on disk (or equivalent artifact)
+
+**During execution:**
+- [ ] Log each significant architectural decision to `decisions.decision_log`:
+  ```python
+  sm.append("master_orchestrator", "decisions", "decision_log", {
+      "decision_id": "d-NNN",
+      "value": "chosen approach",
+      "rationale": "why",
+      "alternatives_considered": ["alt1", "alt2"],
+      "recorded_at": datetime.now(timezone.utc).isoformat(),
+      "source": "claude_code_manual",
+  })
+  ```
+  Target: at least 1 decision per execution phase.
+
+**Note:** `handoff_quality` scores 0 in Claude Code mode (no rejection cycle).
+This is expected — the metric is structurally not applicable in manual mode.
+See `evaluation_policy.yaml` → `claude_code_mode_metrics` for scoring guidance.
+
+---
+
 ## Project Naming Convention
 
 Project IDs follow the format: `proj-{YYYYMMDD}-{NNN}-{slug}`

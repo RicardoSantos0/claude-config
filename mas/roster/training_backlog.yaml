@@ -470,3 +470,31 @@ proposals:
   target_agent: system
   target_artifact: policies/governance_policy.yaml
   tradeoffs: Policy changes may slow workflow if overly restrictive.
+
+- proposal_id: prop-004-domain-expert-exemplary
+  proposal_type: roster
+  priority: 2
+  status: approved
+  target_agent: domain_expert
+  target_artifact: roster/registry_index.yaml
+  description: >
+    domain_expert scored 100/100 in proj-20260419-001-repo-cleanup-audit —
+    perfect task_completion_rate, handoff_quality, boundary_adherence.
+    Used as direct execution agent for 4 surgical fixes; zero violations.
+    Pattern: consultant-tier agent doing scoped technical execution under
+    master supervision is effective and safe.
+  recommended_change: >
+    Note domain_expert as exemplary reference for direct-execution tasks.
+    Valid delegation route: master_orchestrator → domain_expert for well-scoped
+    technical work where consultant domain knowledge maps directly to the task.
+  evidence:
+    - eval-proj-20260419-001-repo-cleanup-audit-20260419T15165
+  project_ids:
+    - proj-20260419-001-repo-cleanup-audit
+  created_at: '2026-04-19T15:19:00+00:00'
+  applied_in_project: proj-20260419-001-repo-cleanup-audit
+  minimum_evidence_met: true
+  systemic: false
+  original_proposal_id: ''
+  rejection_reason: ''
+  tradeoffs: None — informational record only.

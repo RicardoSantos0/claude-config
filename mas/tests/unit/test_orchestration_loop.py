@@ -215,7 +215,7 @@ class TestLoopControl:
         resp = _wire_response(
             s="human_required",
             next_action="escalate",
-            rsn="Dry-run smoke test requires manual execution.",
+            rsn="Task requires live agent execution — escalating to human.",
         )
         loop = self._patched_loop(tmp_path, state, response_text=resp, max_steps=3)
         result = loop.run()

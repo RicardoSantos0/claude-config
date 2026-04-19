@@ -94,7 +94,7 @@ class TestMasterOrchestratorProjectDefinition:
     """AC5 (proj-007): master_orchestrator may write project_definition fields.
 
     Master is the offline coordinator — it must be able to set brief, spec, and
-    criteria when inquirer/PM agents haven't run (dry-run / offline projects).
+    criteria when inquirer/PM agents haven't been delegated yet.
     """
 
     def test_master_can_write_original_brief(self):

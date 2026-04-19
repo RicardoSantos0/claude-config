@@ -11,7 +11,7 @@ Tests cover:
 - Reasoning word cap enforcement
 - Version field handling
 - Module-level convenience functions
-- CLI smoke tests
+- CLI integration tests
 """
 
 import pytest
@@ -307,7 +307,7 @@ class TestStatusCodes:
 
 
 # ---------------------------------------------------------------------------
-# CLI smoke tests
+# CLI integration tests
 # ---------------------------------------------------------------------------
 
 class TestCLI:

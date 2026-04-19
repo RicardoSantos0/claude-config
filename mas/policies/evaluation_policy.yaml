@@ -82,6 +82,21 @@ evaluation_policy:
       quality signal.
     improvement_trigger: "Revisit once SQL-backed memory replacement is implemented"
 
+  # --- CLAUDE CODE MANUAL MODE SCORING ---
+  # When a project runs in Claude Code manual mode (no autonomous loop, token_usage=0,
+  # handoffs accepted in-session), certain metrics are structurally not meaningful.
+  # Evaluator should note mode in the report; trainer proposals should not flag these
+  # as agent quality issues.
+  claude_code_mode_metrics:
+    detection: "communication.total_tokens_used == 0 AND workflow.wire_total_count > 0"
+    not_applicable:
+      - handoff_quality  # No rejection cycle in manual mode — always scores 0; not a quality signal
+    still_scored:
+      - task_completion_rate     # Valid regardless of mode
+      - boundary_adherence       # Valid regardless of mode
+      - documentation_completeness  # Intentionally scored — encourages filling docs even in manual mode
+      - record_integrity            # Valid regardless of mode
+
   # --- TOKEN TRACKING ---
   token_tracking:
     enabled: true
