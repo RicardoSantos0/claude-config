@@ -7,7 +7,7 @@ agents query the graph for relevant facts (~300 tokens). This is Phase 4 of
 the CommsOpt plan, gated on context_injection_efficiency being the top cost driver.
 
 Architecture:
-  - GraphStore: in-memory networkx graph, persisted as YAML per project
+  - GraphStore: in-memory networkx graph, persisted to SQLite (agent_graph tables)
   - GraphMemory: public interface — query(), get_related(), write_episode()
   - EpisodeWriter: called by handoff_engine after each handoff to record events
   - prompt_assembler integration: injects graph context instead of full state
@@ -102,15 +102,11 @@ MAX_QUERY_RESULTS = 10
 class GraphStore:
     """
     In-memory directed graph backed by networkx (or a dict fallback).
-    Persisted as YAML to projects/{project_id}/graph_memory.yaml.
+    Persisted to SQLite (mas/data/episodic.db — agent_graph + agent_graph_edges tables).
     """
 
     def __init__(self, project_id: str):
         self.project_id = project_id
-        if project_id == GLOBAL_PROJECT_ID:
-            self.graph_path = ROOT / "global_graph.yaml"
-        else:
-            self.graph_path = ROOT / "projects" / project_id / "graph_memory.yaml"
         self._g = self._create_graph()
         self._load()
 
@@ -208,18 +204,8 @@ class GraphStore:
     # ------------------------------------------------------------------
 
     def save(self) -> None:
-        """Persist graph to SQLite (primary) and YAML (compatibility copy)."""
-        data = self._to_dict()
-        # Primary: SQLite
-        self._save_to_sqlite(data)
-        # Compatibility: YAML (kept so old tools still work; will be removed once
-        # all readers use SQLite)
-        try:
-            self.graph_path.parent.mkdir(parents=True, exist_ok=True)
-            with self.graph_path.open("w", encoding="utf-8") as f:
-                yaml.dump(data, f, default_flow_style=False, sort_keys=False)
-        except Exception:
-            pass  # YAML write failure is non-fatal; SQLite is authoritative
+        """Persist graph to SQLite (agent_graph + agent_graph_edges tables)."""
+        self._save_to_sqlite(self._to_dict())
 
     def _save_to_sqlite(self, data: dict) -> None:
         """Upsert all nodes and edges into the agent_graph SQLite tables."""
@@ -243,12 +229,14 @@ class GraphStore:
                         relation TEXT,
                         meta TEXT
                     )""")
+                pid = self.project_id  # injected into every row for filtering
                 for node in data.get("nodes", []):
                     nid = node.get("id")
                     if not nid:
                         continue
                     meta = {k: v for k, v in node.items()
                             if k not in ("id", "entity_type")}
+                    meta.setdefault("project_id", pid)
                     conn.execute(
                         "INSERT OR REPLACE INTO agent_graph(id, type, label, meta) "
                         "VALUES (?, ?, ?, ?)",
@@ -262,9 +250,10 @@ class GraphStore:
                     tgt = edge.get("target")
                     if not src or not tgt:
                         continue
-                    edge_id = f"{src}__{edge.get('rel_type', 'related_to')}__{tgt}"
+                    edge_id = f"{src}__{edge.get('rel_type', 'related_to')}__{tgt}__{pid}"
                     meta = {k: v for k, v in edge.items()
                             if k not in ("source", "target", "rel_type")}
+                    meta.setdefault("project_id", pid)
                     conn.execute(
                         "INSERT OR REPLACE INTO agent_graph_edges"
                         "(id, source, target, relation, meta) VALUES (?, ?, ?, ?, ?)",
@@ -276,18 +265,8 @@ class GraphStore:
             pass  # DB write failure is non-fatal; in-memory graph remains valid
 
     def _load(self) -> None:
-        """Load from SQLite first; fall back to YAML for legacy projects."""
-        if self._load_from_sqlite():
-            return
-        # YAML fallback (legacy projects that pre-date SQLite persistence)
-        if not self.graph_path.exists():
-            return
-        try:
-            with self.graph_path.open(encoding="utf-8") as f:
-                data = yaml.safe_load(f) or {}
-            self._from_dict(data)
-        except Exception:
-            pass  # corrupt file — start fresh
+        """Load from SQLite (agent_graph + agent_graph_edges tables)."""
+        self._load_from_sqlite()
 
     def _load_from_sqlite(self) -> bool:
         """Load nodes and edges from SQLite. Returns True if data was found."""
@@ -705,7 +684,7 @@ class GraphMemory:
             "project_id": self.project_id,
             "node_count": self.store.node_count(),
             "edge_count": self.store.edge_count(),
-            "graph_path": str(self.store.graph_path),
+            "storage": "sqlite",
             "networkx_available": _NX_AVAILABLE,
         }
 
@@ -850,7 +829,7 @@ def main() -> int:
     if ns.command == "global-stats":
         store = GraphStore(GLOBAL_PROJECT_ID)
         out = {
-            "graph_path": str(store.graph_path),
+            "storage": "sqlite",
             "node_count": store.node_count(),
             "edge_count": store.edge_count(),
             "networkx_available": _NX_AVAILABLE,

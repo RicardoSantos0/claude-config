@@ -2,14 +2,13 @@
 Agent Runner
 Real Anthropic SDK calls for MAS agents.
 
-Gated on ANTHROPIC_API_KEY — falls back to dry-run mode transparently when
-the key is absent. This means every code path works without a live key;
-the difference is whether an actual LLM call is made.
+Live execution only. If the Anthropic client is unavailable, the caller gets
+an explicit non-retryable error instead of a fake dry-run response.
 
 Every real call is logged to the SQLite event store (mas/data/episodic.db).
 
 Default model: claude-haiku-4-5-20251001 (fast + cheap — right for scaffolding).
-Override with AgentRunner(model="claude-sonnet-4-6") or per-call dry_run=False.
+Override with AgentRunner(model="claude-sonnet-4-6").
 
 Usage:
     from core.engine.agent_runner import AgentRunner
@@ -38,6 +37,10 @@ except Exception:
 
 DEFAULT_MODEL = "claude-haiku-4-5-20251001"
 _MAX_TOKENS_DEFAULT = 1024
+_LIVE_RUN_REQUIRED = (
+    "Live execution is mandatory. Configure ANTHROPIC_API_KEY and the anthropic "
+    "package before running MAS agents. Dry-run support has been removed."
+)
 
 # Errors that will not resolve on retry — fail fast
 _NON_RETRYABLE = (
@@ -76,7 +79,7 @@ class AgentRunner:
             import anthropic
             self._client = anthropic.Anthropic(api_key=key)
         except ImportError:
-            pass  # anthropic package not installed — dry-run only
+            pass  # anthropic package not installed — live execution unavailable
 
     @property
     def available(self) -> bool:
@@ -104,18 +107,28 @@ class AgentRunner:
                 "text":        str   — response text (empty on error)
                 "tokens_used": int   — total tokens consumed
                 "model":       str   — model that was called
-                "dry_run":     bool  — True if no real call was made
+                "dry_run":     bool  — kept for backward-compatible payload shape
                 "error":       str   — set on API error (absent on success)
             }
         """
-        if dry_run or not self.available:
-            self._log_event(project_id, agent_id, prompt,
-                            tokens_prompt=0, tokens_completion=0, dry_run=True)
+        if dry_run:
             return {
-                "text": f"[dry_run] {agent_id}: set ANTHROPIC_API_KEY for live calls",
+                "text": "",
                 "tokens_used": 0,
                 "model": self.model,
-                "dry_run": True,
+                "dry_run": False,
+                "error": "dry_run_removed",
+                "retryable": False,
+            }
+
+        if not self.available:
+            return {
+                "text": "",
+                "tokens_used": 0,
+                "model": self.model,
+                "dry_run": False,
+                "error": _LIVE_RUN_REQUIRED,
+                "retryable": False,
             }
 
         messages = [{"role": "user", "content": prompt}]

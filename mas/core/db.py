@@ -1,10 +1,10 @@
 """
-MAS Database — Central SQLite access layer.
+MAS Database — Central SQL access layer.
 
 Single import point for all database operations. Every module that needs
 to read or write the event log imports from here, not from log_helpers directly.
 
-Database: mas/data/episodic.db
+Default local database: mas/data/episodic.db
 
 Tables:
   agent_events      — every handoff, agent call, phase transition, consultation
@@ -21,7 +21,7 @@ Public API:
   format_events_for_prompt(events) → str
 """
 
-import sqlite3
+import json as _json
 from pathlib import Path
 from typing import Optional
 
@@ -33,6 +33,8 @@ from core.utils.log_helpers import (
     query_by_action_id,
     _get_connection,
 )
+from core.runtime_config import get_database_backend
+from core.adapters import postgres_store
 
 __all__ = [
     "DB_PATH",
@@ -47,7 +49,16 @@ __all__ = [
     "query_graph_node",
     "query_graph_edges",
     "format_events_for_prompt",
+    "upsert_shared_state",
+    "get_shared_state",
+    "migrate_sqlite_to_postgres",
 ]
+
+
+def _resolved_db_url(db_path: Path = DB_PATH) -> str:
+    if db_path != DB_PATH:
+        return f"sqlite:///{db_path}"
+    return get_database_backend()["url"]
 
 
 def query_project_history(
@@ -104,6 +115,9 @@ def semantic_search(
     """
     if not query or not query.strip():
         return []
+    resolved_url = _resolved_db_url(db_path)
+    if postgres_store.is_postgres_url(resolved_url):
+        return postgres_store.semantic_search(resolved_url, query, project_id=project_id, limit=limit)
     try:
         with _get_connection(db_path) as conn:
             if project_id:
@@ -150,12 +164,7 @@ def query_token_usage(
         }
     """
     try:
-        import json as _json
-        with _get_connection(db_path) as conn:
-            rows = conn.execute(
-                "SELECT payload FROM agent_events WHERE project_id=? AND action_type='agent_call'",
-                (project_id,),
-            ).fetchall()
+        rows = query_events(project_id=project_id, action_type="agent_call", db_path=db_path)
         total_prompt = total_completion = total = calls = live_calls = dry_calls = 0
         for row in rows:
             try:
@@ -199,6 +208,9 @@ def query_graph_node(
         node_id: The node's primary key (e.g. an agent_id like 'master_orchestrator').
         db_path: Path to the SQLite database.
     """
+    resolved_url = _resolved_db_url(db_path)
+    if postgres_store.is_postgres_url(resolved_url):
+        return postgres_store.query_graph_node(resolved_url, node_id)
     try:
         with _get_connection(db_path) as conn:
             row = conn.execute(
@@ -224,6 +236,9 @@ def query_graph_edges(
         limit:   Max edges to return.
         db_path: Path to the SQLite database.
     """
+    resolved_url = _resolved_db_url(db_path)
+    if postgres_store.is_postgres_url(resolved_url):
+        return postgres_store.query_graph_edges(resolved_url, node_id, limit=limit)
     try:
         with _get_connection(db_path) as conn:
             rows = conn.execute(
@@ -253,3 +268,100 @@ def format_events_for_prompt(events: list[dict]) -> str:
         intent = (e.get("intent") or "")[:80]      # cap to keep prompts short
         lines.append(f"[{ts}] {agent} / {action}: {intent}")
     return "\n".join(lines)
+
+
+def upsert_shared_state(project_id: str, state: dict, db_path: Path = DB_PATH) -> None:
+    resolved_url = _resolved_db_url(db_path)
+    if postgres_store.is_postgres_url(resolved_url):
+        postgres_store.upsert_shared_state(resolved_url, project_id, state)
+        return
+    try:
+        from core.adapters.sqlite_shared_state import upsert_shared_state as _sqlite_upsert
+    except Exception:
+        _sqlite_upsert = None
+    if _sqlite_upsert:
+        _sqlite_upsert(resolved_url, project_id, state)
+
+
+def get_shared_state(project_id: str, db_path: Path = DB_PATH) -> dict | None:
+    resolved_url = _resolved_db_url(db_path)
+    if postgres_store.is_postgres_url(resolved_url):
+        return postgres_store.get_shared_state(resolved_url, project_id)
+    try:
+        from core.adapters.sqlite_shared_state import get_shared_state as _sqlite_get
+    except Exception:
+        _sqlite_get = None
+    if _sqlite_get:
+        return _sqlite_get(resolved_url, project_id)
+    return None
+
+
+def migrate_sqlite_to_postgres(sqlite_path: Path, postgres_url: str) -> dict:
+    if not postgres_store.is_postgres_url(postgres_url):
+        raise ValueError("A PostgreSQL database URL is required for migration.")
+    postgres_store.init_db(postgres_url)
+    stats = {"agent_events": 0, "shared_states": 0, "agent_graph": 0, "agent_graph_edges": 0}
+    if not sqlite_path.exists():
+        return stats
+
+    with _get_connection(sqlite_path) as conn:
+        event_rows = conn.execute(
+            "SELECT project_id, agent_id, action_type, timestamp, intent, result_shape, payload FROM agent_events"
+        ).fetchall()
+        for row in event_rows:
+            payload = _json.loads(row["payload"] or "{}")
+            postgres_store.append_event(
+                postgres_url,
+                project_id=row["project_id"],
+                agent_id=row["agent_id"],
+                action_type=row["action_type"],
+                timestamp=row["timestamp"],
+                intent=row["intent"] or "",
+                result_shape=row["result_shape"] or "",
+                payload=payload,
+            )
+            stats["agent_events"] += 1
+
+        tables = {r["name"] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
+        if "shared_states" in tables:
+            rows = conn.execute("SELECT project_id, state FROM shared_states").fetchall()
+            for row in rows:
+                try:
+                    state = _json.loads(row["state"] or "{}")
+                except Exception:
+                    state = {}
+                postgres_store.upsert_shared_state(postgres_url, row["project_id"], state)
+                stats["shared_states"] += 1
+
+        if "agent_graph" in tables:
+            rows = conn.execute("SELECT id, type, label, meta FROM agent_graph").fetchall()
+            with postgres_store.connect(postgres_url) as pg_conn:
+                with pg_conn.cursor() as cur:
+                    for row in rows:
+                        cur.execute(
+                            """
+                            INSERT INTO agent_graph(id, type, label, meta)
+                            VALUES (%s, %s, %s, %s::jsonb)
+                            ON CONFLICT (id) DO NOTHING
+                            """,
+                            (row["id"], row["type"], row["label"], row["meta"] or "{}"),
+                        )
+                        stats["agent_graph"] += 1
+                pg_conn.commit()
+
+        if "agent_graph_edges" in tables:
+            rows = conn.execute("SELECT id, source, target, relation, meta FROM agent_graph_edges").fetchall()
+            with postgres_store.connect(postgres_url) as pg_conn:
+                with pg_conn.cursor() as cur:
+                    for row in rows:
+                        cur.execute(
+                            """
+                            INSERT INTO agent_graph_edges(id, source, target, relation, meta)
+                            VALUES (%s, %s, %s, %s, %s::jsonb)
+                            ON CONFLICT (id) DO NOTHING
+                            """,
+                            (row["id"], row["source"], row["target"], row["relation"], row["meta"] or "{}"),
+                        )
+                        stats["agent_graph_edges"] += 1
+                pg_conn.commit()
+    return stats

@@ -79,8 +79,8 @@ At the **review** phase (before handing to evaluator):
 6. **Spawn opportunity review** (required — see `evaluation_policy.yaml`): Assess whether any capability gap covered by a fallback (HR gap note, Claude Code substitution) warrants a formal spawn proposal. Record the assessment — spawn, defer, or no-action — with rationale and alternatives_considered in the decision log. Never skip this step even if the answer is "no-action".
 
 At project **closure** (advancing to `closed`):
-6. Run `EpisodeWriter.replay_from_state(project_id, shared_state)` to ensure the global graph is populated from all project history — this is mandatory, not optional. Global graph contribution is an evaluation metric.
-7. Run `mas db migrate-graph --dry-run` to verify new nodes/edges are ready, then `mas db migrate-graph` to persist them to SQLite. This keeps `agent_graph` current for prompt context injection.
+6. Graph memory is deprecated and must not block closure. Do not treat `EpisodeWriter` or `mas db migrate-graph` as mandatory closure steps.
+7. Prefer SQL-backed retrieval and record any follow-up memory migration work as an improvement item instead of relying on graph replay.
 
 ## Spawning Rules
 You CANNOT spawn agents without:
@@ -169,9 +169,9 @@ Each `dec` entry supports:
 
 ## Execution Mode: Claude Code (Claude Pro — no API credits required)
 
-When invoked directly through Claude Code (not via `mas run`), you ARE the orchestration
-loop. Use the `Agent()` tool to invoke sub-agents. This mode works on Claude Pro with no
-Anthropic API key needed.
+When invoked directly through Claude Code (not via live `mas run`), you are doing
+manual orchestration. Use `uv run mas prompt` to assemble the next agent prompt,
+then invoke the agent in Claude Code. This mode works without an Anthropic API key.
 
 **Pattern for each delegation:**
 1. Run `uv run mas prompt <project_id> <agent_id>` to get the assembled prompt for the agent
@@ -198,8 +198,8 @@ he = HandoffEngine()
 ```
 
 **When to use which mode:**
-- `mas run` → automated loop with Anthropic API key (API credits required)
-- Claude Code `Agent()` → manual orchestration, no API key needed (Claude Pro subscription)
+- `mas run` → live automated loop with Anthropic API key (API credits required)
+- Claude Code + `mas prompt` → manual orchestration, no API key needed
 
 ---
 

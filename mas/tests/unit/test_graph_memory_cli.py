@@ -66,30 +66,21 @@ class TestGraphMemoryCLI:
         assert result.returncode != 0
 
     def test_stats_node_count_after_write(self):
-        """Write a graph YAML directly to the CLI's project dir, verify stats."""
-        import shutil, yaml as _yaml
+        """Write graph data via GraphStore API (SQLite), verify stats CLI reflects it."""
+        import sys, os
+        sys.path.insert(0, str(MAS_ROOT.parent))
+        from core.engine.graph_memory import GraphStore, GLOBAL_PROJECT_ID
 
-        project_dir = MAS_ROOT / "projects" / "proj-cli-stats-002"
-        graph_file = project_dir / "graph_memory.yaml"
-        project_dir.mkdir(parents=True, exist_ok=True)
+        store = GraphStore("proj-cli-stats-002")
+        store.add_node("master_orchestrator", "agent", label="master_orchestrator",
+                       project_id="proj-cli-stats-002")
+        store.add_node("scribe_agent", "agent", label="scribe_agent",
+                       project_id="proj-cli-stats-002")
+        store.add_edge("master_orchestrator", "scribe_agent", "handoff_to",
+                       project_id="proj-cli-stats-002")
+        store.save()
 
-        data = {
-            "project_id": "proj-cli-stats-002",
-            "nodes": [
-                {"id": "master_orchestrator", "entity_type": "agent", "label": "master_orchestrator"},
-                {"id": "scribe_agent", "entity_type": "agent", "label": "scribe_agent"},
-            ],
-            "edges": [
-                {"source": "master_orchestrator", "target": "scribe_agent", "rel_type": "handoff_to"},
-            ],
-        }
-        with graph_file.open("w") as f:
-            _yaml.dump(data, f)
-
-        try:
-            result = _run(["stats", "--project-id", "proj-cli-stats-002"])
-            assert result.returncode == 0
-            out = json.loads(result.stdout)
-            assert out["node_count"] >= 2
-        finally:
-            shutil.rmtree(str(project_dir), ignore_errors=True)
+        result = _run(["stats", "--project-id", "proj-cli-stats-002"])
+        assert result.returncode == 0
+        out = json.loads(result.stdout)
+        assert out["node_count"] >= 2

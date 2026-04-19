@@ -204,6 +204,13 @@ def status(project_id: str):
     live_calls = usage.get("live_calls", 0)
     dry_calls  = usage.get("dry_calls", 0)
     total_tok  = usage.get("total", 0)
+    try:
+        from core.runtime_config import get_database_backend, get_vector_backend
+        db_backend = get_database_backend()
+        vector_backend = get_vector_backend()
+    except Exception:
+        db_backend = {"active_provider": "sqlite"}
+        vector_backend = {"enabled": False, "provider": "chromadb"}
 
     click.echo(f"\nProject  : {project_id}")
     click.echo(f"Status   : {proj_status}")
@@ -214,12 +221,16 @@ def status(project_id: str):
     click.echo(f"Completed phases : {', '.join(completed_phases) or 'none'}")
     click.echo(f"Pending handoffs : {len(pending_handoffs)}")
     click.echo(f"Violations       : {len(violations)}")
+    vector_label = vector_backend["provider"] if vector_backend.get("enabled") else "disabled"
+    click.echo(f"Storage          : db={db_backend['active_provider']} vector={vector_label}")
 
     # Dry/live accounting
     total_calls = live_calls + dry_calls
     if total_calls > 0:
-        dry_pct = dry_calls / total_calls * 100
-        click.echo(f"Agent calls      : {total_calls}  (live: {live_calls}, dry: {dry_calls}, dry%: {dry_pct:.1f}%)")
+        if dry_calls:
+            click.echo(f"Agent calls      : {total_calls}  (live: {live_calls}, historical dry: {dry_calls})")
+        else:
+            click.echo(f"Agent calls      : {live_calls}")
     click.echo(f"Tokens (total)   : {total_tok:,}")
 
     if pending_handoffs:
@@ -448,8 +459,13 @@ def rebuild_fts():
 
     Example: mas db rebuild-fts
     """
+    from core.runtime_config import get_database_backend
     from core.utils.log_helpers import _get_connection, DB_PATH
 
+    backend = get_database_backend()
+    if backend["active_provider"] != "sqlite":
+        click.echo("[warn] FTS rebuild is only relevant for the SQLite fallback store.")
+        return
     conn = _get_connection(DB_PATH)
     try:
         conn.execute("INSERT INTO agent_events_fts(agent_events_fts) VALUES ('rebuild')")
@@ -461,6 +477,33 @@ def rebuild_fts():
         sys.exit(1)
     finally:
         conn.close()
+
+
+@db.command("migrate-postgres")
+def migrate_postgres():
+    """Copy local SQLite events/shared-state/graph tables into configured PostgreSQL."""
+    from core.runtime_config import get_database_backend
+    from core.db import migrate_sqlite_to_postgres
+    from core.utils.log_helpers import DB_PATH
+
+    backend = get_database_backend()
+    postgres_url = backend["url"] if backend["active_provider"] == "postgresql" else ""
+    if not postgres_url.startswith("postgres"):
+        click.echo(
+            "[error] PostgreSQL is not active. Set MAS_DATABASE_PROVIDER=postgresql and MAS_DATABASE_URL first.",
+            err=True,
+        )
+        sys.exit(1)
+    try:
+        stats = migrate_sqlite_to_postgres(DB_PATH, postgres_url)
+    except Exception as exc:
+        click.echo(f"[error] migrate-postgres failed: {exc}", err=True)
+        sys.exit(1)
+    click.echo(
+        "[ok] PostgreSQL migration complete — "
+        f"events={stats['agent_events']} shared_states={stats['shared_states']} "
+        f"graph_nodes={stats['agent_graph']} graph_edges={stats['agent_graph_edges']}"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -570,14 +613,11 @@ def migrate_graph(dry_run: bool):
 @click.argument("project_id")
 @click.option("--max-steps", default=50, show_default=True,
               help="Hard stop after N agent steps.")
-@click.option("--dry-run", is_flag=True, default=False,
-              help="Dry-run mode — no real Anthropic API calls.")
 @click.option("--auto", is_flag=True, default=False,
               help="Skip human confirmation at phase boundaries.")
 @click.option("--phase", "target_phase", default=None, metavar="PHASE",
               help="Stop after this phase completes (e.g. 'specification').")
-def run(project_id: str, max_steps: int, dry_run: bool,
-        auto: bool, target_phase: str | None):
+def run(project_id: str, max_steps: int, auto: bool, target_phase: str | None):
     """Run the autonomous orchestration loop for a project.
 
     Drives the project through intake -> specification -> planning phases,
@@ -588,26 +628,37 @@ def run(project_id: str, max_steps: int, dry_run: bool,
 
     \b
         mas run proj-20260415-005-my-project
-        mas run proj-20260415-005-my-project --dry-run --auto --max-steps 10
+        mas run proj-20260415-005-my-project --auto --max-steps 10
         mas run proj-20260415-005-my-project --phase specification
     """
     _require_project(project_id)
 
+    from core.engine.agent_runner import AgentRunner
     from core.engine.orchestration_loop import OrchestrationLoop, LoopConfig, StopReason
+    from core.runtime_config import get_database_backend, get_vector_backend
+
+    runner = AgentRunner()
+    if not runner.available:
+        click.echo(
+            "[error] Live execution is mandatory. Set ANTHROPIC_API_KEY before running `mas run`.",
+            err=True,
+        )
+        sys.exit(1)
+
+    db_backend = get_database_backend()
+    vector_backend = get_vector_backend()
 
     config = LoopConfig(
         project_id=project_id,
         max_steps=max_steps,
-        dry_run=dry_run,
         auto=auto,
         target_phase=target_phase,
     )
 
     click.echo(f"\n[mas run] {project_id}")
-    if dry_run:
-        click.echo("  mode: dry-run (no real API calls)")
     if auto:
         click.echo("  mode: auto (phase boundaries skipped)")
+    click.echo(f"  storage: db={db_backend['active_provider']} vector={'chromadb' if vector_backend.get('enabled') else 'disabled'}")
     click.echo("")
 
     loop = OrchestrationLoop(config)
@@ -659,7 +710,7 @@ def prompt(project_id: str, agent_id: str | None):
 
     if agent_id is None:
         from core.engine.orchestration_loop import OrchestrationLoop, LoopConfig
-        dummy = LoopConfig(project_id=project_id, dry_run=True)
+        dummy = LoopConfig(project_id=project_id)
         loop = OrchestrationLoop(dummy)
         agent_id = loop._determine_next_agent(state)
 

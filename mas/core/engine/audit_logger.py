@@ -16,8 +16,20 @@ class AuditLogger:
     def __init__(self, log_path: Path = DEFAULT_LOG):
         self.log_path = log_path
 
+    _MAX_LOG_BYTES = 5 * 1024 * 1024  # 5 MB — rotate beyond this
+
+    def _maybe_rotate(self) -> None:
+        """Rename audit.log → audit.log.bak if it exceeds _MAX_LOG_BYTES."""
+        try:
+            if self.log_path.exists() and self.log_path.stat().st_size > self._MAX_LOG_BYTES:
+                bak = self.log_path.with_suffix(".log.bak")
+                self.log_path.rename(bak)
+        except Exception:
+            pass
+
     def log(self, event: str, **kwargs) -> None:
         """Append a structured audit event."""
+        self._maybe_rotate()
         entry = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "event": event,

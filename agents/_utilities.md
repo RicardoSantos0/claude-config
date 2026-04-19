@@ -2,8 +2,8 @@
 
 Shared CLI commands used across agents. All run from the repo root (where `pyproject.toml` lives).
 
-The canonical modules live under `mas/core/engine/`. The legacy paths (`mas/core/*.py`)
-are compat wrappers that re-export everything and remain valid.
+All engine modules live under `mas/core/engine/`. Top-level `mas/core/` contains the CLI
+(`cli.py`), database layer (`db.py`), and configuration (`config.py`).
 
 ## Handoff Commands
 ```bash

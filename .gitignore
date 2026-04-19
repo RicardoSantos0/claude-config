@@ -45,6 +45,7 @@ logs/
 
 # MAS roster (committed, but large binaries excluded)
 mas/roster/**/*.bak
+mas/**/*.bak
 
 # Skills runtime/auth data
 skills/notebooklm/data/browser_state/

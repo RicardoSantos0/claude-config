@@ -258,6 +258,43 @@ class TestDecisionQuality:
         assert result.metric == "decision_quality"
 
 
+class TestEvidenceRequiredMetrics:
+    def test_goal_metrics_require_explicit_outcome_evidence(self, engine, tmp_path):
+        (tmp_path / "planning").mkdir()
+        plan = {
+            "requirements": {
+                "must_have": [
+                    {"acceptance_criteria": ["AC1", "AC2"]},
+                ]
+            }
+        }
+        (tmp_path / "planning" / "product_plan.yaml").write_text(
+            __import__("yaml").safe_dump(plan),
+            encoding="utf-8",
+        )
+
+        shared_state = {
+            "core_identity": {"project_id": "proj-evidence-001"},
+            "project_definition": {"success_criteria": ["Ship dashboard"]},
+            "workflow": {"handoff_history": []},
+            "decisions": {"decision_log": []},
+            "capability": {"verification_results": []},
+            "evaluation": {"performance_metrics": []},
+        }
+        task_board = {"tasks": [{"description": "Ship dashboard", "status": "completed"}]}
+
+        metrics = engine.evaluate_project("proj-evidence-001", shared_state, tmp_path, task_board)
+        by_name = {m.metric: m for m in metrics}
+
+        assert by_name["goal_achievement"].mode == "not_applicable"
+        assert by_name["acceptance_criteria_pass_rate"].mode == "not_applicable"
+
+    def test_graph_metric_is_deprecated(self, engine):
+        result = engine.score_global_graph_contribution("proj-graph-deprecated")
+        assert result.mode == "not_applicable"
+        assert "deprecated" in result.findings.lower()
+
+
 # ---------------------------------------------------------------------------
 # task_completion_rate
 # ---------------------------------------------------------------------------

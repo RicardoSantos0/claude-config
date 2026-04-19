@@ -380,47 +380,63 @@ class MetricsEngine:
         )
 
     def score_global_graph_contribution(self, project_id: str) -> MetricResult:
-        try:
-            from .graph_memory import GraphStore, GLOBAL_PROJECT_ID
-            global_store = GraphStore(GLOBAL_PROJECT_ID)
-
-            contributed = 0
-            if global_store._g is not None:
-                for _nid, attrs in global_store._g.nodes(data=True):
-                    if attrs.get("project") == project_id or project_id in str(attrs.get("projects", "")):
-                        contributed += 1
-                edge_contributed = sum(
-                    1 for _u, _v, edata in global_store._g.edges(data=True)
-                    if edata.get("project") == project_id
-                )
-                contributed += edge_contributed // 2
-            else:
-                for _nid, attrs in getattr(global_store, "_nodes", {}).items():
-                    if attrs.get("project") == project_id or project_id in str(attrs.get("projects", "")):
-                        contributed += 1
-
-            if global_store.has_node(project_id):
-                contributed += 1
-
-        except Exception:
-            contributed = 0
-
-        score = min(100.0, contributed * 5.0)
-
-        if contributed == 0:
-            findings = "Project has not yet contributed to the global graph. Run replay to back-populate."
-        elif contributed < 5:
-            findings = f"Minimal global graph presence ({contributed} nodes/edges). Consider richer episode recording."
-        else:
-            findings = f"Project contributed {contributed} nodes/edges to the global graph."
-
         return MetricResult(
             metric="global_graph_contribution",
-            score=round(score, 1),
-            evidence=f"contributed_entries={contributed}",
-            findings=findings,
-            exemplary=contributed >= 20,
-            breakdown={"contributed_entries": contributed},
+            score=0.0,
+            evidence=(
+                "Graph memory is deprecated for evaluation. "
+                "SQL-backed retrieval is the active direction."
+            ),
+            findings=(
+                "Deprecated metric excluded pending a SQL-native replacement for graph memory "
+                "(for example PostgreSQL- or vector-backed retrieval)."
+            ),
+            mode="not_applicable",
+            breakdown={"storage_strategy": "sql-first", "project_id": project_id},
+        )
+
+    def _collect_outcome_evidence(self, shared_state: dict) -> list[str]:
+        """Return explicit verification/performance evidence for project outcomes."""
+        evidence: list[str] = []
+
+        capability = shared_state.get("capability", {})
+        evaluation = shared_state.get("evaluation", {})
+
+        for item in capability.get("verification_results", []) or []:
+            if isinstance(item, dict):
+                status = item.get("status") or item.get("result") or "recorded"
+                target = item.get("target") or item.get("artifact") or item.get("name") or "verification"
+                evidence.append(f"verification:{target}:{status}")
+            elif item:
+                evidence.append(f"verification:{item}")
+
+        for item in evaluation.get("performance_metrics", []) or []:
+            if isinstance(item, dict):
+                metric = item.get("metric") or item.get("name") or "metric"
+                score = item.get("score")
+                if score is None:
+                    evidence.append(f"performance:{metric}")
+                else:
+                    evidence.append(f"performance:{metric}:{score}")
+            elif item:
+                evidence.append(f"performance:{item}")
+
+        return evidence
+
+    def _evidence_required_metric(
+        self,
+        metric: str,
+        evidence_sources: list[str],
+        reason: str,
+    ) -> MetricResult:
+        """Return a not_applicable metric when outcome evidence is missing."""
+        evidence = "; ".join(evidence_sources[:5]) if evidence_sources else "No explicit outcome evidence recorded"
+        return MetricResult(
+            metric=metric,
+            score=0.0,
+            evidence=evidence,
+            findings=reason,
+            mode="not_applicable",
         )
 
 
@@ -766,6 +782,7 @@ class MetricsEngine:
         over_effort = sum(1 for t in tasks if t.get("over_effort"))
 
         completed_descs = [t["description"] for t in tasks if t["status"] == "completed"]
+        outcome_evidence = self._collect_outcome_evidence(shared_state)
 
         plan_path = project_dir / "planning" / "product_plan.yaml"
         total_ac = 0
@@ -782,16 +799,33 @@ class MetricsEngine:
             elif planned > 0:
                 passed_ac = int(total_ac * (completed / planned))
 
-        metrics = [
-            self.score_goal_achievement(success_criteria, completed_descs),
-            self.score_acceptance_criteria_pass_rate(total_ac, passed_ac),
+        metrics = []
+        if success_criteria and not outcome_evidence:
+            metrics.append(self._evidence_required_metric(
+                "goal_achievement",
+                outcome_evidence,
+                "Marked not_applicable until explicit verification or performance evidence is recorded.",
+            ))
+        else:
+            metrics.append(self.score_goal_achievement(success_criteria, completed_descs))
+
+        if total_ac > 0 and not outcome_evidence:
+            metrics.append(self._evidence_required_metric(
+                "acceptance_criteria_pass_rate",
+                outcome_evidence,
+                "Marked not_applicable until acceptance criteria are backed by explicit verification evidence.",
+            ))
+        else:
+            metrics.append(self.score_acceptance_criteria_pass_rate(total_ac, passed_ac))
+
+        metrics.extend([
             self.score_scope_adherence(planned, completed, blocked, failed, over_effort),
             self.score_documentation_completeness(project_dir),
             self.score_phase_efficiency(handoff_history),
             self.score_decision_quality(decision_log),
             self.score_record_integrity(handoff_history),
             self.score_global_graph_contribution(project_id),
-        ]
+        ])
 
         # D2 (AC2): promote data-absent metrics to 'not_applicable' on dry-run projects.
         # Metrics that default to 50.0 when input data is absent, and metrics that score 0.0

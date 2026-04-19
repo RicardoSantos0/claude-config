@@ -5,7 +5,7 @@ Autonomous execution engine for the Governed Multi-Agent Delivery System.
 Drives a project through its phases by:
   1. Determining which agent runs next (from shared state)
   2. Assembling a context-aware prompt (PromptAssembler)
-  3. Calling the agent via AgentRunner (real or dry-run)
+  3. Calling the agent via AgentRunner
   4. Parsing the wire-protocol response (ResponseParser)
   5. Executing the response: handoffs, phase advances, decisions, artifacts
   6. Handling consultation (ConsultationEngine + per-consultant agent calls)
@@ -14,7 +14,7 @@ Drives a project through its phases by:
 
 Usage:
     from core.engine.orchestration_loop import OrchestrationLoop, LoopConfig
-    config = LoopConfig(project_id="proj-20260415-005-...", dry_run=True, auto=True)
+    config = LoopConfig(project_id="proj-20260415-005-...", auto=True)
     result = OrchestrationLoop(config).run()
 """
 
@@ -41,7 +41,7 @@ ROOT = Path(__file__).parent.parent.parent.parent  # repo root (claude-config/)
 class LoopConfig:
     project_id: str
     max_steps: int = 50
-    dry_run: bool = False
+    dry_run: bool = field(default=False, repr=False)  # deprecated compatibility flag
     auto: bool = False                # skip human checkpoints
     target_phase: str | None = None   # stop after this phase completes
     max_agent_retries: int = 2        # per-agent consecutive error limit
@@ -144,12 +144,11 @@ class OrchestrationLoop:
                 parsed = self._parse_response(agent_resp.raw_text)
 
                 # Print result summary
-                dry_tag = " dry" if agent_resp.dry_run else ""
                 tok_tag = f" tok={agent_resp.tokens_used}" if agent_resp.tokens_used else ""
                 status_tag = f" [{parsed.status}]" if parsed.status else ""
                 action_tag = f" -> {parsed.next_action}" if parsed.next_action not in ("", "wait") else ""
                 agent_tag = f":{parsed.next_agent}" if parsed.next_agent else ""
-                print(f"  tokens={agent_resp.tokens_used}{dry_tag}"
+                print(f"  tokens={agent_resp.tokens_used}"
                       f"{status_tag}{action_tag}{agent_tag}")
 
                 # Log any parse warnings
@@ -162,6 +161,11 @@ class OrchestrationLoop:
                     answer = self._handle_knowledge_request(parsed.knowledge_request)
                     self._pending_grounded_context = answer
                     print(f"  [notebooklm] grounded context injected for next step")
+
+                if agent_id != "master_orchestrator" and parsed.next_action == "escalate":
+                    raise _EscalationRequired(
+                        parsed.reasoning or f"Agent '{agent_id}' requested escalation."
+                    )
 
                 # Execute master or sub-agent actions
                 if agent_id == "master_orchestrator":
@@ -239,13 +243,12 @@ class OrchestrationLoop:
             agent_id=agent_id,
             prompt=prompt,
             project_id=self.config.project_id,
-            dry_run=self.config.dry_run,
             max_tokens=max_tokens,
         )
 
         text = result.get("text", "")
         tokens = result.get("tokens_used", 0)
-        is_dry = result.get("dry_run", True)
+        is_dry = bool(result.get("dry_run", False))
 
         if result.get("error"):
             if not result.get("retryable", True):
@@ -371,14 +374,7 @@ class OrchestrationLoop:
 
             # Trigger EpisodeWriter replay when closing project
             if new_phase == "closed":
-                try:
-                    from core.engine.graph_memory import EpisodeWriter
-                    n = EpisodeWriter.replay_from_state(
-                        self.config.project_id, self._load_state()
-                    )
-                    print(f"  [graph] episode replay complete ({n} episodes)")
-                except Exception as e:
-                    print(f"  [graph] replay skipped: {e}")
+                print("  [graph] skipped: graph memory is deprecated; prefer SQL-backed retrieval")
 
         # 6. Delegate to next agent
         if parsed.next_action == "delegate" and parsed.next_agent:
@@ -490,8 +486,7 @@ class OrchestrationLoop:
             model = get_model_for_agent(consultant_id)
             runner = AgentRunner(model=model)
             result = runner.run(consultant_id, prompt,
-                                project_id=self.config.project_id,
-                                dry_run=self.config.dry_run)
+                                project_id=self.config.project_id)
 
             c_text = result.get("text", "")
             c_parsed = self._parse_consultant_response(c_text)

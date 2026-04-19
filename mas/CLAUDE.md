@@ -28,8 +28,9 @@ if Windows App Store Python is active. Prefer the activated venv.
 
 ### Mode 1 — Claude Code (Claude Pro, no API credits needed) ✅ Primary
 
-Invoke `master_orchestrator` from Claude Code. It orchestrates sub-agents using
-Claude Code's `Agent()` tool — no `ANTHROPIC_API_KEY` required.
+Invoke `master_orchestrator` from Claude Code. Use `mas prompt` to assemble the
+next agent prompt, then run the agent manually in Claude Code — no
+`ANTHROPIC_API_KEY` required.
 
 The Python engine handles all state, handoffs, and governance. Claude Code is the runtime.
 
@@ -37,7 +38,7 @@ The Python engine handles all state, handoffs, and governance. Claude Code is th
 # 1. Initialize project
 mas init my-project
 
-# 2. Invoke master_orchestrator in Claude Code — it will spawn sub-agents automatically
+# 2. Invoke master_orchestrator in Claude Code and continue manually with `mas prompt` as needed
 
 # 3. Get the assembled prompt for any agent (useful for debugging or manual spawning)
 mas prompt proj-YYYYMMDD-NNN-my-project               # next agent auto-detected
@@ -62,11 +63,8 @@ mas tokens proj-YYYYMMDD-NNN-my-project
 
 # 4. Maintenance
 mas db rebuild-fts
-mas db migrate-graph
+mas db migrate-postgres
 ```
-
-> **Note:** Without `ANTHROPIC_API_KEY`, `mas run` falls back to dry-run mode.
-> Use Claude Code mode (Mode 1) instead — it is fully functional without API credits.
 
 ---
 
@@ -84,11 +82,13 @@ mas roster                            # All registered agents
 mas prompt  <project-id> [agent-id]   # Assemble agent prompt (Claude Code mode)
 
 # Tests
-pytest mas/tests/                     # Full suite (1040 tests)
+pytest mas/tests/                     # Full suite
 pytest mas/tests/unit/                # Unit tests only
 pytest mas/tests/integration/         # Integration tests only
-pytest mas/tests/integration/test_full_lifecycle.py  # End-to-end lifecycle test
 ```
+
+Resume across sessions is handled through the sibling Codex MAS control plane
+via the `mas-resume` skill.
 
 ---
 
@@ -164,7 +164,7 @@ Modules in `mas/core/` (top-level, always use these paths):
 | Module | CLI entry | Purpose |
 |--------|-----------|---------|
 | `cli.py` | `mas` / `uv run mas` | Top-level CLI entry point |
-| `db.py` | — (library) | Central SQLite access layer; `semantic_search()`, `query_token_usage()` |
+| `db.py` | — (library) | Central SQL access layer; `semantic_search()`, `query_token_usage()`, shared-state SQL helpers |
 | `wire_protocol.py` | — (library) | Compact wire format for handoff payloads |
 | `config.py` | — (library) | System configuration loader |
 
@@ -173,7 +173,7 @@ Modules in `mas/core/engine/` (engine subpackage — use full path):
 | Module | CLI entry | Purpose |
 |--------|-----------|---------|
 | `shared_state_manager.py` | `python mas/core/engine/shared_state_manager.py` | Project state, access control, snapshots |
-| `handoff_engine.py` | `python mas/core/engine/handoff_engine.py` | Handoff creation, acceptance, SQLite logging |
+| `handoff_engine.py` | `python mas/core/engine/handoff_engine.py` | Handoff creation, acceptance, SQL logging |
 | `intake_checker.py` | `python mas/core/engine/intake_checker.py` | Spec quality scoring (threshold ≥ 0.85) |
 | `capability_registry.py` | `python mas/core/engine/capability_registry.py` | Roster, gap certificates, match scoring |
 | `task_board.py` | `python mas/core/engine/task_board.py` | Milestones, tasks, dependency chains |
@@ -185,7 +185,7 @@ Modules in `mas/core/engine/` (engine subpackage — use full path):
 | `prompt_assembler.py` | — (library) | State projection + FTS5-aware prompt building |
 | `access_control.py` | — (library) | Field-level write permissions matrix |
 | `skill_bridge.py` | — (library) | Agent-to-skill gateway with auth matrix |
-| `graph_memory.py` | — (library) | Graph-based relationship memory |
+| `graph_memory.py` | — (library) | Legacy graph helper retained only for migration/compatibility work |
 | `audit_logger.py` | — (library) | Structured YAML event logging |
 | `checkpoint_writer.py` | — (library) | Human-readable project checkpoints |
 
@@ -199,13 +199,12 @@ Modules in `mas/core/engine/` (engine subpackage — use full path):
 mas/
 ├── core/               Python engine
 │   ├── cli.py          CLI entry point
-│   ├── db.py           SQLite access layer (semantic_search, query_token_usage)
+│   ├── db.py           SQL access layer (semantic_search, query_token_usage)
 │   ├── wire_protocol.py
 │   ├── config.py
 │   └── engine/         Engine subpackage (20 modules)
 ├── data/
-│   ├── episodic.db     SQLite WAL — agent_events table + agent_events_fts (FTS5)
-│   └── semantic_stub.json  ← now live; backend: sqlite_fts5
+│   └── episodic.db     Local SQLite fallback store
 ├── agents/             → see ../agents/ at repo root (symlinked globally)
 ├── policies/           Governance rules (YAML)
 ├── templates/          Handoff, spawn, eval report templates (YAML)
@@ -219,7 +218,6 @@ mas/
 ├── tests/
 │   ├── unit/           Per-module unit tests
 │   ├── integration/    Per-phase integration tests
-│   │   └── test_full_lifecycle.py   ← end-to-end test
 │   ├── governance/     Access control and immutability tests
 │   └── prompts/        Agent prompt tests
 ├── projects/           Runtime project data (gitignored)
@@ -256,12 +254,13 @@ Current domains: `software_engineering` · `data_science` · `content_creation` 
 ## Running Tests
 
 ```bash
-pytest mas/tests/                      # All 1013 tests (activate venv first)
+pytest mas/tests/                      # Full suite (activate venv first)
 pytest mas/tests/ -x                   # Stop on first failure
 pytest mas/tests/unit/                 # Unit tests only
-pytest mas/tests/integration/test_full_lifecycle.py -v  # E2E lifecycle
 pytest mas/tests/ --cov=mas/core       # With coverage
 
 # Or via uv (slower, rebuilds wheel):
 uv run pytest mas/tests/
 ```
+
+The deprecated graph-memory tests are quarantined while the repo moves toward a SQL-first replacement.

@@ -73,20 +73,14 @@ evaluation_policy:
     record_in: "decisions.decision_log with rationale and alternatives_considered"
 
   # --- GRAPH CONTRIBUTION (prop-0515a6a5, prop-f3b3a7e9, prop-f53c0198) ---
-  # global_graph_contribution scores based on entries written to the global YAML graph
-  # and the agent_graph SQLite tables. Low scores on every project indicate EpisodeWriter
-  # and migrate-graph are not running at closure.
   graph_contribution:
-    required_at_closure: true
-    steps:
-      - "Run EpisodeWriter.replay_from_state(project_id, shared_state) before advancing to 'closed'"
-      - "Run 'mas db migrate-graph' after replay to persist nodes/edges to SQLite agent_graph tables"
-    threshold_for_not_applicable: 25.0
+    status: "deprecated"
+    required_at_closure: false
     note: >
-      On dry-run projects (no live agent calls), global_graph_contribution ≤ 25 is promoted to
-      'not_applicable' by MetricsEngine and excluded from the project score average. This prevents
-      penalising simulated runs for the absence of live episode data.
-    improvement_trigger: "Score < 70 across 2+ consecutive projects → trainer proposal"
+      global_graph_contribution is excluded from project scoring until a SQL-native
+      replacement for graph memory is implemented. Do not use this metric as a live
+      quality signal.
+    improvement_trigger: "Revisit once SQL-backed memory replacement is implemented"
 
   # --- DRY-RUN METRIC HANDLING ---
   # Some metrics have no meaningful signal on dry-run projects (no live LLM calls).
@@ -99,7 +93,7 @@ evaluation_policy:
       - scope_adherence           # scores 50 — no scope deviation possible without real work
       - decision_quality          # scores 50 — no real decisions logged
       - documentation_completeness  # scores 0 — scribe not invoked in simulation
-      - global_graph_contribution   # scores low — EpisodeWriter not run
+      - global_graph_contribution   # deprecated metric — always excluded pending SQL-native replacement
     detection: "MetricsEngine._is_dry_run_state() checks query_token_usage().live_calls == 0"
     always_scored:
       - phase_efficiency    # based on handoff structure, valid even dry-run

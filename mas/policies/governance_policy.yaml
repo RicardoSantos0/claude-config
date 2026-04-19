@@ -83,12 +83,11 @@ governance_policy:
   # --- GRAPH CONTRIBUTION — closure requirement (prop-1d62c672, prop-c3778a9a) ---
   graph_contribution_policy:
     description: >
-      Run 'mas db migrate-graph' at project closure to write episode nodes and edges
-      to episodic.db. Skipping this causes global_graph_contribution to score below
-      threshold (target ≥70). The EpisodeWriter is not invoked automatically — it is
-      a manual closure step owned by the Master Orchestrator.
-    required_at: "project closure (before status → closed)"
-    command: "uv run mas db migrate-graph"
+      Deprecated. Graph memory is no longer a required closure path. Do not block
+      project closure on EpisodeWriter replay or migrate-graph; the supported direction
+      is SQL-backed retrieval and future storage replacement.
+    required_at: "not required"
+    command: "none"
 
   # --- VIOLATION HANDLING ---
   violations:

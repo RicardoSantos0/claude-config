@@ -4,7 +4,7 @@ Unit tests for GraphMemory (mas/core/graph_memory.py).
 Tests cover:
 - GraphStore: add_node, add_edge, has_node, node_count, edge_count
 - GraphStore: neighbors() returns connected nodes
-- GraphStore: save/load round-trip (YAML persistence)
+- GraphStore: save/load round-trip (SQLite persistence)
 - GraphMemory: write_episode() for each episode type
 - GraphMemory: query() returns bounded facts
 - GraphMemory: query() returns empty for unknown agent with no graph

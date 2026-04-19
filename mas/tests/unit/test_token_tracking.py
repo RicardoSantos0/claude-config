@@ -1,13 +1,10 @@
 """
 Tests for token tracking — proj-20260415-001-db-semantic-and-acl-fix
 
-AC7  agent_runner logs a token usage row on dry-run call
-AC7b query_token_usage sums rows correctly
+AC7 query_token_usage sums rows correctly for persisted agent_call rows
 """
 
-import pytest
 import tempfile
-import json
 from pathlib import Path
 
 
@@ -15,54 +12,6 @@ def _make_temp_db() -> Path:
     tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
     tmp.close()
     return Path(tmp.name)
-
-
-class TestAgentRunnerLogsTokenUsage:
-    """AC7: agent_runner writes an agent_call row on every call."""
-
-    def test_dry_run_logs_zero_token_row(self):
-        """AC7: dry-run call writes a row with tokens_total=0 to SQLite."""
-        from core.engine.agent_runner import AgentRunner
-        from core.db import query_events
-
-        db_path = _make_temp_db()
-        runner = AgentRunner(db_path=db_path)
-
-        result = runner.run(
-            agent_id="master_orchestrator",
-            prompt="Test prompt for token tracking",
-            project_id="proj-token-test",
-            dry_run=True,
-        )
-
-        assert result["dry_run"] is True
-        events = query_events(project_id="proj-token-test",
-                              action_type="agent_call", db_path=db_path)
-        assert len(events) == 1, "Expected exactly one agent_call row"
-
-        payload = json.loads(events[0]["payload"])
-        inputs = payload["params"]["inputs"]
-        assert inputs["tokens_prompt"]     == 0
-        assert inputs["tokens_completion"] == 0
-        assert inputs["tokens_total"]      == 0
-
-    def test_dry_run_without_project_id_does_not_write(self):
-        """AC7 edge case: no project_id → no SQLite write (nothing to scope to)."""
-        from core.engine.agent_runner import AgentRunner
-        from core.utils.log_helpers import init_db
-
-        db_path = _make_temp_db()
-        init_db(db_path)  # create schema so the count query works
-        runner = AgentRunner(db_path=db_path)
-        runner.run(agent_id="hr_agent", prompt="test", project_id="", dry_run=True)
-
-        import sqlite3
-        conn = sqlite3.connect(str(db_path))
-        count = conn.execute(
-            "SELECT count(*) FROM agent_events WHERE action_type='agent_call'"
-        ).fetchone()[0]
-        conn.close()
-        assert count == 0
 
 
 class TestQueryTokenUsage:

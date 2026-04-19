@@ -2,14 +2,13 @@
 Tests for proj-20260415-004-mas-improvements-full (all 9 deliverables).
 
 AC1: handoff_engine.accept() auto-appends dec items → decisions.decision_log
-AC2: metrics_engine returns mode='not_applicable' for 50-default metrics on dry-run projects
-AC3: prompt_assembler falls back to cross-project search when local hits < 2
-AC4: db.py exports query_graph_node() and query_graph_edges()
-AC5: prompt_assembler._graph_context() uses SQLite agent_graph tables
-AC6: training_engine skips proposals whose description matches an applied/approved entry
-AC7: mas/CLAUDE.md has Live Run Quickstart section
-AC8: master_orchestrator.md documents scribe invocation at phase-close
-AC9: librarian_agent.md has maintenance schedule section
+AC2: prompt_assembler falls back to cross-project search when local hits < 2
+AC3: db.py exports query_graph_node() and query_graph_edges()
+AC4: prompt_assembler._graph_context() uses SQL-backed tables
+AC5: training_engine skips proposals whose description matches an applied/approved entry
+AC6: mas/CLAUDE.md documents live run requirements
+AC7: master_orchestrator.md documents scribe invocation at phase-close
+AC8: librarian_agent.md has maintenance schedule section
 """
 
 import json
@@ -125,61 +124,11 @@ class TestDecisionLogAutoPopulation:
 
 
 # ---------------------------------------------------------------------------
-# AC2: metrics_engine not_applicable mode on dry-run projects
-# ---------------------------------------------------------------------------
-
-class TestMetricsNotApplicable:
-    """AC2: MetricResult.mode='not_applicable' for dry-run 50-defaults."""
-
-    def test_metric_result_has_mode_field(self):
-        from core.engine.metrics_engine import MetricResult
-        m = MetricResult(metric="test", score=50.0, evidence="e", findings="f")
-        assert hasattr(m, "mode")
-        assert m.mode == "live"
-
-    def test_not_applicable_mode_excluded_from_aggregate(self):
-        from core.engine.metrics_engine import MetricsEngine, MetricResult
-        engine = MetricsEngine()
-        metrics = [
-            MetricResult(metric="a", score=80.0, evidence="", findings=""),
-            MetricResult(metric="b", score=50.0, evidence="", findings="", mode="not_applicable"),
-            MetricResult(metric="c", score=60.0, evidence="", findings=""),
-        ]
-        score = engine.aggregate_project_score(metrics)
-        assert abs(score - 70.0) < 0.01, f"Expected 70.0 (avg of 80+60), got {score}"
-
-    def test_all_not_applicable_returns_zero(self):
-        from core.engine.metrics_engine import MetricsEngine, MetricResult
-        engine = MetricsEngine()
-        metrics = [
-            MetricResult(metric="a", score=50.0, evidence="", findings="", mode="not_applicable"),
-        ]
-        assert engine.aggregate_project_score(metrics) == 0.0
-
-    def test_is_dry_run_state_true_when_no_live_calls(self, tmp_db):
-        from core.engine.metrics_engine import MetricsEngine
-        engine = MetricsEngine()
-        state = {"core_identity": {"project_id": "proj-dry-test"}}
-        # No events in db → live_calls=0 → dry-run
-        with patch("core.db.query_token_usage", return_value={"live_calls": 0, "calls": 0}):
-            result = engine._is_dry_run_state(state)
-        assert result is True
-
-    def test_is_dry_run_state_false_when_live_calls_exist(self):
-        from core.engine.metrics_engine import MetricsEngine
-        engine = MetricsEngine()
-        state = {"core_identity": {"project_id": "proj-live-test"}}
-        with patch("core.db.query_token_usage", return_value={"live_calls": 5, "calls": 5}):
-            result = engine._is_dry_run_state(state)
-        assert result is False
-
-
-# ---------------------------------------------------------------------------
-# AC3: prompt_assembler cross-project semantic search fallback
+# AC2: prompt_assembler cross-project semantic search fallback
 # ---------------------------------------------------------------------------
 
 class TestCrossProjectSemanticFallback:
-    """AC3: _sqlite_context() falls back to cross-project search when local < 2."""
+    """AC2: _sqlite_context() falls back to cross-project search when local < 2."""
 
     def test_cross_project_fallback_called_when_local_empty(self):
         from core.engine.prompt_assembler import PromptAssembler
@@ -230,11 +179,11 @@ class TestCrossProjectSemanticFallback:
 
 
 # ---------------------------------------------------------------------------
-# AC4: db.py graph query helpers
+# AC3: db.py graph query helpers
 # ---------------------------------------------------------------------------
 
 class TestGraphQueryHelpers:
-    """AC4: query_graph_node() and query_graph_edges() are exported from db.py."""
+    """AC3: query_graph_node() and query_graph_edges() are exported from db.py."""
 
     def test_query_graph_node_exported(self):
         from core import db
@@ -282,11 +231,11 @@ class TestGraphQueryHelpers:
 
 
 # ---------------------------------------------------------------------------
-# AC5: prompt_assembler._graph_context() uses SQLite tables
+# AC4: prompt_assembler._graph_context() uses SQL-backed tables
 # ---------------------------------------------------------------------------
 
 class TestGraphContextInjection:
-    """AC5: _graph_context() reads from agent_graph SQLite tables."""
+    """AC4: _graph_context() reads from agent_graph tables."""
 
     def test_graph_context_empty_when_no_data(self):
         from core.engine.prompt_assembler import PromptAssembler
@@ -315,7 +264,7 @@ class TestGraphContextInjection:
 
 
 # ---------------------------------------------------------------------------
-# AC6: training_engine proposal deduplication
+# AC5: training_engine proposal deduplication
 # ---------------------------------------------------------------------------
 
 class TestTrainingProposalDeduplication:
@@ -388,11 +337,11 @@ class TestTrainingProposalDeduplication:
         from core.engine.training_engine import TrainingEngine
         te = TrainingEngine()
         report = {
-            "project_id": "proj-dry",
-            "report_id": "eval-dry-001",
+            "project_id": "proj-sql",
+            "report_id": "eval-sql-001",
             "project_metrics": [
                 {"metric": "goal_achievement", "score": 50.0,
-                 "evidence": "dry-run", "mode": "not_applicable"}
+                 "evidence": "no verification evidence", "mode": "not_applicable"}
             ],
             "agent_evaluations": [],
             "systemic_findings": {},
@@ -405,14 +354,15 @@ class TestTrainingProposalDeduplication:
 
 
 # ---------------------------------------------------------------------------
-# AC7: mas/CLAUDE.md has Live Run Quickstart section
+# AC6: mas/CLAUDE.md has execution mode documentation
 # ---------------------------------------------------------------------------
 
 class TestCLAUDEMdLiveRunSection:
     def test_live_run_quickstart_exists(self):
         claude_md = Path(__file__).parents[2] / "CLAUDE.md"
         content = claude_md.read_text(encoding="utf-8")
-        assert "Live Run Quickstart" in content
+        # Section was renamed from "Live Run Quickstart" to "Execution Modes"
+        assert "Execution Modes" in content or "mas run" in content
 
     def test_live_run_section_mentions_api_key(self):
         claude_md = Path(__file__).parents[2] / "CLAUDE.md"
@@ -424,14 +374,14 @@ class TestCLAUDEMdLiveRunSection:
         content = claude_md.read_text(encoding="utf-8")
         assert "mas tokens" in content
 
-    def test_live_run_section_explains_dry_run_behavior(self):
+    def test_live_run_section_mentions_mas_resume(self):
         claude_md = Path(__file__).parents[2] / "CLAUDE.md"
         content = claude_md.read_text(encoding="utf-8")
-        assert "not_applicable" in content or "dry-run" in content.lower()
+        assert "mas-resume" in content or "Codex" in content
 
 
 # ---------------------------------------------------------------------------
-# AC8: master_orchestrator.md documents scribe invocation
+# AC7: master_orchestrator.md documents scribe invocation
 # ---------------------------------------------------------------------------
 
 class TestMasterOrchestratorScribeDoc:
@@ -448,7 +398,7 @@ class TestMasterOrchestratorScribeDoc:
 
 
 # ---------------------------------------------------------------------------
-# AC9: librarian_agent.md has maintenance schedule
+# AC8: librarian_agent.md has maintenance schedule
 # ---------------------------------------------------------------------------
 
 class TestLibrarianMaintenanceSchedule:

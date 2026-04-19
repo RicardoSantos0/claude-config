@@ -68,7 +68,7 @@ mas init session-scheduler          # Standard project (9 phases)
 mas init --mode=lite quick-fix      # Lite project (3 phases, no consultation)
 mas status <project-id>             # Check project phase
 mas roster                          # List all agents
-pytest mas/tests/                   # Run test suite (1013 tests)
+pytest mas/tests/                   # Run test suite
 ```
 
 `uv run mas ...` also works from repo root but is slower.
@@ -104,7 +104,7 @@ claude-config/
 │   └── _utilities.md
 │
 ├── commands/              # Custom slash commands
-│   └── resume-mas.md      # Resume a paused MAS project
+│   └── resume-mas.md      # Compatibility bridge to Codex MAS resume
 │
 ├── skills/                # Skill packages
 │   ├── frontend-design/
@@ -118,18 +118,17 @@ claude-config/
     ├── system_config.yaml
     ├── core/              # Python engine
     │   ├── cli.py         # CLI entry point
-    │   ├── db.py          # SQLite access layer (FTS5 semantic search)
+    │   ├── db.py          # SQL access layer (SQLite fallback, PostgreSQL optional)
     │   └── engine/        # 20 engine modules
-    ├── data/              # Runtime databases
-    │   ├── episodic.db    # SQLite WAL — agent_events + FTS5 index
-    │   └── semantic_stub.json  # Semantic search config (backend: sqlite_fts5)
+    ├── data/              # Runtime databases and local runtime state
+    │   └── episodic.db    # Local SQLite fallback store
     ├── domains/           # Domain context files (auto-injected into domain_expert)
     ├── foundation/        # Protocol & schema specs
     ├── policies/          # 6 governance YAML files
     ├── projects/          # Project workspaces (gitignored)
     ├── roster/            # Agent registry + training_backlog.yaml
     ├── templates/         # Handoff, spawn, eval report templates
-    └── tests/             # Test suite (1013 tests)
+    └── tests/             # Test suite
 ```
 
 ---
@@ -234,7 +233,7 @@ Each standard phase transition requires:
 | Module | Purpose |
 |--------|---------|
 | `cli.py` | CLI entry point (`mas init`, `mas status`, `mas init --mode=lite`, …) |
-| `db.py` | Central SQLite layer: `append_event`, `semantic_search`, `query_token_usage` |
+| `db.py` | Central SQL layer: `append_event`, `semantic_search`, `query_token_usage`, shared-state SQL helpers |
 | `wire_protocol.py` | Compact wire format for handoff payloads |
 | `config.py` | System configuration loader |
 
@@ -243,7 +242,7 @@ Each standard phase transition requires:
 | Module | Purpose |
 |--------|---------|
 | `shared_state_manager.py` | Project state, access control, snapshots |
-| `handoff_engine.py` | Handoff creation, acceptance, SQLite event logging |
+| `handoff_engine.py` | Handoff creation, acceptance, SQL event logging |
 | `access_control.py` | Field-level write permissions (updated 0.2.0 — broader write rights) |
 | `prompt_assembler.py` | State projection + FTS5-aware prompt injection |
 | `agent_runner.py` | Anthropic SDK wrapper; gated on `ANTHROPIC_API_KEY`; logs tokens |
@@ -255,7 +254,7 @@ Each standard phase transition requires:
 | `spawn_policy.py` | Spawn validation; `LITE_MODE_NO_SPAWN` for lite projects |
 | `training_engine.py` | Proposal generation, backlog management |
 | `skill_bridge.py` | Agent-to-skill gateway with authorization matrix |
-| `graph_memory.py` | Graph-based relationship memory |
+| `graph_memory.py` | Legacy graph helper still present for migration/compatibility work |
 | `audit_logger.py` | Structured YAML event logging |
 | `checkpoint_writer.py` | Human-readable project checkpoints |
 | `context_compressor.py` | Progressive state compression for token budgets |
@@ -316,7 +315,7 @@ The 5-member consultant panel (`risk_advisor`, `quality_advisor`, `devils_advoca
 - **Token counter**: Heuristic and tiktoken backends
 - **Wire protocol validation** for payload compliance
 - **Skill bridge** with per-agent access control matrix
-- **Graph memory** for relationship tracking
+- **SQL-backed context lookups** with SQLite as the local fallback and PostgreSQL/ChromaDB available when configured
 - **Communication efficiency metrics** in evaluation (half-weight): token efficiency, payload density, context injection efficiency, consultation overhead, wire compliance
 
 ### Memory and Episodic DB
@@ -326,15 +325,15 @@ The 5-member consultant panel (`risk_advisor`, `quality_advisor`, `devils_advoca
 | Type | Scope | Lifetime | Store |
 |------|-------|----------|-------|
 | Working state | Task/phase | Ephemeral | `shared_state.yaml` (archived at phase end) |
-| Episodic (events) | Per project | Durable | `mas/data/episodic.db` — `agent_events` table |
+| Episodic (events) | Per project | Durable | SQL backend (`mas/data/episodic.db` locally, PostgreSQL when configured) |
 | Roster | System-wide | Durable | `mas/roster/` YAML files |
 
-**`mas/data/episodic.db`** is the primary event store (603+ rows across all projects):
+The runtime uses a SQL event store:
 
 - Every handoff create/accept/reject writes a row
-- Every `agent_runner` call writes a row (including dry-run, with 0-token payload)
-- FTS5 virtual table `agent_events_fts` enables semantic search over `intent` + `payload`
-- `core.db.semantic_search(query, project_id)` — BM25-ranked full-text search
+- Every live `agent_runner` call writes a row
+- SQLite uses FTS5 locally; PostgreSQL uses a simple SQL text match until a richer search backend is configured
+- `core.db.semantic_search(query, project_id)` — SQL-backed event search
 - `core.db.query_token_usage(project_id)` — sums `tokens_prompt/completion/total`
 - `prompt_assembler` injects the 5 most relevant past events into every agent prompt
   (uses semantic search with current phase as query; falls back to recent-5 if < 2 hits)
@@ -373,7 +372,7 @@ Markdown files in `mas/domains/` auto-injected into `domain_expert`:
 
 | Command | Description |
 |---------|-------------|
-| `resume-mas` | Resume a paused MAS project |
+| `resume-mas` | Compatibility bridge into the Codex MAS `mas-resume` skill |
 
 ---
 
@@ -397,14 +396,14 @@ Or via `uv run mas <command>` from repo root (slower).
 ## Testing
 
 ```bash
-pytest mas/tests/              # Full suite (1013 tests)
+pytest mas/tests/              # Full suite
 pytest mas/tests/unit/         # Unit tests
 pytest mas/tests/integration/  # Integration tests
 pytest mas/tests/governance/   # Access control & immutability
 pytest mas/tests/prompts/      # Agent prompt tests
 ```
 
-End-to-end lifecycle test: `mas/tests/integration/test_full_lifecycle.py`
+Legacy graph-memory tests remain quarantined while the repo uses the SQL/vector path instead.
 
 ---
 

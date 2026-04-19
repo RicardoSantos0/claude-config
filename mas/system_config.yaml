@@ -102,6 +102,23 @@ storage:
   provider: "filesystem"
   format: "yaml"
   backup_enabled: false
+  database:
+    provider: "sqlite"
+    url: "sqlite:///mas/data/episodic.db"
+    target_provider: "postgresql"
+    postgres_url: ""
+  vector:
+    provider: "chromadb"
+    enabled: false
+    collection: "mas-agent-context"
+    persist_directory: "mas/data/chromadb"
+    host: ""
+    port: 8000
+
+control_plane:
+  provider: "codex-mas"
+  codex_mas_root: "../codex-mas"
+  resume_skill: "mas-resume"
 
 # --- AUDIT ---
 audit:

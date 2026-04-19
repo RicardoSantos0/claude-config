@@ -70,3 +70,7 @@ def get_governance_mode() -> str:
 
 def get_defaults() -> dict:
     return load_config()["defaults"]
+
+
+def get_control_plane() -> dict:
+    return load_config().get("control_plane", {})

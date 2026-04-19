@@ -196,6 +196,22 @@ class SharedStateManager:
 
     def load(self) -> dict:
         """Load and return the current shared state from disk."""
+        try:
+            from core.runtime_config import get_database_backend
+            backend = get_database_backend()
+            if backend.get("active_provider") == "postgresql":
+                from core.db import get_shared_state
+                state = get_shared_state(self.project_id)
+                if state:
+                    try:
+                        with open(self.state_path, "w", encoding="utf-8") as f:
+                            yaml.dump(state, f, default_flow_style=False,
+                                      allow_unicode=True, sort_keys=False)
+                    except Exception:
+                        pass
+                    return state
+        except Exception:
+            pass
         with open(self.state_path, "r", encoding="utf-8") as f:
             return yaml.safe_load(f)
 
@@ -391,6 +407,11 @@ class SharedStateManager:
         with open(self.state_path, "w", encoding="utf-8") as f:
             yaml.dump(state, f, default_flow_style=False,
                       allow_unicode=True, sort_keys=False)
+        try:
+            from core.db import upsert_shared_state
+            upsert_shared_state(self.project_id, state)
+        except Exception:
+            pass
 
 
 # --- CLI ---

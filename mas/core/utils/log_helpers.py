@@ -13,6 +13,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
+from core.adapters import postgres_store
+
 # Ensure DB path resolves to mas/data/episodic.db regardless of module location
 DB_PATH = Path(__file__).parents[2] / "data" / "episodic.db"
 
@@ -63,8 +65,21 @@ def _get_connection(db_path: Path = DB_PATH) -> sqlite3.Connection:
     return conn
 
 
-def init_db(db_path: Path = DB_PATH) -> None:
+def _active_db_url(db_path: Path | None = None, db_url: str | None = None) -> str | None:
+    if db_url:
+        return db_url
+    if db_path is not None and db_path != DB_PATH:
+        return f"sqlite:///{db_path}"
+    from core.runtime_config import get_database_backend
+    return get_database_backend().get("url")
+
+
+def init_db(db_path: Path = DB_PATH, db_url: str | None = None) -> None:
     """Initialise episodic log DB schema (idempotent)."""
+    resolved_url = _active_db_url(db_path=db_path, db_url=db_url)
+    if postgres_store.is_postgres_url(resolved_url):
+        postgres_store.init_db(resolved_url)
+        return
     with _get_connection(db_path) as conn:
         conn.executescript("""
             CREATE TABLE IF NOT EXISTS agent_events (
@@ -126,6 +141,7 @@ def append_event(
     result_shape: str = "",
     payload: Optional[dict] = None,
     db_path: Path = DB_PATH,
+    db_url: str | None = None,
 ) -> str:
     """Append an event to the episodic log. Returns the action_id."""
     action_id = str(uuid.uuid4())
@@ -139,8 +155,21 @@ def append_event(
     if payload:
         entry["params"]["inputs"] = payload
 
-    init_db(db_path)
     ts = datetime.now(timezone.utc).isoformat()
+    resolved_url = _active_db_url(db_path=db_path, db_url=db_url)
+    if postgres_store.is_postgres_url(resolved_url):
+        return postgres_store.append_event(
+            resolved_url,
+            project_id=project_id,
+            agent_id=agent_id,
+            action_type=action_type,
+            timestamp=ts,
+            intent=intent,
+            result_shape=result_shape,
+            payload=entry,
+        )
+
+    init_db(db_path)
     with _get_connection(db_path) as conn:
         conn.execute(
             """INSERT INTO agent_events
@@ -152,8 +181,11 @@ def append_event(
     return action_id
 
 
-def query_by_action_id(action_id: str, db_path: Path = DB_PATH) -> Optional[dict]:
+def query_by_action_id(action_id: str, db_path: Path = DB_PATH, db_url: str | None = None) -> Optional[dict]:
     """Retrieve a single event by its action_id — no full-scan."""
+    resolved_url = _active_db_url(db_path=db_path, db_url=db_url)
+    if postgres_store.is_postgres_url(resolved_url):
+        return postgres_store.query_by_action_id(resolved_url, action_id)
     if not db_path.exists():
         return None
     with _get_connection(db_path) as conn:
@@ -173,8 +205,18 @@ def query_events(
     action_type: Optional[str] = None,
     limit: int = 50,
     db_path: Path = DB_PATH,
+    db_url: str | None = None,
 ) -> list[dict]:
     """Query events by project/agent/action with a row limit."""
+    resolved_url = _active_db_url(db_path=db_path, db_url=db_url)
+    if postgres_store.is_postgres_url(resolved_url):
+        return postgres_store.query_events(
+            resolved_url,
+            project_id=project_id,
+            agent_id=agent_id,
+            action_type=action_type,
+            limit=limit,
+        )
     if not db_path.exists():
         return []
     clauses, params = [], []

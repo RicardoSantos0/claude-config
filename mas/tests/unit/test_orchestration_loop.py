@@ -222,6 +222,17 @@ class TestLoopControl:
         # Check config was dry_run
         assert loop.config.dry_run is True
 
+    def test_subagent_escalation_stops_loop(self, tmp_path):
+        state = _make_state(handoffs=[_pending_handoff("inquirer_agent")])
+        resp = _wire_response(
+            s="human_required",
+            next_action="escalate",
+            rsn="Dry-run smoke test requires manual execution.",
+        )
+        loop = self._patched_loop(tmp_path, state, response_text=resp, max_steps=3)
+        result = loop.run()
+        assert result.reason == StopReason.HUMAN_ESCALATION
+
 
 # ---------------------------------------------------------------------------
 # Human checkpoint
@@ -501,3 +512,35 @@ class TestPhaseDocumentWriting:
         dest.write_text("original: content\n", encoding="utf-8")
         loop._write_phase_document("intake", state, tmp_path)
         assert dest.read_text(encoding="utf-8") == "original: content\n"
+
+
+class TestDeprecatedGraphReplay:
+
+    def test_closure_skips_graph_replay(self, monkeypatch):
+        loop = OrchestrationLoop(LoopConfig(project_id="p", dry_run=True, auto=True))
+        state = _make_state(phase="improvement")
+
+        class _SM:
+            project_dir = Path(".")
+
+            def snapshot(self, phase):
+                return None
+
+            def write(self, *args, **kwargs):
+                return None
+
+            def system_append(self, *args, **kwargs):
+                return None
+
+            def append(self, *args, **kwargs):
+                return None
+
+        monkeypatch.setattr("core.engine.shared_state_manager.SharedStateManager", lambda *_a, **_k: _SM())
+        monkeypatch.setattr(loop, "_write_phase_document", lambda *a, **k: None)
+
+        parsed = loop._parse_response(_wire_response(s="task:complete"))
+        with patch("builtins.print") as mock_print:
+            loop._execute_master_actions(parsed, state)
+
+        printed = "\n".join(" ".join(map(str, call.args)) for call in mock_print.call_args_list)
+        assert "graph memory is deprecated" in printed

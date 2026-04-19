@@ -1,8 +1,0 @@
-{
-  "version": "1.0",
-  "backend": "sqlite_fts5",
-  "table": "agent_events_fts",
-  "database": "mas/data/episodic.db",
-  "note": "Semantic search is live via SQLite FTS5. agent_events_fts is a content-based virtual table over agent_events(intent, payload). Indexed automatically via AFTER INSERT trigger. Upgrade path: replace with ChromaDB or pgvector if vector similarity (not keyword) is needed.",
-  "entries": []
-}

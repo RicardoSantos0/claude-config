@@ -344,14 +344,24 @@ class PromptAssembler:
 
     def _graph_context(self, agent_id: str, state: dict) -> str:
         """
-        Inject agent graph context into the prompt (D5/AC5).
+        Inject agent graph context into the prompt.
 
         Strategy:
-          1. Query agent_graph SQLite table for this agent's node + direct edges.
-          2. Fall back to GraphMemory YAML backend if SQLite has < 2 results.
+          1. Query ChromaDB-backed vector context when configured.
+          2. Otherwise query agent_graph SQLite tables for this agent's node + direct edges.
         Returns a compact string or "" if unavailable.
         Never raises.
         """
+        project_id = state.get("core_identity", {}).get("project_id", "")
+        phase = state.get("core_identity", {}).get("current_phase", "")
+        try:
+            from core.runtime_config import query_vector_context
+            vector_ctx = query_vector_context(project_id, agent_id, phase=phase)
+            if vector_ctx:
+                return vector_ctx
+        except Exception:
+            pass
+
         try:
             from core.db import query_graph_node, query_graph_edges
             node = query_graph_node(agent_id)
@@ -366,26 +376,8 @@ class PromptAssembler:
                     lines.append(f"  → {rel} → {other}")
                 return "\n".join(lines)
         except Exception:
-            pass
-
-        # Fallback: YAML-backed GraphMemory
-        try:
-            from core.engine.graph_memory import GraphMemory
-            project_id = state.get("core_identity", {}).get("project_id", "")
-            if not project_id:
-                return ""
-            gm = GraphMemory(project_id)
-            if gm.store.node_count() < 5:
-                return ""
-            phase = state.get("core_identity", {}).get("current_phase", "")
-            result = gm.query(agent_id, context=phase)
-            facts = result.get("facts", [])
-            if not facts:
-                return ""
-            lines = [f"[{f['type']}] {f['summary']}" for f in facts]
-            return "## Relevant Context (from graph memory)\n" + "\n".join(lines)
-        except Exception:
             return ""
+        return ""
 
     def get_state_projection(self, agent_id: str) -> list[str]:
         """Return the list of state paths this agent is authorized to read."""
