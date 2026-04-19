@@ -80,6 +80,7 @@ class _EscalationRequired(Exception):
 # ---------------------------------------------------------------------------
 
 from core.engine.shared_state_manager import STANDARD_PHASES  # noqa: E402
+from core.engine.agent_ids import normalize_agent_id, is_consultant_panel_alias  # noqa: E402
 
 _LITE_PHASES = ("intake", "execution", "closed")
 
@@ -215,6 +216,8 @@ class OrchestrationLoop:
         from core.engine.prompt_assembler import PromptAssembler
         from core.utils.config import get_model_for_agent
 
+        canonical_agent_id = normalize_agent_id(agent_id) or agent_id
+
         if self._assembler is None:
             self._assembler = PromptAssembler(agents_dir=ROOT / "agents")
 
@@ -222,24 +225,24 @@ class OrchestrationLoop:
         extra_ctx = self._build_extra_context()
 
         # Inject pending handoff task description for sub-agents
-        if agent_id != "master_orchestrator":
-            task_ctx = self._pending_handoff_context(agent_id, state)
+        if canonical_agent_id != "master_orchestrator":
+            task_ctx = self._pending_handoff_context(canonical_agent_id, state)
             if task_ctx:
                 if extra_ctx is None:
                     extra_ctx = {}
                 extra_ctx["pending_task"] = task_ctx
 
-        prompt = self._assembler.assemble(agent_id, state,
+        prompt = self._assembler.assemble(canonical_agent_id, state,
                                           extra_context=extra_ctx)
 
-        model = get_model_for_agent(agent_id)
+        model = get_model_for_agent(canonical_agent_id)
         runner = AgentRunner(model=model)
 
         from core.utils.config import load_config
         max_tokens = load_config().get("llm", {}).get("max_tokens", 4096)
 
         result = runner.run(
-            agent_id=agent_id,
+            agent_id=canonical_agent_id,
             prompt=prompt,
             project_id=self.config.project_id,
             max_tokens=max_tokens,
@@ -250,18 +253,20 @@ class OrchestrationLoop:
 
         if result.get("error"):
             if not result.get("retryable", True):
-                raise Exception(f"Non-retryable error from '{agent_id}': {result['error']}")
-            self._agent_error_counts[agent_id] = self._agent_error_counts.get(agent_id, 0) + 1
-            if self._agent_error_counts[agent_id] > self.config.max_agent_retries:
-                raise Exception(f"Agent '{agent_id}' failed {self.config.max_agent_retries+1} "
+                raise Exception(f"Non-retryable error from '{canonical_agent_id}': {result['error']}")
+            self._agent_error_counts[canonical_agent_id] = (
+                self._agent_error_counts.get(canonical_agent_id, 0) + 1
+            )
+            if self._agent_error_counts[canonical_agent_id] > self.config.max_agent_retries:
+                raise Exception(f"Agent '{canonical_agent_id}' failed {self.config.max_agent_retries+1} "
                                 f"times: {result['error']}")
-            print(f"  [agent_error] {agent_id}: {result['error']} "
-                  f"(retry {self._agent_error_counts[agent_id]}/{self.config.max_agent_retries})")
+            print(f"  [agent_error] {canonical_agent_id}: {result['error']} "
+                  f"(retry {self._agent_error_counts[canonical_agent_id]}/{self.config.max_agent_retries})")
             text = ""
         else:
-            self._agent_error_counts.pop(agent_id, None)
+            self._agent_error_counts.pop(canonical_agent_id, None)
 
-        return _AgentResponse(agent_id=agent_id, raw_text=text, tokens_used=tokens)
+        return _AgentResponse(agent_id=canonical_agent_id, raw_text=text, tokens_used=tokens)
 
     def _determine_next_agent(self, state: dict) -> str:
         """
@@ -282,11 +287,13 @@ class OrchestrationLoop:
 
         acc_status = last.get("acceptance", {}).get("status", "pending")
         if acc_status == "pending":
-            return last.get("to_agent", "master_orchestrator")
+            raw_to_agent = last.get("to_agent", "master_orchestrator")
+            return normalize_agent_id(raw_to_agent) or "master_orchestrator"
         return "master_orchestrator"
 
     def _pending_handoff_context(self, agent_id: str, state: dict) -> str:
         """Return the task_description from the pending handoff for this agent."""
+        target_agent_id = normalize_agent_id(agent_id) or agent_id
         history = state.get("workflow", {}).get("handoff_history", [])
         for ho in reversed(history):
             try:
@@ -294,7 +301,8 @@ class OrchestrationLoop:
                 expanded = HandoffEngine.expand(ho)
             except Exception:
                 expanded = ho
-            if (expanded.get("to_agent") == agent_id and
+            to_agent = normalize_agent_id(expanded.get("to_agent")) or expanded.get("to_agent")
+            if (to_agent == target_agent_id and
                     expanded.get("acceptance", {}).get("status") == "pending"):
                 task = expanded.get("task_description", "")
                 payload_summary = expanded.get("payload", {}).get("summary", "")
@@ -327,6 +335,8 @@ class OrchestrationLoop:
         he = HandoffEngine()
         phase = state.get("core_identity", {}).get("current_phase", "intake")
         now = datetime.now(timezone.utc).isoformat()
+        next_agent_raw = parsed.next_agent
+        next_agent_id = normalize_agent_id(next_agent_raw) if next_agent_raw else None
 
         # 1. Record decisions
         for dec in parsed.decisions:
@@ -344,10 +354,26 @@ class OrchestrationLoop:
         # 2. Record artifacts
         for art in parsed.artifacts:
             sm.append("master_orchestrator", "artifacts", "documents", art)
+        self._materialize_artifacts(parsed.artifacts, sm.project_dir, author="master_orchestrator")
 
         # 3. Consultation trigger
-        if parsed.consultation_trigger and not self._pending_consultation_synthesis:
-            synthesis = self._run_consultation(parsed.consultation_trigger, state)
+        consultation_trigger = parsed.consultation_trigger
+        if parsed.next_action == "consult" and consultation_trigger is None:
+            consultation_trigger = self._default_consultation_trigger(parsed, state)
+
+        # Group aliases ("experts", "wxperts", etc.) are treated as panel consultation.
+        if parsed.next_action == "delegate" and is_consultant_panel_alias(next_agent_raw):
+            consultation_trigger = consultation_trigger or self._default_consultation_trigger(parsed, state)
+            consultation_trigger.setdefault("consultants", [
+                "risk_advisor",
+                "quality_advisor",
+                "devils_advocate",
+                "domain_expert",
+                "efficiency_advisor",
+            ])
+
+        if consultation_trigger and not self._pending_consultation_synthesis:
+            synthesis = self._run_consultation(consultation_trigger, state)
             if synthesis and getattr(synthesis, "unanimous_high_risk", False):
                 return LoopResult(0, StopReason.UNANIMOUS_RISK,
                                   "master_orchestrator", phase,
@@ -374,15 +400,17 @@ class OrchestrationLoop:
                 print("  [graph] skipped: graph memory is deprecated; prefer SQL-backed retrieval")
 
         # 6. Delegate to next agent
-        if parsed.next_action == "delegate" and parsed.next_agent:
+        if (parsed.next_action == "delegate"
+                and next_agent_id
+                and not is_consultant_panel_alias(next_agent_raw)):
             payload = self._build_handoff_payload(parsed)
             he.create(sm,
                       from_agent="master_orchestrator",
-                      to_agent=parsed.next_agent,
+                      to_agent=next_agent_id,
                       phase=phase,
                       task_description=parsed.reasoning or f"Execute {phase} tasks",
                       payload=payload)
-            print(f"  [handoff] master_orchestrator → {parsed.next_agent}")
+            print(f"  [handoff] master_orchestrator → {next_agent_id}")
 
         return None
 
@@ -394,6 +422,7 @@ class OrchestrationLoop:
 
         sm = SharedStateManager(self.config.project_id)
         he = HandoffEngine()
+        target_agent_id = normalize_agent_id(agent_id) or agent_id
         history = state.get("workflow", {}).get("handoff_history", [])
 
         for ho in reversed(history):
@@ -401,7 +430,8 @@ class OrchestrationLoop:
                 expanded = HandoffEngine.expand(ho)
             except Exception:
                 expanded = ho
-            if (expanded.get("to_agent") == agent_id and
+            to_agent = normalize_agent_id(expanded.get("to_agent")) or expanded.get("to_agent")
+            if (to_agent == target_agent_id and
                     expanded.get("acceptance", {}).get("status") == "pending"):
                 he.accept(sm, expanded["handoff_id"])
                 print(f"  [accept] {expanded['handoff_id']}")
@@ -442,6 +472,8 @@ class OrchestrationLoop:
             except Exception:
                 pass
 
+        self._materialize_artifacts(parsed.artifacts, sm.project_dir, author=agent_id)
+
     # ------------------------------------------------------------------
     # Consultation
     # ------------------------------------------------------------------
@@ -458,6 +490,14 @@ class OrchestrationLoop:
         sm = SharedStateManager(self.config.project_id)
         engine = ConsultationEngine()
         assembler = PromptAssembler(agents_dir=ROOT / "agents")
+        raw_domain = (trigger.get("domain")
+                      or trigger.get("context", {}).get("domain")
+                      or "software_engineering")
+        domain = str(raw_domain).strip() or "software_engineering"
+        domain_context = engine.load_domain_context(domain)
+        consultants = trigger.get("consultants")
+        if consultants:
+            consultants = [normalize_agent_id(c) or c for c in consultants]
 
         try:
             request = engine.create_request(
@@ -465,6 +505,8 @@ class OrchestrationLoop:
                 question=trigger.get("question", ""),
                 context=trigger.get("context", {}),
                 decision_type=trigger.get("decision_type", "governance"),
+                consultants=consultants,
+                domain_context=domain_context,
             )
         except Exception as e:
             print(f"  [consult_error] create_request failed: {e}")
@@ -479,6 +521,8 @@ class OrchestrationLoop:
                 "injected_consultation_context": yaml.dump(
                     trigger.get("context", {}), default_flow_style=False),
             }
+            if consultant_id == "domain_expert":
+                extra["injected_domain_context"] = request.domain_context
             prompt = assembler.assemble(consultant_id, state, extra_context=extra)
             model = get_model_for_agent(consultant_id)
             runner = AgentRunner(model=model)
@@ -661,6 +705,95 @@ class OrchestrationLoop:
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+
+    def _default_consultation_trigger(self, parsed: "ParsedResponse", state: dict) -> dict:
+        """
+        Build a safe fallback consultation trigger when the model asks to consult
+        but omits the structured trigger payload.
+        """
+        phase = state.get("core_identity", {}).get("current_phase", "intake")
+        if phase in ("planning", "capability_discovery", "execution", "review"):
+            decision_type = "architecture"
+        else:
+            decision_type = "governance"
+
+        question = parsed.reasoning or f"Consultation requested during phase '{phase}'."
+        return {
+            "decision_type": decision_type,
+            "question": question,
+            "context": {
+                "phase": phase,
+                "status": parsed.status or "",
+                "next_action": parsed.next_action or "",
+            },
+            "decision_reached": "pending_consultation",
+            "rationale": "Auto-generated trigger because next_action requested consultation without consultation_trigger payload.",
+        }
+
+    def _resolve_artifact_path(self, artifact: str, project_dir: Path) -> Path:
+        """Resolve artifact paths relative to the current project when needed."""
+        path = Path(artifact)
+        if path.is_absolute():
+            return path
+        artifact_norm = artifact.replace("\\", "/").strip()
+        if artifact_norm.startswith("mas/projects/"):
+            return ROOT / artifact_norm
+        if artifact_norm.startswith("projects/"):
+            return ROOT / "mas" / artifact_norm
+        return project_dir / artifact_norm
+
+    def _materialize_artifacts(self, artifacts: list[str], project_dir: Path, author: str) -> None:
+        """
+        Ensure artifact files declared by agents exist on disk.
+        Creates missing files with lightweight placeholder content.
+        """
+        if not artifacts:
+            return
+        for artifact in artifacts:
+            try:
+                resolved = self._resolve_artifact_path(str(artifact), project_dir)
+                if resolved.exists():
+                    continue
+                resolved.parent.mkdir(parents=True, exist_ok=True)
+                ext = resolved.suffix.lower()
+                ts = datetime.now(timezone.utc).isoformat()
+                if ext in {".md", ".txt"}:
+                    content = (
+                        f"# Generated Artifact\n\n"
+                        f"- source_agent: {author}\n"
+                        f"- project_id: {self.config.project_id}\n"
+                        f"- created_at: {ts}\n"
+                        f"- note: auto-materialized by orchestration loop from `art` declaration.\n"
+                    )
+                    resolved.write_text(content, encoding="utf-8")
+                elif ext in {".yaml", ".yml"}:
+                    payload = {
+                        "generated_by": author,
+                        "project_id": self.config.project_id,
+                        "created_at": ts,
+                        "note": "Auto-materialized by orchestration loop from art declaration.",
+                    }
+                    with resolved.open("w", encoding="utf-8") as fh:
+                        yaml.dump(payload, fh, default_flow_style=False, sort_keys=False)
+                elif ext == ".json":
+                    payload = {
+                        "generated_by": author,
+                        "project_id": self.config.project_id,
+                        "created_at": ts,
+                        "note": "Auto-materialized by orchestration loop from art declaration.",
+                    }
+                    import json as _json
+                    resolved.write_text(_json.dumps(payload, indent=2), encoding="utf-8")
+                else:
+                    resolved.touch()
+                rel = resolved
+                try:
+                    rel = resolved.relative_to(project_dir)
+                except Exception:
+                    pass
+                print(f"  [artifact] materialized {rel}")
+            except Exception as e:
+                print(f"  [artifact_warn] could not materialize '{artifact}': {e}")
 
     def _write_phase_document(self, phase: str, state: dict,
                               project_dir: Path) -> None:

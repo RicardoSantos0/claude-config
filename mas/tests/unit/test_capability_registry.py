@@ -11,6 +11,7 @@ from core.engine.capability_registry import (
     GapCertificate,
     STRONG_MATCH_THRESHOLD,
     PARTIAL_MATCH_THRESHOLD,
+    PARAMETERIZATION_THRESHOLD,
 )
 
 
@@ -221,6 +222,20 @@ class TestSearch:
         results = registry.search(["anything"])
         assert results == []
 
+    def test_generalist_penalty_applied(self, registry):
+        registry.register_agent({
+            "agent_id": "domain_expert",
+            "name": "Domain Expert",
+            "version": "1.0.0",
+            "trust_tier": "T1_established",
+            "status": "active",
+            "capabilities": ["analysis", "architecture", "security", "performance"],
+        })
+        results = registry.search(["analysis", "architecture", "security", "performance"])
+        assert results
+        # Raw overlap would be 100, but generalist penalty reduces the score.
+        assert results[0].score < 100.0
+
 
 # ---------------------------------------------------------------------------
 # Roster mutation tests
@@ -430,6 +445,17 @@ class TestGapCertificate:
             data = yaml.safe_load(f)
         assert "capability_gap_certificate" in data
         assert data["capability_gap_certificate"]["certificate_id"] == cert.certificate_id
+
+    def test_parameterization_threshold_message_uses_constant(self, registry):
+        cert = registry.produce_gap_certificate(
+            need_description="Need specialized capability",
+            required_capabilities=["a", "b", "c", "d"],
+            project_id="proj-threshold-001",
+            requested_by="hr_agent",
+        )
+        msg = cert.parameterization_rejected_because
+        if msg:
+            assert str(int(PARAMETERIZATION_THRESHOLD)) in msg
 
     def test_no_gap_when_strong_match_exists(self, populated_registry):
         """If a strong match exists, produce_gap_certificate still works

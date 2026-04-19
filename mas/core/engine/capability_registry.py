@@ -22,6 +22,16 @@ VERSION_HISTORY_PATH = ROOT / "roster" / "version_history.yaml"
 # Match thresholds
 STRONG_MATCH_THRESHOLD = 80.0   # >= 80: recommend reuse
 PARTIAL_MATCH_THRESHOLD = 50.0  # 50–79: recommend with parameterization note
+PARAMETERIZATION_THRESHOLD = 70.0
+
+# Bias against overusing broad generalists for specialized capability asks.
+GENERALIST_AGENT_IDS = {
+    "master_orchestrator",
+    "domain_expert",
+    "project_manager_agent",
+    "product_manager_agent",
+    "inquirer_agent",
+}
 
 
 # ---------------------------------------------------------------------------
@@ -209,6 +219,8 @@ class CapabilityRegistry:
 
             caps = agent.get("capabilities", [])
             score = self.score_match(required_capabilities, caps)
+            if self._is_generalist(agent.get("agent_id", ""), caps):
+                score = max(0.0, score - self._generalist_penalty(required_capabilities))
 
             req_lower = [t.lower() for t in required_capabilities]
             cap_lower = [t.lower() for t in caps]
@@ -233,6 +245,22 @@ class CapabilityRegistry:
 
         results.sort(key=lambda r: r.score, reverse=True)
         return results
+
+    def _is_generalist(self, agent_id: str, capabilities: list[str]) -> bool:
+        """Heuristic: known broad roles or unusually broad capability surfaces."""
+        return agent_id in GENERALIST_AGENT_IDS or len(capabilities) >= 10
+
+    def _generalist_penalty(self, required_capabilities: list[str]) -> float:
+        """
+        Increase penalty as the request becomes more specialized.
+        Encourages HR to raise gap certificates earlier when specialist fit is weak.
+        """
+        req_count = len(required_capabilities)
+        if req_count >= 4:
+            return 20.0
+        if req_count >= 2:
+            return 12.0
+        return 8.0
 
     def get_strong_matches(self, required_capabilities: list[str]) -> list[MatchResult]:
         return [r for r in self.search(required_capabilities)
@@ -416,10 +444,10 @@ class CapabilityRegistry:
             for r in partial
         ]
 
-        could_parameterize = bool(partial) and partial[0].score >= 60.0
+        could_parameterize = bool(partial) and partial[0].score >= PARAMETERIZATION_THRESHOLD
         param_rejected = (
             "" if could_parameterize
-            else "No partial match reaches parameterization threshold (60%)"
+            else f"No partial match reaches parameterization threshold ({PARAMETERIZATION_THRESHOLD:.0f}%)"
         )
 
         data = self.load_registry()

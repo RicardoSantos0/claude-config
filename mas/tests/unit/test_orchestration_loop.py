@@ -139,6 +139,11 @@ class TestDetermineNextAgent:
         ])
         assert loop._determine_next_agent(state) == "scribe_agent"
 
+    def test_alias_handoff_target_is_normalized(self):
+        loop = self._loop()
+        state = _make_state(handoffs=[_pending_handoff("hr")])
+        assert loop._determine_next_agent(state) == "hr_agent"
+
 
 # ---------------------------------------------------------------------------
 # _build_extra_context
@@ -149,6 +154,75 @@ class TestBuildExtraContext:
     def test_empty_when_no_pending(self):
         loop = OrchestrationLoop(LoopConfig(project_id="p"))
         assert loop._build_extra_context() is None
+
+
+class TestConsultFallback:
+    def test_consult_action_without_trigger_builds_default_trigger(self, monkeypatch, tmp_path):
+        cfg = LoopConfig(project_id="proj-test", auto=True)
+        loop = OrchestrationLoop(cfg)
+        state = _make_state(phase="planning")
+        parsed = loop._parse_response(_wire_response(s="consult:flag", next_action="consult",
+                                                     rsn="Need panel review"))
+
+        calls = {}
+
+        class _DummySM:
+            project_dir = tmp_path
+
+            def append(self, *args, **kwargs):
+                return None
+
+            def write(self, *args, **kwargs):
+                return None
+
+            def snapshot(self, *args, **kwargs):
+                return None
+
+            def system_append(self, *args, **kwargs):
+                return None
+
+        class _DummyHE:
+            def create(self, *args, **kwargs):
+                return None
+
+        class _Synth:
+            unanimous_high_risk = False
+            human_escalation_required = False
+
+        def _fake_run_consultation(trigger, _state):
+            calls["trigger"] = trigger
+            return _Synth()
+
+        monkeypatch.setattr("core.engine.shared_state_manager.SharedStateManager",
+                            lambda *_a, **_kw: _DummySM())
+        monkeypatch.setattr("core.engine.handoff_engine.HandoffEngine",
+                            lambda *_a, **_kw: _DummyHE())
+        monkeypatch.setattr(loop, "_run_consultation", _fake_run_consultation)
+
+        result = loop._execute_master_actions(parsed, state)
+        assert result is None
+        assert "trigger" in calls
+        assert calls["trigger"]["decision_type"] == "architecture"
+
+
+class TestArtifactMaterialization:
+    def test_materializes_missing_artifact_files(self, tmp_path):
+        loop = OrchestrationLoop(LoopConfig(project_id="proj-artifacts"))
+        project_dir = tmp_path / "proj-artifacts"
+        project_dir.mkdir(parents=True)
+
+        artifacts = [
+            "docs/report.md",
+            "logs/run.yaml",
+            "payload/result.json",
+            "blob.bin",
+        ]
+        loop._materialize_artifacts(artifacts, project_dir, author="inquirer_agent")
+
+        assert (project_dir / "docs" / "report.md").exists()
+        assert (project_dir / "logs" / "run.yaml").exists()
+        assert (project_dir / "payload" / "result.json").exists()
+        assert (project_dir / "blob.bin").exists()
 
     def test_grounded_context_injected_and_cleared(self):
         loop = OrchestrationLoop(LoopConfig(project_id="p"))

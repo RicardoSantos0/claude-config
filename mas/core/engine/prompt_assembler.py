@@ -13,6 +13,7 @@ import yaml
 
 from core.utils.token_counter import TokenCounter
 from core.engine.context_compressor import compress, estimate_tokens
+from core.engine.agent_ids import normalize_agent_id
 
 # Threshold (tokens) above which we compress the state projection before injection
 _COMPRESSION_TOKEN_THRESHOLD = 2000
@@ -113,7 +114,8 @@ def _project_state(state: dict, agent_id: str) -> dict:
     Return a filtered view of state containing only fields
     the agent is authorized to read.
     """
-    projection_paths = STATE_PROJECTIONS.get(agent_id, [])
+    canonical_agent_id = normalize_agent_id(agent_id) or agent_id
+    projection_paths = STATE_PROJECTIONS.get(canonical_agent_id, [])
     projected = {}
 
     for path in projection_paths:
@@ -202,11 +204,13 @@ class PromptAssembler:
         self.agents_dir = agents_dir
 
     def get_template_path(self, agent_id: str) -> Path:
-        return self.agents_dir / f"{agent_id}.md"
+        canonical_agent_id = normalize_agent_id(agent_id) or agent_id
+        return self.agents_dir / f"{canonical_agent_id}.md"
 
     def load_template(self, agent_id: str) -> str:
         """Load the raw .md template for an agent (strips YAML frontmatter)."""
-        path = self.get_template_path(agent_id)
+        canonical_agent_id = normalize_agent_id(agent_id) or agent_id
+        path = self.get_template_path(canonical_agent_id)
         if not path.exists():
             raise FileNotFoundError(f"Agent template not found: {path}")
         content = path.read_text(encoding="utf-8")
@@ -217,6 +221,85 @@ class PromptAssembler:
                 content = content[end + 3:].lstrip()
         return content
 
+    def _authorized_skills(self, agent_id: str) -> list[dict]:
+        """Return authorized skills for this agent as serializable dicts."""
+        try:
+            from core.engine.skill_bridge import SkillBridge
+            return [s.to_dict() for s in SkillBridge().authorized_skills(agent_id)]
+        except Exception:
+            return []
+
+    def _build_skill_access_block(self, agent_id: str, skills: list[dict]) -> str:
+        """Human-readable skill access section appended to prompts."""
+        if not skills:
+            return (
+                "## Skill Access\n"
+                "Authorized skills: none\n"
+                "If a skill is required, delegate to an authorized agent.\n"
+            )
+
+        names = ", ".join(s.get("name", "") for s in skills if s.get("name"))
+        lines = [
+            "## Skill Access",
+            f"Authorized skills: {names}",
+            "Use `/skill-name <query>` when a skill can improve speed or grounding.",
+            "Reference skill outputs in your `art` list when relevant.",
+        ]
+        return "\n".join(lines) + "\n"
+
+    def _append_missing_context_sections(
+        self,
+        prompt: str,
+        template: str,
+        context: dict[str, str],
+    ) -> str:
+        """
+        Backward-compatible context injection.
+        If templates don't define injected placeholders, append key context blocks.
+        """
+        sections: list[str] = []
+
+        if "{injected_project_id}" not in template or "{injected_current_phase}" not in template:
+            sections.append(
+                "## Runtime Context\n"
+                f"- project_id: {context.get('injected_project_id', '')}\n"
+                f"- current_phase: {context.get('injected_current_phase', '')}"
+            )
+
+        if "{injected_shared_state}" not in template:
+            sections.append(
+                "## Scoped Shared State\n"
+                f"{context.get('injected_shared_state', '')}".rstrip()
+            )
+
+        # Preserve inquirer behavior: no wire instruction injection.
+        if "{injected_wire_instruction}" not in template:
+            wire = context.get("injected_wire_instruction", "").strip()
+            if wire:
+                sections.append(wire)
+
+        optional_keys = (
+            "injected_consultation_question",
+            "injected_consultation_context",
+            "injected_consultation_synthesis",
+            "injected_grounded_context",
+            "injected_domain_context",
+            "injected_recent_events",
+            "injected_graph_context",
+        )
+        for key in optional_keys:
+            if f"{{{key}}}" in template:
+                continue
+            val = (context.get(key) or "").strip()
+            if not val:
+                continue
+            label = key.replace("injected_", "").replace("_", " ").title()
+            sections.append(f"## {label}\n{val}")
+
+        if not sections:
+            return prompt
+        return f"{prompt.rstrip()}\n\n" + "\n\n".join(sections) + "\n"
+
     def assemble(self, agent_id: str, state: dict,
                  extra_context: dict | None = None) -> str:
         """
@@ -226,8 +309,9 @@ class PromptAssembler:
         After assembly, self.last_token_count holds the estimated
         token count of the assembled prompt.
         """
-        template = self.load_template(agent_id)
-        projected = _project_state(state, agent_id)
+        canonical_agent_id = normalize_agent_id(agent_id) or agent_id
+        template = self.load_template(canonical_agent_id)
+        projected = _project_state(state, canonical_agent_id)
         compact = _compact_projection(projected)
 
         # Compress large state projections to stay within token budget
@@ -247,7 +331,7 @@ class PromptAssembler:
             "- Omit empty lists and null fields\n"
             "- Optional reasoning (`rsn`): max 100 words\n"
             "- Human-facing text (CHECKPOINT.md, reports) uses expand() — stay structured here.\n"
-        ) if agent_id != "inquirer_agent" else ""
+        ) if canonical_agent_id != "inquirer_agent" else ""
 
         context = {
             "injected_project_id": state.get("core_identity", {}).get("project_id", ""),
@@ -284,9 +368,19 @@ class PromptAssembler:
                 compact["project_definition"].get("original_brief") or "(not yet available)"
             )
 
+        # Skill access context (authorization + runtime discoverability)
+        authorized_skills = self._authorized_skills(canonical_agent_id)
+        context["injected_authorized_skills"] = yaml.dump(
+            authorized_skills, default_flow_style=False, allow_unicode=True, sort_keys=False
+        )
+        context["injected_authorized_skill_names"] = (
+            ", ".join(s.get("name", "") for s in authorized_skills if s.get("name"))
+            if authorized_skills else "(none)"
+        )
+
         # Graph memory context injection (replaces part of state dump when available)
         # Only used when graph has ≥ 5 nodes — not enough data otherwise.
-        graph_context = self._graph_context(agent_id, state)
+        graph_context = self._graph_context(canonical_agent_id, state)
         if graph_context:
             context["injected_graph_context"] = graph_context
 
@@ -303,6 +397,10 @@ class PromptAssembler:
             context.update(extra_context)
 
         prompt = _fill_placeholders(template, context)
+        prompt = self._append_missing_context_sections(prompt, template, context)
+        if ("{injected_authorized_skills}" not in template and
+                "{injected_authorized_skill_names}" not in template):
+            prompt = f"{prompt.rstrip()}\n\n{self._build_skill_access_block(canonical_agent_id, authorized_skills)}"
         self.last_token_count: int = _token_counter.count(prompt)
         return prompt
 
@@ -381,4 +479,5 @@ class PromptAssembler:
 
     def get_state_projection(self, agent_id: str) -> list[str]:
         """Return the list of state paths this agent is authorized to read."""
-        return STATE_PROJECTIONS.get(agent_id, [])
+        canonical_agent_id = normalize_agent_id(agent_id) or agent_id
+        return STATE_PROJECTIONS.get(canonical_agent_id, [])

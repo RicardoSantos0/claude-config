@@ -247,6 +247,29 @@ class TestPlaceholderFilling:
         prompt = assembler.assemble("custom_agent", state)
         assert "{injected_unknown_key}" in prompt
 
+    def test_fallback_context_appended_when_template_has_no_injected_keys(self, agents_dir):
+        (agents_dir / "plain_agent.md").write_text(
+            "---\nname: plain_agent\n---\nI have no injected placeholders.\n",
+            encoding="utf-8",
+        )
+        assembler = PromptAssembler(agents_dir=agents_dir)
+        state = _make_state(project_id="proj-fallback-001", phase="planning")
+        prompt = assembler.assemble("plain_agent", state)
+        assert "## Runtime Context" in prompt
+        assert "proj-fallback-001" in prompt
+        assert "planning" in prompt
+        assert "## Scoped Shared State" in prompt
+
+    def test_skill_access_section_is_appended(self, agents_dir):
+        (agents_dir / "skill_plain_agent.md").write_text(
+            "---\nname: skill_plain_agent\n---\nNo placeholders.\n",
+            encoding="utf-8",
+        )
+        assembler = PromptAssembler(agents_dir=agents_dir)
+        prompt = assembler.assemble("skill_plain_agent", _make_state())
+        assert "## Skill Access" in prompt
+        assert "Authorized skills:" in prompt
+
 
 # ---------------------------------------------------------------------------
 # Token count

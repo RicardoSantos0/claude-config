@@ -188,6 +188,14 @@ class TestPromptAssembly:
         assert prompt.exit_code == 0
         assert "# Agent: scribe_agent" in prompt.output
 
+    def test_explicit_agent_alias_override(self, runner, patched_roots):
+        result = runner.invoke(main, ["init", "prompt-explicit-alias"])
+        pid = _extract_project_id(result.output)
+
+        prompt = runner.invoke(main, ["prompt", pid, "hr"])
+        assert prompt.exit_code == 0
+        assert "# Agent: hr_agent" in prompt.output
+
     def test_prompt_contains_project_state_section(self, runner, patched_roots):
         result = runner.invoke(main, ["init", "prompt-state-section"])
         pid = _extract_project_id(result.output)

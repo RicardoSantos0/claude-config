@@ -119,11 +119,13 @@ def _pending_handoffs_from_state(state: dict) -> list[dict]:
 def _assemble_prompt(project_id: str, agent_id: str, state: dict) -> str:
     agents_dir = ROOT.parent / "agents"
     from core.engine.prompt_assembler import PromptAssembler
+    from core.engine.agent_ids import normalize_agent_id
+    canonical_agent_id = normalize_agent_id(agent_id) or agent_id
     assembler = PromptAssembler(agents_dir=agents_dir)
     try:
-        return assembler.assemble(agent_id, state)
+        return assembler.assemble(canonical_agent_id, state)
     except FileNotFoundError:
-        click.echo(f"[error] Agent template not found for '{agent_id}' in {agents_dir}", err=True)
+        click.echo(f"[error] Agent template not found for '{canonical_agent_id}' in {agents_dir}", err=True)
         sys.exit(1)
 
 
@@ -920,6 +922,9 @@ def prompt(project_id: str, agent_id: str | None):
         dummy = LoopConfig(project_id=project_id)
         loop = OrchestrationLoop(dummy)
         agent_id = loop._determine_next_agent(state)
+    else:
+        from core.engine.agent_ids import normalize_agent_id
+        agent_id = normalize_agent_id(agent_id) or agent_id
 
     assembled = _assemble_prompt(project_id, agent_id, state)
     _emit_prompt(project_id, agent_id, assembled)
