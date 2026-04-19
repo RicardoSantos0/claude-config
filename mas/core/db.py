@@ -155,17 +155,14 @@ def query_token_usage(
     """
     Sum token usage across all agent_call events for a project.
     Token fields are stored in the JSON payload as:
-      {"tokens_prompt": N, "tokens_completion": N, "tokens_total": N, "dry_run": bool}
+      {"tokens_prompt": N, "tokens_completion": N, "tokens_total": N}
 
     Returns:
-        {
-            "total_prompt": int, "total_completion": int, "total": int,
-            "calls": int, "live_calls": int, "dry_calls": int
-        }
+        {"total_prompt": int, "total_completion": int, "total": int, "calls": int}
     """
     try:
         rows = query_events(project_id=project_id, action_type="agent_call", db_path=db_path)
-        total_prompt = total_completion = total = calls = live_calls = dry_calls = 0
+        total_prompt = total_completion = total = calls = 0
         for row in rows:
             try:
                 data = _json.loads(row["payload"] or "{}")
@@ -175,10 +172,6 @@ def query_token_usage(
                 total_completion += params.get("tokens_completion", 0)
                 total            += params.get("tokens_total", 0)
                 calls += 1
-                if params.get("dry_run", False):
-                    dry_calls += 1
-                else:
-                    live_calls += 1
             except Exception:
                 pass
         return {
@@ -186,13 +179,11 @@ def query_token_usage(
             "total_completion": total_completion,
             "total":            total,
             "calls":            calls,
-            "live_calls":       live_calls,
-            "dry_calls":        dry_calls,
         }
     except Exception:
         return {
             "total_prompt": 0, "total_completion": 0, "total": 0,
-            "calls": 0, "live_calls": 0, "dry_calls": 0,
+            "calls": 0,
         }
 
 

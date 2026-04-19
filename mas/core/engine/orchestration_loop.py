@@ -23,7 +23,7 @@ from __future__ import annotations
 import dataclasses
 import subprocess
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
@@ -41,7 +41,6 @@ ROOT = Path(__file__).parent.parent.parent.parent  # repo root (claude-config/)
 class LoopConfig:
     project_id: str
     max_steps: int = 50
-    dry_run: bool = field(default=False, repr=False)  # deprecated compatibility flag
     auto: bool = False                # skip human checkpoints
     target_phase: str | None = None   # stop after this phase completes
     max_agent_retries: int = 2        # per-agent consecutive error limit
@@ -248,7 +247,6 @@ class OrchestrationLoop:
 
         text = result.get("text", "")
         tokens = result.get("tokens_used", 0)
-        is_dry = bool(result.get("dry_run", False))
 
         if result.get("error"):
             if not result.get("retryable", True):
@@ -263,8 +261,7 @@ class OrchestrationLoop:
         else:
             self._agent_error_counts.pop(agent_id, None)
 
-        return _AgentResponse(agent_id=agent_id, raw_text=text,
-                              tokens_used=tokens, dry_run=is_dry)
+        return _AgentResponse(agent_id=agent_id, raw_text=text, tokens_used=tokens)
 
     def _determine_next_agent(self, state: dict) -> str:
         """
@@ -772,7 +769,6 @@ class _AgentResponse:
     agent_id: str
     raw_text: str
     tokens_used: int
-    dry_run: bool
 
 
 # Re-export ParsedResponse for callers

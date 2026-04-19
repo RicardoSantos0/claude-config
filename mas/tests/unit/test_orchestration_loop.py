@@ -70,16 +70,14 @@ class TestLoopConfig:
     def test_defaults(self):
         cfg = LoopConfig(project_id="proj-test")
         assert cfg.max_steps == 50
-        assert cfg.dry_run is False
         assert cfg.auto is False
         assert cfg.target_phase is None
         assert cfg.max_agent_retries == 2
 
     def test_custom_values(self):
-        cfg = LoopConfig(project_id="p", max_steps=5, dry_run=True, auto=True,
+        cfg = LoopConfig(project_id="p", max_steps=5, auto=True,
                          target_phase="specification")
         assert cfg.max_steps == 5
-        assert cfg.dry_run is True
         assert cfg.target_phase == "specification"
 
 
@@ -185,8 +183,7 @@ class TestLoopControl:
 
     def _patched_loop(self, tmp_path, state, response_text="", max_steps=3):
         """Helper: loop with mocked state load and agent dispatch."""
-        cfg = LoopConfig(project_id="proj-loop-test", max_steps=max_steps,
-                         dry_run=True, auto=True)
+        cfg = LoopConfig(project_id="proj-loop-test", max_steps=max_steps, auto=True)
         loop = OrchestrationLoop(cfg)
 
         loop._load_state = MagicMock(return_value=state)
@@ -194,7 +191,6 @@ class TestLoopControl:
             agent_id="master_orchestrator",
             raw_text=response_text,
             tokens_used=0,
-            dry_run=True,
         ))
         return loop
 
@@ -213,14 +209,6 @@ class TestLoopControl:
         result = loop.run()
         assert result.reason == StopReason.MAX_STEPS
         assert result.stopped_at_step == 3
-
-    def test_dry_run_uses_zero_tokens(self, tmp_path):
-        state = _make_state()
-        loop = self._patched_loop(tmp_path, state, max_steps=1)
-        loop.run()
-        call_kwargs = loop._dispatch_agent.call_args
-        # Check config was dry_run
-        assert loop.config.dry_run is True
 
     def test_subagent_escalation_stops_loop(self, tmp_path):
         state = _make_state(handoffs=[_pending_handoff("inquirer_agent")])
@@ -346,7 +334,7 @@ class TestTargetPhase:
         within the same iteration: 'intake' at the top, 'specification' at the bottom.
         """
         cfg = LoopConfig(project_id="p", target_phase="specification",
-                         dry_run=True, auto=True, max_steps=20)
+                         auto=True, max_steps=20)
         loop = OrchestrationLoop(cfg)
 
         call_count = [0]
@@ -360,7 +348,7 @@ class TestTargetPhase:
         loop._dispatch_agent = MagicMock(return_value=MagicMock(
             agent_id="master_orchestrator",
             raw_text=_wire_response(s="task:complete"),
-            tokens_used=0, dry_run=True,
+            tokens_used=0,
         ))
         # Prevent actual engine calls from writing to disk
         loop._execute_master_actions = MagicMock(return_value=None)
@@ -392,7 +380,7 @@ class TestDecisionQualityFields:
         sm.initialize(request_id="req-dec-001")
 
         from core.engine.orchestration_loop import OrchestrationLoop, LoopConfig
-        cfg = LoopConfig(project_id=pid, max_steps=2, dry_run=True, auto=True)
+        cfg = LoopConfig(project_id=pid, max_steps=2, auto=True)
         loop = OrchestrationLoop(cfg)
 
         dec = [{"id": "d-q-001", "v": "use postgres", "rat": "proven reliability",
@@ -469,7 +457,7 @@ class TestPhaseDocumentWriting:
 
     def test_intake_doc_created(self, tmp_path):
         from core.engine.orchestration_loop import OrchestrationLoop, LoopConfig
-        loop = OrchestrationLoop(LoopConfig(project_id="p", dry_run=True))
+        loop = OrchestrationLoop(LoopConfig(project_id="p"))
         state = self._make_state_with_spec("intake")
         loop._write_phase_document("intake", state, tmp_path)
         dest = tmp_path / "intake" / "clarified_spec.yaml"
@@ -480,7 +468,7 @@ class TestPhaseDocumentWriting:
 
     def test_planning_doc_created(self, tmp_path):
         from core.engine.orchestration_loop import OrchestrationLoop, LoopConfig
-        loop = OrchestrationLoop(LoopConfig(project_id="p", dry_run=True))
+        loop = OrchestrationLoop(LoopConfig(project_id="p"))
         state = self._make_state_with_spec("planning")
         loop._write_phase_document("planning", state, tmp_path)
         dest = tmp_path / "planning" / "product_plan.yaml"
@@ -488,7 +476,7 @@ class TestPhaseDocumentWriting:
 
     def test_execution_doc_created(self, tmp_path):
         from core.engine.orchestration_loop import OrchestrationLoop, LoopConfig
-        loop = OrchestrationLoop(LoopConfig(project_id="p", dry_run=True))
+        loop = OrchestrationLoop(LoopConfig(project_id="p"))
         state = self._make_state_with_spec("execution")
         loop._write_phase_document("execution", state, tmp_path)
         dest = tmp_path / "execution" / "execution_plan.yaml"
@@ -496,7 +484,7 @@ class TestPhaseDocumentWriting:
 
     def test_unknown_phase_no_doc(self, tmp_path):
         from core.engine.orchestration_loop import OrchestrationLoop, LoopConfig
-        loop = OrchestrationLoop(LoopConfig(project_id="p", dry_run=True))
+        loop = OrchestrationLoop(LoopConfig(project_id="p"))
         state = self._make_state_with_spec("review")
         loop._write_phase_document("review", state, tmp_path)
         # No files created for unrecognised phases
@@ -505,7 +493,7 @@ class TestPhaseDocumentWriting:
     def test_idempotent_does_not_overwrite(self, tmp_path):
         """Existing docs must not be overwritten."""
         from core.engine.orchestration_loop import OrchestrationLoop, LoopConfig
-        loop = OrchestrationLoop(LoopConfig(project_id="p", dry_run=True))
+        loop = OrchestrationLoop(LoopConfig(project_id="p"))
         state = self._make_state_with_spec("intake")
         dest = tmp_path / "intake" / "clarified_spec.yaml"
         dest.parent.mkdir(parents=True, exist_ok=True)
@@ -517,7 +505,7 @@ class TestPhaseDocumentWriting:
 class TestDeprecatedGraphReplay:
 
     def test_closure_skips_graph_replay(self, monkeypatch):
-        loop = OrchestrationLoop(LoopConfig(project_id="p", dry_run=True, auto=True))
+        loop = OrchestrationLoop(LoopConfig(project_id="p", auto=True))
         state = _make_state(phase="improvement")
 
         class _SM:

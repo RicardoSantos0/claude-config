@@ -738,19 +738,6 @@ class MetricsEngine:
             return 0.0
         return sum(m.score for m in applicable) / len(applicable)
 
-    def _is_dry_run_state(self, shared_state: dict) -> bool:
-        """True when no live agent calls have been made.
-        Used to promote data-absent metrics to 'not_applicable' mode."""
-        try:
-            from core.db import query_token_usage
-            project_id = shared_state.get("core_identity", {}).get("project_id", "")
-            if not project_id:
-                return False
-            usage = query_token_usage(project_id)
-            return usage.get("live_calls", 0) == 0 and usage.get("calls", 0) >= 0
-        except Exception:
-            return False
-
     # ------------------------------------------------------------------
     # Full report construction
     # ------------------------------------------------------------------
@@ -826,35 +813,6 @@ class MetricsEngine:
             self.score_record_integrity(handoff_history),
             self.score_global_graph_contribution(project_id),
         ])
-
-        # D2 (AC2): promote data-absent metrics to 'not_applicable' when there is
-        # no live execution evidence.
-        # Metrics that default to 50.0 when input data is absent, and metrics that score 0.0
-        # purely because no live agent work was done, are uninformative without live execution evidence —
-        # exclude them from the project average so scores reflect real work only.
-        #
-        # prop-85472733: goal_achievement 0.0 when no live execution evidence (no tasks matched criteria)
-        # prop-3a881566: documentation_completeness 0.0 when no live execution evidence (scribe not invoked)
-        # prop-0515a6a5/f3b3a7e9: global_graph_contribution low when no live execution evidence
-        _dry_run_na_at_50 = {
-            "acceptance_criteria_pass_rate", "scope_adherence", "decision_quality",
-        }
-        _dry_run_na_at_zero_or_50 = {
-            "goal_achievement", "documentation_completeness",
-        }
-        _dry_run_na_graph_threshold = 25.0  # below this, graph score reflects absent EpisodeWriter
-
-        if self._is_dry_run_state(shared_state):
-            for m in metrics:
-                if m.metric in _dry_run_na_at_50 and m.score == 50.0:
-                    m.mode = "not_applicable"
-                    m.findings = (m.findings or "") + " [not_applicable: no live execution evidence]"
-                elif m.metric in _dry_run_na_at_zero_or_50 and m.score <= 50.0:
-                    m.mode = "not_applicable"
-                    m.findings = (m.findings or "") + " [not_applicable: no live agent output to assess]"
-                elif m.metric == "global_graph_contribution" and m.score <= _dry_run_na_graph_threshold:
-                    m.mode = "not_applicable"
-                    m.findings = (m.findings or "") + " [not_applicable: no live execution evidence; run 'mas db migrate-graph' at closure if needed]"
 
         return metrics
 

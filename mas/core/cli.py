@@ -423,9 +423,8 @@ def status(project_id: str):
     # Token usage summary (D1/D3)
     from core.db import query_token_usage
     usage = query_token_usage(project_id)
-    live_calls = usage.get("live_calls", 0)
-    dry_calls  = usage.get("dry_calls", 0)
-    total_tok  = usage.get("total", 0)
+    calls     = usage.get("calls", 0)
+    total_tok = usage.get("total", 0)
     try:
         from core.runtime_config import get_database_backend, get_vector_backend
         db_backend = get_database_backend()
@@ -446,13 +445,8 @@ def status(project_id: str):
     vector_label = vector_backend["provider"] if vector_backend.get("enabled") else "disabled"
     click.echo(f"Storage          : db={db_backend['active_provider']} vector={vector_label}")
 
-    # Dry/live accounting
-    total_calls = live_calls + dry_calls
-    if total_calls > 0:
-        if dry_calls:
-            click.echo(f"Agent calls      : {total_calls}  (live: {live_calls}, historical dry: {dry_calls})")
-        else:
-            click.echo(f"Agent calls      : {live_calls}")
+    if calls > 0:
+        click.echo(f"Agent calls      : {calls}")
     click.echo(f"Tokens (total)   : {total_tok:,}")
 
     if pending_handoffs:
@@ -657,22 +651,16 @@ def tokens(project_id: str):
     from core.db import query_token_usage
 
     usage = query_token_usage(project_id)
-    total        = usage.get("total", 0)
-    prompt       = usage.get("total_prompt", 0)
-    completion   = usage.get("total_completion", 0)
-    calls        = usage.get("calls", 0)
-    dry_calls    = usage.get("dry_calls", 0)
-    live_calls   = usage.get("live_calls", 0)
+    total      = usage.get("total", 0)
+    prompt     = usage.get("total_prompt", 0)
+    completion = usage.get("total_completion", 0)
+    calls      = usage.get("calls", 0)
 
     click.echo(f"\nToken usage — {project_id}")
-    click.echo(f"  Total calls      : {calls}  (live: {live_calls}, dry: {dry_calls})")
+    click.echo(f"  Total calls      : {calls}")
     click.echo(f"  Prompt tokens    : {prompt:,}")
     click.echo(f"  Completion tokens: {completion:,}")
     click.echo(f"  Total tokens     : {total:,}")
-
-    if live_calls + dry_calls > 0:
-        dry_pct = dry_calls / (live_calls + dry_calls) * 100
-        click.echo(f"  Historical dry-call ratio : {dry_pct:.1f}%")
 
 
 # ---------------------------------------------------------------------------

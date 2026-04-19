@@ -43,13 +43,6 @@ class TestAvailability:
 
 class TestLiveOnly:
 
-    def test_dry_run_flag_is_rejected(self):
-        runner = AgentRunner()
-        result = runner.run("inquirer_agent", "some prompt", dry_run=True)
-        assert result["error"] == "dry_run_removed"
-        assert result["retryable"] is False
-        assert result["tokens_used"] == 0
-
     def test_no_api_key_requires_live_configuration(self):
         with patch.dict(os.environ, {}, clear=True):
             os.environ.pop("ANTHROPIC_API_KEY", None)
@@ -60,8 +53,8 @@ class TestLiveOnly:
 
     def test_result_has_required_keys(self):
         runner = AgentRunner()
-        result = runner.run("agent", "prompt", dry_run=True)
-        for key in ("text", "tokens_used", "model", "dry_run", "error", "retryable"):
+        result = runner.run("agent", "prompt")
+        for key in ("text", "tokens_used", "model", "error", "retryable"):
             assert key in result
 
 
@@ -73,6 +66,6 @@ class TestSQLiteLogging:
 
     def test_blocked_call_does_not_log_agent_event(self, db):
         runner = AgentRunner(db_path=db)
-        runner.run("inquirer_agent", "prompt", project_id="proj-test", dry_run=True)
+        runner.run("inquirer_agent", "prompt", project_id="proj-test")
         rows = query_events(project_id="proj-test", action_type="agent_call", db_path=db)
         assert rows == []

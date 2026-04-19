@@ -82,23 +82,6 @@ evaluation_policy:
       quality signal.
     improvement_trigger: "Revisit once SQL-backed memory replacement is implemented"
 
-  # --- NO-LIVE-EVIDENCE METRIC HANDLING ---
-  # Legacy key kept for compatibility; behavior applies whenever no live execution evidence exists.
-  # MetricsEngine.evaluate_project() automatically promotes these to mode='not_applicable'
-  # so they are excluded from the project score average.
-  dry_run_metrics:
-    not_applicable_when_dry_run:
-      - goal_achievement          # scores 0 or 50 — no task output to match against criteria
-      - acceptance_criteria_pass_rate  # scores 50 — no live AC validation evidence
-      - scope_adherence           # scores 50 — no scope deviation evidence without live work
-      - decision_quality          # scores 50 — no real decisions logged
-      - documentation_completeness  # scores 0 — scribe not invoked in non-live runs
-      - global_graph_contribution   # deprecated metric — always excluded pending SQL-native replacement
-    detection: "MetricsEngine._is_dry_run_state() checks query_token_usage().live_calls == 0"
-    always_scored:
-      - phase_efficiency    # based on handoff structure, valid without live execution evidence
-      - record_integrity    # based on governance violations, valid without live execution evidence
-
   # --- TOKEN TRACKING ---
   token_tracking:
     enabled: true

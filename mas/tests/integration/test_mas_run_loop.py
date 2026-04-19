@@ -66,7 +66,6 @@ def _patched_loop(
     cfg = LoopConfig(
         project_id=project_id,
         max_steps=max_steps,
-        dry_run=True,
         auto=auto,
         target_phase=target_phase,
     )
@@ -94,7 +93,6 @@ def _patched_loop(
             agent_id=agent_id,
             raw_text=text,
             tokens_used=0,
-            dry_run=True,
         )
 
     loop._dispatch_agent = _dispatch
@@ -375,7 +373,7 @@ class TestNonRetryableErrors:
         pid = "proj-loop-int-012"
         _make_project(tmp_path, pid)
 
-        cfg = LoopConfig(project_id=pid, max_steps=10, dry_run=False, auto=True)
+        cfg = LoopConfig(project_id=pid, max_steps=10, auto=True)
         loop = OrchestrationLoop(cfg)
 
         def _load():
@@ -393,7 +391,6 @@ class TestNonRetryableErrors:
                 "text": "",
                 "tokens_used": 0,
                 "model": "claude-opus-4-6",
-                "dry_run": False,
                 "error": "Error code: 400 - credit balance is too low to access the Anthropic API.",
                 "retryable": False,
             }

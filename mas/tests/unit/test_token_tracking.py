@@ -83,8 +83,6 @@ class TestQueryTokenUsage:
         assert result["total_completion"] == 0
         assert result["total"] == 0
         assert result["calls"] == 0
-        assert result["dry_calls"] == 0
-        assert result["live_calls"] == 0
 
     def test_only_counts_agent_call_rows(self):
         """AC7: handoff rows are ignored; only action_type='agent_call' is summed."""

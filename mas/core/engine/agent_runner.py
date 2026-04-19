@@ -2,10 +2,10 @@
 Agent Runner
 Real Anthropic SDK calls for MAS agents.
 
-Live execution only. If the Anthropic client is unavailable, the caller gets
-an explicit non-retryable error instead of a fake dry-run response.
+Live execution only. If the Anthropic client is unavailable (no ANTHROPIC_API_KEY
+or package missing), the caller receives an explicit non-retryable error.
 
-Every real call is logged to the SQLite event store (mas/data/episodic.db).
+Every call is logged to the SQLite event store (mas/data/episodic.db).
 
 Default model: claude-haiku-4-5-20251001 (fast + cheap — right for scaffolding).
 Override with AgentRunner(model="claude-sonnet-4-6").
@@ -39,7 +39,7 @@ DEFAULT_MODEL = "claude-haiku-4-5-20251001"
 _MAX_TOKENS_DEFAULT = 1024
 _LIVE_RUN_REQUIRED = (
     "Live execution is mandatory. Configure ANTHROPIC_API_KEY and the anthropic "
-    "package before running MAS agents. Dry-run support has been removed."
+    "package before running MAS agents."
 )
 
 # Errors that will not resolve on retry — fail fast
@@ -95,7 +95,6 @@ class AgentRunner:
         agent_id: str,
         prompt: str,
         project_id: str = "",
-        dry_run: bool = False,
         max_tokens: int = _MAX_TOKENS_DEFAULT,
         system_prompt: str = "",
     ) -> dict:
@@ -104,29 +103,18 @@ class AgentRunner:
 
         Returns:
             {
-                "text":        str   — response text (empty on error)
-                "tokens_used": int   — total tokens consumed
-                "model":       str   — model that was called
-                "dry_run":     bool  — kept for backward-compatible payload shape
-                "error":       str   — set on API error (absent on success)
+                "text":        str  — response text (empty on error)
+                "tokens_used": int  — total tokens consumed
+                "model":       str  — model that was called
+                "error":       str  — set on API error (absent on success)
+                "retryable":   bool — False for auth/credit errors
             }
         """
-        if dry_run:
-            return {
-                "text": "",
-                "tokens_used": 0,
-                "model": self.model,
-                "dry_run": False,
-                "error": "dry_run_removed",
-                "retryable": False,
-            }
-
         if not self.available:
             return {
                 "text": "",
                 "tokens_used": 0,
                 "model": self.model,
-                "dry_run": False,
                 "error": _LIVE_RUN_REQUIRED,
                 "retryable": False,
             }
@@ -155,7 +143,6 @@ class AgentRunner:
                 "text": text,
                 "tokens_used": tokens,
                 "model": self.model,
-                "dry_run": False,
             }
 
         except Exception as exc:
@@ -165,7 +152,6 @@ class AgentRunner:
                 "text": "",
                 "tokens_used": 0,
                 "model": self.model,
-                "dry_run": False,
                 "error": error_str,
                 "retryable": retryable,
             }
@@ -181,7 +167,6 @@ class AgentRunner:
         prompt: str,
         tokens_prompt: int = 0,
         tokens_completion: int = 0,
-        dry_run: bool = False,
     ) -> None:
         """Write an agent_call event to SQLite. Non-fatal."""
         if not project_id:
@@ -203,7 +188,6 @@ class AgentRunner:
                     "tokens_prompt":     tokens_prompt,
                     "tokens_completion": tokens_completion,
                     "tokens_total":      tokens_total,
-                    "dry_run":           dry_run,
                 },
                 **kwargs,
             )

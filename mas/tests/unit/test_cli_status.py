@@ -48,7 +48,7 @@ def test_status_uses_core_identity_updated_at(runner, tmp_path, monkeypatch):
     monkeypatch.setattr(
         db_mod,
         "query_token_usage",
-        lambda _project_id: {"total": 0, "live_calls": 0, "dry_calls": 0},
+        lambda _project_id: {"total": 0, "calls": 0},
     )
 
     result = runner.invoke(main, ["status", project_id])
@@ -87,7 +87,7 @@ def test_status_counts_pending_from_acceptance_object(runner, tmp_path, monkeypa
     monkeypatch.setattr(
         db_mod,
         "query_token_usage",
-        lambda _project_id: {"total": 0, "live_calls": 0, "dry_calls": 0},
+        lambda _project_id: {"total": 0, "calls": 0},
     )
 
     result = runner.invoke(main, ["status", project_id])
