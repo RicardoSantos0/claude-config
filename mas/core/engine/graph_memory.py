@@ -56,7 +56,18 @@ except ImportError:
 
 ROOT = Path(__file__).parent.parent.parent   # mas/
 
-# Special sentinel: the cross-project global graph stored at mas/global_graph.yaml
+# Module-level DB path — promoted so tests can monkeypatch it.
+# Falls back gracefully when core.db is not importable (e.g. isolated unit tests).
+try:
+    from core.db import _get_connection as _db_get_connection, init_db as _db_init_db, DB_PATH as _DB_PATH
+    _DB_AVAILABLE = True
+except ImportError:
+    _db_get_connection = None  # type: ignore
+    _db_init_db = None  # type: ignore
+    _DB_PATH = None  # type: ignore
+    _DB_AVAILABLE = False
+
+# Special sentinel: the cross-project global graph stored in SQLite
 GLOBAL_PROJECT_ID = "__global__"
 
 # ---------------------------------------------------------------------------
@@ -210,10 +221,11 @@ class GraphStore:
     def _save_to_sqlite(self, data: dict) -> None:
         """Upsert all nodes and edges into the agent_graph SQLite tables."""
         import json
+        if not _DB_AVAILABLE or _DB_PATH is None:
+            return
         try:
-            from core.db import _get_connection, DB_PATH, init_db
-            init_db()
-            with _get_connection(DB_PATH) as conn:
+            _db_init_db(_DB_PATH)
+            with _db_get_connection(_DB_PATH) as conn:
                 conn.execute("""
                     CREATE TABLE IF NOT EXISTS agent_graph (
                         id TEXT PRIMARY KEY,
@@ -271,9 +283,10 @@ class GraphStore:
     def _load_from_sqlite(self) -> bool:
         """Load nodes and edges from SQLite. Returns True if data was found."""
         import json
+        if not _DB_AVAILABLE or _DB_PATH is None:
+            return False
         try:
-            from core.db import _get_connection, DB_PATH
-            with _get_connection(DB_PATH) as conn:
+            with _db_get_connection(_DB_PATH) as conn:
                 # Check tables exist
                 tables = {r[0] for r in conn.execute(
                     "SELECT name FROM sqlite_master WHERE type='table'"

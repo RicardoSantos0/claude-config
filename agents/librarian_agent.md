@@ -34,12 +34,6 @@ All commands run from the system root where `system_config.yaml` lives.
 # Rebuild FTS5 index (safe to run at any time — idempotent)
 mas db rebuild-fts
 
-# Migrate global_graph.yaml nodes/edges into SQLite (idempotent)
-mas db migrate-graph
-
-# Dry-run to see what would be migrated
-mas db migrate-graph --dry-run
-
 # Show token usage for a project
 mas tokens <project_id>
 
@@ -62,11 +56,6 @@ conn.close()
 - Rebuild the FTS5 index when content/rowid drift is detected
 - Run `mas db rebuild-fts` after large batch inserts or schema migrations
 - Monitor FTS row count vs agent_events row count — they must match
-
-### Graph Migration
-- Migrate `mas/data/global_graph.yaml` nodes/edges → `agent_graph` / `agent_graph_edges` tables
-- Migration is idempotent (INSERT OR IGNORE) — safe to re-run
-- Always dry-run first with `--dry-run` for large graphs
 
 ### Database Vacuum
 - Run `VACUUM` after large deletes to reclaim space

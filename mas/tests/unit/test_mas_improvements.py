@@ -374,10 +374,10 @@ class TestCLAUDEMdLiveRunSection:
         content = claude_md.read_text(encoding="utf-8")
         assert "mas tokens" in content
 
-    def test_live_run_section_mentions_mas_resume(self):
+    def test_live_run_section_mentions_resume_mas(self):
         claude_md = Path(__file__).parents[2] / "CLAUDE.md"
         content = claude_md.read_text(encoding="utf-8")
-        assert "mas-resume" in content or "Codex" in content
+        assert "/resume-mas" in content
 
 
 # ---------------------------------------------------------------------------
@@ -412,7 +412,7 @@ class TestLibrarianMaintenanceSchedule:
         content = lib_md.read_text(encoding="utf-8")
         assert "rebuild-fts" in content or "rebuild_fts" in content
 
-    def test_migrate_graph_mentioned(self):
+    def test_vacuum_or_fts_mentioned(self):
         lib_md = Path(__file__).parents[3] / "agents" / "librarian_agent.md"
         content = lib_md.read_text(encoding="utf-8")
-        assert "migrate-graph" in content or "migrate_graph" in content
+        assert "rebuild-fts" in content or "VACUUM" in content

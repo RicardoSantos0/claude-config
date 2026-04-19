@@ -74,7 +74,9 @@ mas db migrate-postgres
 # Project lifecycle
 mas init    <slug-or-id>               # Initialize new project
 mas init    --mode=lite <slug>         # Lite mode: 3 phases, no consultation
+mas doctor                             # Runtime diagnostics
 mas status  <project-id>              # Current phase [lite], owner, pending handoffs
+mas resume  <project-id>              # Resume summary + next action
 mas state   <project-id>              # Full shared state dump
 mas pending <project-id>              # Unresolved handoffs
 mas snapshot <project-id>             # Snapshot state at current phase
@@ -87,8 +89,7 @@ pytest mas/tests/unit/                # Unit tests only
 pytest mas/tests/integration/         # Integration tests only
 ```
 
-Resume across sessions is handled through the sibling Codex MAS control plane
-via the `mas-resume` skill.
+Resume across sessions is local to this repository via `/resume-mas <project-id>`.
 
 ---
 

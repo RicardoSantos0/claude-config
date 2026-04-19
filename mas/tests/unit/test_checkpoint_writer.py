@@ -129,8 +129,8 @@ class TestCheckpointGeneration:
         project_id, _, _ = tmp_project
         cw.write()
         content = (cw.project_dir / "CHECKPOINT.md").read_text(encoding="utf-8")
-        assert "mas-resume" in content
-        assert "Codex MAS control plane" in content
+        assert f"/resume-mas {project_id}" in content
+        assert "shared_state.yaml" in content
         assert project_id in content
 
     def test_contains_brief_summary(self, cw):

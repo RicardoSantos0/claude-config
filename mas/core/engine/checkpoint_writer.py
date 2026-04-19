@@ -32,11 +32,6 @@ try:
 except ImportError:
     _wire_decoder = None  # type: ignore
 
-try:
-    from core.runtime_config import get_control_plane_config as _get_control_plane_config
-except ImportError:
-    _get_control_plane_config = None  # type: ignore
-
 ROOT = Path(__file__).parent.parent.parent   # mas/
 
 
@@ -220,24 +215,19 @@ class CheckpointWriter:
             ]
 
         # Resume instructions
-        control_plane = _get_control_plane_config() if _get_control_plane_config else {}
-        codex_root = control_plane.get("codex_mas_root", ROOT.parent.parent / "codex-mas")
-        resume_skill = control_plane.get("resume_skill", "mas-resume")
         lines += [
             "---",
             "",
             "## How to Resume",
             "",
-            f"Resume this project from the Codex MAS control plane at `{codex_root}`.",
-            "",
-            f"Use the `{resume_skill}` skill with project ID `{project_id}`.",
+            f"/resume-mas {project_id}",
             "",
             "```bash",
             f"uv run mas status {project_id}",
             f"uv run mas pending {project_id}",
             "```",
             "",
-            "_Source of truth remains this project's shared_state.yaml in claude-config._",
+            "_Source of truth is this project's shared_state.yaml in this repository._",
             "",
         ]
 

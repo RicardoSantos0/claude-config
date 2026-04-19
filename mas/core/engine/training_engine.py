@@ -127,7 +127,7 @@ class TrainingEngine:
         for m in report_data.get("project_metrics", []):
             score = float(m.get("score", 100))
             metric = m.get("metric", "unknown")
-            # D2: skip not_applicable metrics (dry-run projects)
+            # D2: skip not_applicable metrics (projects without live execution evidence)
             if m.get("mode") == "not_applicable":
                 continue
             if score < LOW_THRESHOLD:

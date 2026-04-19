@@ -115,11 +115,6 @@ storage:
     host: ""
     port: 8000
 
-control_plane:
-  provider: "codex-mas"
-  codex_mas_root: "../codex-mas"
-  resume_skill: "mas-resume"
-
 # --- AUDIT ---
 audit:
   enabled: true

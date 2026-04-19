@@ -4,6 +4,51 @@ All notable changes to this repository are documented here.
 
 ---
 
+## [2026-04-19] SQL-first migration, autonomous resume flow, live-only execution
+
+### Changes
+
+**Live-only runtime (dry-run removed):**
+- **`mas/core/engine/agent_runner.py`** now enforces live execution; dry-run calls return a non-retryable error instead of simulated output.
+- **`mas/core/cli.py`** removed `mas run --dry-run`; `mas run` now fails fast if `ANTHROPIC_API_KEY` is not available.
+- **`mas/core/cli.py`** removed `mas db migrate-graph --dry-run`; graph migration now always executes as an idempotent write.
+- **`mas/core/engine/orchestration_loop.py`** no longer dispatches dry-run calls and now treats non-retryable execution failures as immediate stops.
+
+**SQL + PostgreSQL/ChromaDB transition path:**
+- Added **`mas/core/runtime_config.py`** for backend/control-plane selection.
+- Added adapters:
+  - **`mas/core/adapters/postgres_store.py`**
+  - **`mas/core/adapters/sqlite_shared_state.py`**
+  - **`mas/core/adapters/__init__.py`**
+- **`mas/core/utils/log_helpers.py`** and **`mas/core/db.py`** now route event/query operations by configured backend and expose shared-state SQL helpers.
+- New CLI command: **`mas db migrate-postgres`** in **`mas/core/cli.py`** for SQLite→PostgreSQL migration.
+- **`mas/core/engine/shared_state_manager.py`** now upserts shared state into SQL while preserving YAML project files.
+
+**Graph memory deprecation + policy alignment:**
+- **`mas/data/semantic_stub.json`** removed.
+- **`mas/core/engine/graph_memory.py`** now uses SQLite graph tables only (YAML graph persistence/fallback removed).
+- **`mas/core/engine/prompt_assembler.py`** now prefers ChromaDB context (when enabled), then SQL graph context.
+- **`mas/core/engine/metrics_engine.py`** marks `global_graph_contribution` as `not_applicable` (deprecated metric).
+- **`mas/policies/evaluation_policy.yaml`** and **`mas/policies/governance_policy.yaml`** updated to deprecate graph-contribution closure gating.
+
+**Autonomous resume flow (local MAS):**
+- **`mas/core/engine/checkpoint_writer.py`** and **`mas/foundation/checkpoint_format.md`** now point resume instructions to local `/resume-mas` + `mas status` / `mas pending` verification.
+- Added config surface in **`mas/system_config.yaml`** + **`.env.example`** for:
+  - database provider/target/postgres URL
+  - vector provider/enabled/persist path
+- **`pyproject.toml`** adds optional dependency groups:
+  - `postgres` (`psycopg[binary]`)
+  - `vector` (`chromadb`)
+
+**Cleanup + test realignment:**
+- Deleted **`mas/tests/unit/test_dry_live_accounting.py`**.
+- Added **`mas/tests/unit/test_runtime_config.py`**.
+- Added **`mas/tests/conftest.py`** to quarantine deprecated graph-memory test modules.
+- Updated unit tests across runner/loop/metrics/token/checkpoint paths to align with live-only + SQL-first behavior.
+- **`mas/core/engine/audit_logger.py`** now rotates oversized `audit.log` to `audit.log.bak`.
+
+---
+
 ## [2026-04-16] proj-007 trainer proposals — Decision quality, phase docs, graph closure, ACL
 
 ### Changes (implementing proj-007 evaluation proposals)

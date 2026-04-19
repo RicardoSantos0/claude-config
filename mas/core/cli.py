@@ -5,6 +5,8 @@ Entry point: uv run mas <command>
 Commands
 --------
   init      Create and initialize a new project
+  doctor    Run runtime and environment diagnostics
+  resume    Resume a project from checkpoint/state
   status    Show project status and workflow state
   state     Read a value from shared state
   pending   List pending handoffs
@@ -13,6 +15,7 @@ Commands
 """
 
 import re
+import os
 import sys
 from pathlib import Path
 from datetime import datetime, timezone
@@ -91,6 +94,53 @@ def _load_state(project_id: str) -> dict:
     return sm.load()
 
 
+def _handoff_acceptance_status(handoff: dict) -> str:
+    """Read handoff acceptance status across expanded and compact variants."""
+    acceptance = handoff.get("acceptance")
+    if isinstance(acceptance, dict):
+        status = acceptance.get("status")
+        if isinstance(status, str) and status:
+            return status
+    compact = handoff.get("acc")
+    if isinstance(compact, str) and compact:
+        return compact
+    status = handoff.get("status")
+    if isinstance(status, str):
+        return status
+    return ""
+
+
+def _pending_handoffs_from_state(state: dict) -> list[dict]:
+    wf = state.get("workflow", {})
+    history = wf.get("handoff_history", [])
+    return [h for h in history if _handoff_acceptance_status(h) == "pending"]
+
+
+def _assemble_prompt(project_id: str, agent_id: str, state: dict) -> str:
+    agents_dir = ROOT.parent / "agents"
+    from core.engine.prompt_assembler import PromptAssembler
+    assembler = PromptAssembler(agents_dir=agents_dir)
+    try:
+        return assembler.assemble(agent_id, state)
+    except FileNotFoundError:
+        click.echo(f"[error] Agent template not found for '{agent_id}' in {agents_dir}", err=True)
+        sys.exit(1)
+
+
+def _emit_prompt(project_id: str, agent_id: str, assembled: str) -> None:
+    header = f"# Agent: {agent_id}  |  Project: {project_id}\n# Prompt length: {len(assembled)} chars\n#" + "-" * 60
+    out = sys.stdout.buffer if hasattr(sys.stdout, "buffer") else sys.stdout
+    out.write((header + "\n" + assembled + "\n").encode("utf-8", errors="replace"))
+
+
+def _resolve_sqlite_path(db_url: str) -> Path:
+    raw = db_url.replace("sqlite:///", "", 1)
+    p = Path(raw)
+    if not p.is_absolute():
+        p = (ROOT.parent / p).resolve()
+    return p
+
+
 # ---------------------------------------------------------------------------
 # CLI group
 # ---------------------------------------------------------------------------
@@ -167,6 +217,181 @@ def init(name_or_id: str, request_id: str, mode: str):
 
 
 # ---------------------------------------------------------------------------
+# mas doctor
+# ---------------------------------------------------------------------------
+
+@main.command()
+def doctor():
+    """Run runtime and environment diagnostics for MAS CLI usage."""
+    checks: list[tuple[str, str, str]] = []
+
+    def add(status: str, name: str, detail: str) -> None:
+        checks.append((status, name, detail))
+
+    # API key is optional for manual Claude Code flow, required for `mas run`.
+    if os.getenv("ANTHROPIC_API_KEY"):
+        add("ok", "api_key", "ANTHROPIC_API_KEY detected")
+    else:
+        add("warn", "api_key", "ANTHROPIC_API_KEY missing (required for `mas run`, optional for manual `mas prompt` flow)")
+
+    env_path = ROOT.parent / ".env"
+    if env_path.exists():
+        add("ok", "env_file", f"Found {env_path}")
+    else:
+        add("warn", "env_file", f"Missing {env_path}; copy from .env.example if needed")
+
+    # Required paths for CLI/project flow.
+    projects_dir = _get_projects_dir()
+    required_paths = [
+        ("projects_dir", projects_dir),
+        ("policies_dir", ROOT / "policies"),
+        ("templates_dir", ROOT / "templates"),
+        ("foundation_dir", ROOT / "foundation"),
+        ("agents_dir", ROOT.parent / "agents"),
+    ]
+    for name, path in required_paths:
+        if path.exists() and path.is_dir():
+            add("ok", name, str(path))
+        else:
+            add("fail", name, f"Missing required directory: {path}")
+
+    master_template = ROOT.parent / "agents" / "master_orchestrator.md"
+    if master_template.exists():
+        add("ok", "master_template", str(master_template))
+    else:
+        add("fail", "master_template", f"Missing required agent template: {master_template}")
+
+    # Backend checks
+    try:
+        from core.runtime_config import get_database_backend, get_vector_backend
+        db_backend = get_database_backend()
+        vector_backend = get_vector_backend()
+    except Exception as exc:
+        add("fail", "runtime_config", str(exc))
+        db_backend = {"active_provider": "sqlite", "url": "sqlite:///mas/data/episodic.db"}
+        vector_backend = {"enabled": False, "provider": "chromadb"}
+
+    try:
+        from core.utils.log_helpers import init_db
+        provider = db_backend.get("active_provider")
+        url = db_backend.get("url", "")
+        if provider == "sqlite":
+            db_path = _resolve_sqlite_path(url)
+            init_db(db_path=db_path)
+            add("ok", "database_backend", f"sqlite ready at {db_path}")
+        elif provider == "postgresql":
+            from core.adapters import postgres_store
+            with postgres_store.connect(url) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT 1")
+                    cur.fetchone()
+            add("ok", "database_backend", "postgresql reachable")
+        else:
+            add("warn", "database_backend", f"Unknown provider '{provider}'")
+    except Exception as exc:
+        add("fail", "database_backend", str(exc))
+
+    try:
+        provider = vector_backend.get("provider")
+        enabled = bool(vector_backend.get("enabled"))
+        if not enabled:
+            add("ok", "vector_backend", "disabled")
+        elif provider != "chromadb":
+            add("warn", "vector_backend", f"enabled with unsupported provider '{provider}'")
+        else:
+            import chromadb  # type: ignore
+            host = vector_backend.get("host")
+            if host:
+                client = chromadb.HttpClient(host=host, port=vector_backend.get("port") or 8000)
+                client.list_collections()
+                add("ok", "vector_backend", f"chromadb http reachable at {host}:{vector_backend.get('port') or 8000}")
+            else:
+                persist = Path(vector_backend.get("persist_directory"))
+                persist.mkdir(parents=True, exist_ok=True)
+                client = chromadb.PersistentClient(path=str(persist))
+                client.get_or_create_collection(vector_backend.get("collection", "mas-agent-context"))
+                add("ok", "vector_backend", f"chromadb persistent store ready at {persist}")
+    except Exception as exc:
+        add("fail", "vector_backend", str(exc))
+
+    status_icons = {"ok": "[ok]", "warn": "[warn]", "fail": "[fail]"}
+    ok_count = warn_count = fail_count = 0
+    click.echo("\nMAS Doctor")
+    for status, name, detail in checks:
+        if status == "ok":
+            ok_count += 1
+        elif status == "warn":
+            warn_count += 1
+        else:
+            fail_count += 1
+        click.echo(f"{status_icons.get(status, '[?]')} {name}: {detail}")
+
+    click.echo(f"\nSummary: ok={ok_count} warn={warn_count} fail={fail_count}")
+    if fail_count:
+        sys.exit(1)
+
+
+# ---------------------------------------------------------------------------
+# mas resume
+# ---------------------------------------------------------------------------
+
+@main.command()
+@click.argument("project_id")
+@click.option("--show-prompt", is_flag=True, default=False,
+              help="Print the assembled prompt for the next suggested agent.")
+def resume(project_id: str, show_prompt: bool):
+    """Resume a project from checkpoint + shared state with a concrete next step."""
+    project_dir = _require_project(project_id)
+    checkpoint_path = project_dir / "CHECKPOINT.md"
+    generated_checkpoint = False
+    if not checkpoint_path.exists():
+        try:
+            from core.engine.checkpoint_writer import CheckpointWriter
+            checkpoint_path = CheckpointWriter(project_id).write()
+            generated_checkpoint = True
+        except Exception as exc:
+            click.echo(f"[warn] Could not generate checkpoint: {exc}")
+
+    state = _load_state(project_id)
+    ci = state.get("core_identity", {})
+    phase = ci.get("current_phase", "—")
+    status = ci.get("status", "—")
+    pending_handoffs = _pending_handoffs_from_state(state)
+
+    click.echo(f"\n[mas resume] {project_id}")
+    click.echo(f"  checkpoint: {checkpoint_path}")
+    if generated_checkpoint:
+        click.echo("  checkpoint generated from current shared state")
+    click.echo(f"  status    : {status}")
+    click.echo(f"  phase     : {phase}")
+    click.echo(f"  pending   : {len(pending_handoffs)}")
+
+    if pending_handoffs:
+        click.echo("\nPending handoffs:")
+        for h in pending_handoffs:
+            handoff_id = h.get("handoff_id") or h.get("id") or "unknown"
+            from_agent = h.get("from_agent") or h.get("from") or "—"
+            to_agent = h.get("to_agent") or h.get("to") or "—"
+            task_description = h.get("task_description") or h.get("task") or ""
+            click.echo(f"  [{handoff_id}] {from_agent} → {to_agent} ({task_description})")
+        click.echo("\nNext action: resolve pending handoff(s) before progressing phases.")
+        return
+
+    if status == "closed":
+        click.echo("\nNext action: project is already closed; no further orchestration required.")
+        return
+
+    from core.engine.orchestration_loop import OrchestrationLoop, LoopConfig
+    loop = OrchestrationLoop(LoopConfig(project_id=project_id))
+    next_agent = loop._determine_next_agent(state)
+    click.echo(f"\nNext action: invoke {next_agent}.")
+
+    if show_prompt:
+        assembled = _assemble_prompt(project_id, next_agent, state)
+        _emit_prompt(project_id, next_agent, assembled)
+
+
+# ---------------------------------------------------------------------------
 # mas status
 # ---------------------------------------------------------------------------
 
@@ -187,13 +412,10 @@ def status(project_id: str):
     phase = ci.get("current_phase", "—")
     owner = wf.get("current_owner", "—")
     proj_status = ci.get("status", "—")
-    updated = meta.get("updated_at", "—")
+    updated = ci.get("updated_at") or meta.get("updated_at", "—")
     proj_mode = wf.get("mode", "standard")
 
-    pending_handoffs = [
-        h for h in wf.get("handoff_history", [])
-        if h.get("status") == "pending"
-    ]
+    pending_handoffs = _pending_handoffs_from_state(state)
     completed_phases = wf.get("completed_phases", [])
     violations = state.get("_meta", {}).get("governance_violations", [])
 
@@ -236,10 +458,14 @@ def status(project_id: str):
     if pending_handoffs:
         click.echo("\nPending handoffs:")
         for h in pending_handoffs:
+            handoff_id = h.get("handoff_id") or h.get("id") or "unknown"
+            from_agent = h.get("from_agent") or h.get("from") or "—"
+            to_agent = h.get("to_agent") or h.get("to") or "—"
+            task_description = h.get("task_description") or h.get("task") or ""
             click.echo(
-                f"  [{h['handoff_id']}] "
-                f"{h['from_agent']} → {h['to_agent']} "
-                f"({h.get('task_description', '')})"
+                f"  [{handoff_id}] "
+                f"{from_agent} → {to_agent} "
+                f"({task_description})"
             )
 
 
@@ -446,7 +672,7 @@ def tokens(project_id: str):
 
     if live_calls + dry_calls > 0:
         dry_pct = dry_calls / (live_calls + dry_calls) * 100
-        click.echo(f"  Dry-run ratio    : {dry_pct:.1f}%")
+        click.echo(f"  Historical dry-call ratio : {dry_pct:.1f}%")
 
 
 # ---------------------------------------------------------------------------
@@ -511,9 +737,7 @@ def migrate_postgres():
 # ---------------------------------------------------------------------------
 
 @db.command("migrate-graph")
-@click.option("--dry-run", is_flag=True, default=False,
-              help="Show what would be migrated without writing to SQLite.")
-def migrate_graph(dry_run: bool):
+def migrate_graph():
     """One-time import of legacy global_graph.yaml into agent_graph SQLite tables.
 
     GraphStore now writes to SQLite directly on every save() — this command is
@@ -525,7 +749,6 @@ def migrate_graph(dry_run: bool):
 
     Example:
         mas db migrate-graph
-        mas db migrate-graph --dry-run
     """
     import yaml as _yaml
     from core.utils.log_helpers import _get_connection, DB_PATH
@@ -544,10 +767,6 @@ def migrate_graph(dry_run: bool):
 
     nodes = graph_data.get("nodes", [])
     edges = graph_data.get("edges", [])
-
-    if dry_run:
-        click.echo(f"[dry-run] Would migrate {len(nodes)} nodes, {len(edges)} edges.")
-        return
 
     conn = _get_connection(DB_PATH)
     try:
@@ -714,21 +933,8 @@ def prompt(project_id: str, agent_id: str | None):
         loop = OrchestrationLoop(dummy)
         agent_id = loop._determine_next_agent(state)
 
-    agents_dir = ROOT.parent / "agents"
-    from core.engine.prompt_assembler import PromptAssembler
-    assembler = PromptAssembler(agents_dir=agents_dir)
-
-    try:
-        assembled = assembler.assemble(agent_id, state)
-    except FileNotFoundError:
-        click.echo(f"[error] Agent template not found for '{agent_id}' in {agents_dir}", err=True)
-        sys.exit(1)
-
-    header = f"# Agent: {agent_id}  |  Project: {project_id}\n# Prompt length: {len(assembled)} chars\n#" + "-" * 60
-    # Write as UTF-8 bytes directly to avoid Windows cp1252 encoding errors
-    import sys as _sys
-    out = _sys.stdout.buffer if hasattr(_sys.stdout, "buffer") else _sys.stdout
-    out.write((header + "\n" + assembled + "\n").encode("utf-8", errors="replace"))
+    assembled = _assemble_prompt(project_id, agent_id, state)
+    _emit_prompt(project_id, agent_id, assembled)
 
 
 # ---------------------------------------------------------------------------

@@ -112,8 +112,8 @@ Present only when `spawning.spawned_agents` is non-empty.
 
 ### 10. How to Resume
 
-Always the last section. Must point resume control at the Codex MAS `mas-resume`
-skill and include the manual `mas status` / `mas pending` checks in this repo.
+Always the last section. Must include `/resume-mas {project_id}` and the manual
+`mas status` / `mas pending` verification commands.
 
 ---
 
@@ -129,7 +129,7 @@ skill and include the manual `mas status` / `mas pending` checks in this repo.
 
 ## Reading a Checkpoint on Resume
 
-When the Codex MAS `mas-resume` skill is invoked for `{project_id}`:
+When `/resume-mas {project_id}` is invoked:
 
 1. Read `CHECKPOINT.md` for narrative context
 2. Verify with `uv run mas status {project_id}` — ground truth is always shared state

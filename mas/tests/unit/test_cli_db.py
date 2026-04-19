@@ -2,7 +2,7 @@
 Tests for `mas db` CLI subgroup (D2, D4).
 AC3: mas db rebuild-fts rebuilds FTS5 index without errors.
 AC6: agent_graph and agent_graph_edges tables exist after init_db.
-AC7: mas db migrate-graph --dry-run reports counts without writing.
+AC7: mas db migrate-graph writes graph rows idempotently.
 """
 
 import json
@@ -114,15 +114,12 @@ class TestMigrateGraph:
             ],
         }
 
-    def _run_migration(self, db, graph_data, dry_run=False):
+    def _run_migration(self, db, graph_data):
         """Run the migration logic directly (same logic as CLI migrate_graph)."""
         import json as _json
         conn = _get_connection(db)
         nodes = graph_data.get("nodes", [])
         edges = graph_data.get("edges", [])
-
-        if dry_run:
-            return len(nodes), len(edges)
 
         node_count = 0
         for node in nodes:
@@ -154,18 +151,6 @@ class TestMigrateGraph:
         conn.commit()
         conn.close()
         return node_count, edge_count
-
-    def test_migrate_graph_dry_run_returns_counts(self, tmp_db):
-        data = self._make_graph_data()
-        node_count, edge_count = self._run_migration(tmp_db, data, dry_run=True)
-        assert node_count == 2
-        assert edge_count == 1
-
-        # Nothing should be written in dry-run
-        conn = _get_connection(tmp_db)
-        count = conn.execute("SELECT COUNT(*) FROM agent_graph").fetchone()[0]
-        conn.close()
-        assert count == 0
 
     def test_migrate_graph_writes_nodes_and_edges(self, tmp_db):
         data = self._make_graph_data()

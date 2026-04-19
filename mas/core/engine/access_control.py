@@ -38,7 +38,7 @@ ACCESS_CONTROL: dict[str, dict] = {
 
     # === PROJECT DEFINITION ===
     # master_orchestrator is co-owner on all project_definition fields:
-    # it coordinates offline/dry-run projects and acts as stand-in orchestrator
+    # it coordinates offline/no-live-execution projects and acts as stand-in orchestrator
     # when inquirer_agent or product_manager_agent haven't run yet.
     "project_definition.original_brief":          {"write": ["inquirer_agent", "master_orchestrator"],         "mutability": "immutable_after_approval"},
     "project_definition.brief_summary":          {"write": ["inquirer_agent", "master_orchestrator"],         "mutability": "immutable_after_approval"},

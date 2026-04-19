@@ -66,7 +66,9 @@ Then use bare commands:
 ```bash
 mas init session-scheduler          # Standard project (9 phases)
 mas init --mode=lite quick-fix      # Lite project (3 phases, no consultation)
+mas doctor                          # Runtime diagnostics
 mas status <project-id>             # Check project phase
+mas resume <project-id>             # Resume guidance from checkpoint + state
 mas roster                          # List all agents
 pytest mas/tests/                   # Run test suite
 ```
@@ -104,7 +106,7 @@ claude-config/
 │   └── _utilities.md
 │
 ├── commands/              # Custom slash commands
-│   └── resume-mas.md      # Compatibility bridge to Codex MAS resume
+│   └── resume-mas.md      # Resume a paused MAS project
 │
 ├── skills/                # Skill packages
 │   ├── frontend-design/
@@ -372,7 +374,7 @@ Markdown files in `mas/domains/` auto-injected into `domain_expert`:
 
 | Command | Description |
 |---------|-------------|
-| `resume-mas` | Compatibility bridge into the Codex MAS `mas-resume` skill |
+| `resume-mas` | Resume a paused MAS project from its checkpoint |
 
 ---
 
@@ -383,7 +385,9 @@ Activate the venv first (`...\.venv\Scripts\activate`), then:
 ```bash
 mas init <slug>                  # Initialize standard project (9 phases)
 mas init --mode=lite <slug>      # Initialize lite project (3 phases, no consultation)
+mas doctor                       # Runtime/env diagnostics (DB, vector, templates, API key)
 mas status <project-id>          # Current phase [lite], owner, pending handoffs
+mas resume <project-id>          # Resume summary + next action
 mas pending <project-id>         # Unresolved handoffs
 mas snapshot <project-id>        # Snapshot state at current phase
 mas roster                       # All registered agents

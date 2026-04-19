@@ -1,6 +1,5 @@
 """
-Runtime configuration helpers for live execution, control-plane routing,
-and SQL/vector backend selection.
+Runtime configuration helpers for live execution and SQL/vector backend selection.
 """
 
 from __future__ import annotations
@@ -34,21 +33,6 @@ def _resolve_path(raw_path: str | None, *, base: Path) -> Path | None:
     if not candidate.is_absolute():
         candidate = (base / candidate).resolve()
     return candidate
-
-
-def get_control_plane_config() -> dict[str, Any]:
-    cfg = load_config()
-    section = cfg.get("control_plane", {})
-    default_root = (REPO_ROOT.parent / "codex-mas").resolve()
-    codex_root = _resolve_path(
-        _coalesce(os.getenv("MAS_CODEX_MAS_ROOT"), section.get("codex_mas_root"), str(default_root)),
-        base=REPO_ROOT,
-    ) or default_root
-    return {
-        "provider": _coalesce(os.getenv("MAS_CONTROL_PLANE_PROVIDER"), section.get("provider"), "codex-mas"),
-        "codex_mas_root": codex_root,
-        "resume_skill": _coalesce(os.getenv("MAS_CODEX_RESUME_SKILL"), section.get("resume_skill"), "mas-resume"),
-    }
 
 
 def get_database_backend() -> dict[str, Any]:
