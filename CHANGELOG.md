@@ -4,6 +4,38 @@ All notable changes to this repository are documented here.
 
 ---
 
+## [2026-04-20b] proj-20260420-001: notion-zotero platform — spawn packages complete
+
+### New MAS Project
+
+**`proj-20260420-001-notion-zotero-platform`** — platform evolution for `Notion_Zotero` PhD package:
+- All pre-execution phases completed: intake, specification, planning, capability discovery
+- Full consultant panel review (all 5 advisors) → 10 adjustments applied and recorded in `d-consult-001`
+- 4 delivery agent spawn packages written and registered in roster
+
+### New Agent Packages (`agents/`)
+
+- **`canonical_engineer.md`** — T3_provisional, Sprint 1: schema hardening (Pydantic v2 strict), canonical field registry (`schema_registry.yaml`), field ownership manifest, importer semantics rewrite, template library, domain pack refactoring, legacy decoupling
+- **`analysis_engineer.md`** — T3_provisional, Sprint 2: flattening service, 5 named CLI reports, QA reports, migration audit (>=5 categories), package ergonomics; blocked on Sprint 1 schema freeze gate
+- **`integration_engineer.md`** — T3_provisional, Sprint 3: Notion/Zotero read connectors (API-key gated, read-only), field ownership enforcement, dry-run diff engine, dry-run writers, sync design + write-log design docs
+- **`reliability_engineer.md`** — T3_provisional, all sprints: golden fixtures, CI lint guards (legacy path + domain pack import), write-path interception tests at transport layer, >=80% coverage gates, packaging cleanup, mode docs
+
+### Key Panel Adjustments Applied
+
+- Sprint 4 collapsed into Sprint 3 exit artifacts (sync_design.md + write_log_design.md)
+- Schema freeze gate: human sign-off required before Sprint 2
+- Write-path interception must assert at HTTP transport layer, not flag check
+- Reports capped at 5 named types (no speculative scope)
+- Example notebooks deferred post-validation
+- `schema_registry.yaml` + field ownership manifest added as Sprint 1 deliverables
+- Domain pack lint guard added to CI
+
+### Roster
+
+4 new agents registered in `mas/roster/registry_index.yaml` with `status: pending_activation`.
+
+---
+
 ## [2026-04-20] Parallel agent dispatch, HR DeploymentPlan routing, master-owned consultant panel
 
 ### Orchestration Engine
