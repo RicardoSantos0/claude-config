@@ -99,3 +99,16 @@ handoff_protocol:
     - "A live handoff record MUST be created and accepted BEFORE work on any phase begins — retroactive handoffs filed after-the-fact are a record integrity violation and will penalize the project score"
     - "When delegating a phase with multiple tasks, batch all tasks into a single handoff to minimize overhead — one handoff per phase, not one per task"
     - "Retroactive handoffs are permitted for recovery only; they MUST be flagged with retroactive: true in the payload and logged as a quality finding"
+
+  deployment_plan_routing:
+    description: >
+      After HR returns a DeploymentPlan, handoffs to execution agents MUST be
+      sourced from that plan. The DeploymentPlan is the authorized routing table
+      for the capability_discovery → execution transition.
+    rules:
+      - "Handoff to_agent MUST match an entry in the HR DeploymentPlan unless a logged override exists"
+      - "Handoff task_description SHOULD use the plan entry's task field as its basis"
+      - "Handoff payload MUST include hr_suggested_params from the plan entry when present"
+      - "Each plan entry produces exactly one handoff — do not split or merge plan entries"
+      - "Gap-certified entries do NOT produce handoffs; they produce spawn decisions or deferrals"
+      - "After all ready entries are dispatched, Master clears the pending deployment plan"

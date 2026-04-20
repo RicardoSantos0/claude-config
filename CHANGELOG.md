@@ -4,6 +4,45 @@ All notable changes to this repository are documented here.
 
 ---
 
+## [2026-04-20] Parallel agent dispatch, HR DeploymentPlan routing, master-owned consultant panel
+
+### Orchestration Engine
+
+**Parallel agent dispatch** (`mas/core/engine/orchestration_loop.py`, `response_parser.py`):
+- Main loop now has three branches: master (no pending handoffs), single sub-agent, and **parallel** (multiple pending handoffs dispatched concurrently via `concurrent.futures.ThreadPoolExecutor`).
+- `_determine_pending_agents(state) -> list[str]` replaces single-agent lookup — returns all agents with pending handoffs, enabling true concurrent execution.
+- `_dispatch_agents_parallel(agent_ids, state)` fans out to a thread pool, collects results in dispatch order, then accepts all handoffs sequentially.
+- `ParsedResponse` gains `parallel_agents: list[str]` extracted from `next_agents` wire field. Master emits `next_agents: [a, b, c]` to trigger concurrent dispatch in one step.
+- `_execute_master_actions` handles both single (`next_agent`) and multi (`next_agents`) delegation paths; each parallel agent gets its own handoff with HR-enriched payload.
+- `_build_handoff_payload` gains `target_agent=` parameter for per-agent HR param lookup in parallel case.
+
+**Master-owned consultant panel** (`mas/core/engine/orchestration_loop.py`):
+- Removed hardcoded default consultant list `[risk_advisor, quality_advisor, devils_advocate, domain_expert, efficiency_advisor]` from the orchestration engine.
+- Master Orchestrator must now explicitly name which consultants to invoke via `consultation_trigger.consultants`. The engine adds nothing — master owns panel composition entirely.
+
+### Agent Definitions
+
+**`agents/hr_agent.md`**:
+- DeploymentPlan entry schema gains `parallel: bool` and `parallel_group: str | null` fields.
+- Guidance added: mark independent entries with the same `parallel_group` to signal concurrent dispatchability to Master.
+
+**`agents/master_orchestrator.md`**:
+- New section: **Capability Discovery → Execution Flow** diagram updated with parallel group dispatch path.
+- New section: **Consultant Panel — Composition Rules** — documents how to select consultants by decision type, with wire block example. No defaults; master decides.
+- Step 2 of HR DeploymentPlan consumption documents `next_agents` wire field for parallel groups.
+
+### Governance & Specs
+
+- **`mas/policies/governance_policy.yaml`**: New `consultant_panel_policy` section — master must specify `consultants` list; empty list not permitted; full panel reserved for critical decisions.
+- **`mas/foundation/wire_protocol_spec.yaml`**: Added `next_agents` and `next_agent` to field_map; new `master_delegation_parallel` message schema with example; `handoff_payload` documents `next_agents` vs `next_agent` mutual exclusivity; `capability_assessment` entry schema includes `parallel` and `parallel_group` with parallel example.
+- **`mas/foundation/shared_state_schema.yaml`**: `deployment_plan_entry_schema` gains `parallel` and `parallel_group` fields.
+
+### Tests
+
+- All 1013 existing tests pass, 0 regressions.
+
+---
+
 ## [2026-04-19] Follow-through hardening: doctor/resume CLI, status fix, live-evidence wording
 
 ### Changes

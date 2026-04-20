@@ -20,6 +20,7 @@ Usage:
 
 from __future__ import annotations
 
+import concurrent.futures
 import dataclasses
 import subprocess
 import sys
@@ -109,6 +110,7 @@ class OrchestrationLoop:
         self.config = config
         self._pending_consultation_synthesis: Any = None
         self._pending_grounded_context: str = ""
+        self._pending_deployment_plan: list[dict] = []   # set when HR returns a deploy plan
         self._agent_error_counts: dict[str, int] = {}
         # Lazy-loaded helpers
         self._runner = None
@@ -134,50 +136,88 @@ class OrchestrationLoop:
                     return LoopResult(step, StopReason.PROJECT_CLOSED, last_agent, last_phase,
                                       "Project is already closed.")
 
-                agent_id = self._determine_next_agent(state)
-                last_agent = agent_id
+                pending_agents = self._determine_pending_agents(state)
 
-                self._print_step(step + 1, agent_id, last_phase)
+                if not pending_agents:
+                    # ── Master's turn ──────────────────────────────────────────
+                    agent_id = "master_orchestrator"
+                    last_agent = agent_id
+                    self._print_step(step + 1, agent_id, last_phase)
 
-                # Dispatch agent
-                agent_resp = self._dispatch_agent(agent_id, state)
-                parsed = self._parse_response(agent_resp.raw_text)
+                    agent_resp = self._dispatch_agent(agent_id, state)
+                    parsed = self._parse_response(agent_resp.raw_text)
 
-                # Print result summary
-                tok_tag = f" tok={agent_resp.tokens_used}" if agent_resp.tokens_used else ""
-                status_tag = f" [{parsed.status}]" if parsed.status else ""
-                action_tag = f" -> {parsed.next_action}" if parsed.next_action not in ("", "wait") else ""
-                agent_tag = f":{parsed.next_agent}" if parsed.next_agent else ""
-                print(f"  tokens={agent_resp.tokens_used}"
-                      f"{status_tag}{action_tag}{agent_tag}")
+                    status_tag = f" [{parsed.status}]" if parsed.status else ""
+                    action_tag = f" -> {parsed.next_action}" if parsed.next_action not in ("", "wait") else ""
+                    agent_tag = (f":{parsed.next_agents_label}" if parsed.parallel_agents
+                                 else f":{parsed.next_agent}" if parsed.next_agent else "")
+                    print(f"  tokens={agent_resp.tokens_used}{status_tag}{action_tag}{agent_tag}")
 
-                # Log any parse warnings
-                for err in parsed.parse_errors:
-                    print(f"  [parse_warn] {err}")
+                    for err in parsed.parse_errors:
+                        print(f"  [parse_warn] {err}")
 
-                # Handle KNOWLEDGE_REQUEST before acting (so grounded_context is
-                # available for the NEXT step's prompt)
-                if parsed.knowledge_request:
-                    answer = self._handle_knowledge_request(parsed.knowledge_request)
-                    self._pending_grounded_context = answer
-                    print(f"  [notebooklm] grounded context injected for next step")
+                    if parsed.knowledge_request:
+                        answer = self._handle_knowledge_request(parsed.knowledge_request)
+                        self._pending_grounded_context = answer
+                        print(f"  [notebooklm] grounded context injected for next step")
 
-                if agent_id != "master_orchestrator" and parsed.next_action == "escalate":
-                    raise _EscalationRequired(
-                        parsed.reasoning or f"Agent '{agent_id}' requested escalation."
-                    )
-
-                # Execute master or sub-agent actions
-                if agent_id == "master_orchestrator":
                     stop = self._execute_master_actions(parsed, state)
                     if stop:
                         return stop
-                else:
-                    # Sub-agent completed — accept handoff and record its output
+
+                elif len(pending_agents) == 1:
+                    # ── Single sub-agent ───────────────────────────────────────
+                    agent_id = pending_agents[0]
+                    last_agent = agent_id
+                    self._print_step(step + 1, agent_id, last_phase)
+
+                    agent_resp = self._dispatch_agent(agent_id, state)
+                    parsed = self._parse_response(agent_resp.raw_text)
+
+                    status_tag = f" [{parsed.status}]" if parsed.status else ""
+                    action_tag = f" -> {parsed.next_action}" if parsed.next_action not in ("", "wait") else ""
+                    print(f"  tokens={agent_resp.tokens_used}{status_tag}{action_tag}")
+
+                    for err in parsed.parse_errors:
+                        print(f"  [parse_warn] {err}")
+
+                    if parsed.knowledge_request:
+                        answer = self._handle_knowledge_request(parsed.knowledge_request)
+                        self._pending_grounded_context = answer
+                        print(f"  [notebooklm] grounded context injected for next step")
+
+                    if parsed.next_action == "escalate":
+                        raise _EscalationRequired(
+                            parsed.reasoning or f"Agent '{agent_id}' requested escalation."
+                        )
+
                     self._accept_pending_handoff(state, agent_id, parsed)
                     self._record_subagent_output(agent_id, parsed)
 
-                # Phase boundary check
+                else:
+                    # ── Parallel sub-agents ────────────────────────────────────
+                    ts = datetime.now(timezone.utc).strftime("%H:%M:%S")
+                    print(f"[step {step + 1:>3}] {ts}  [parallel ×{len(pending_agents)}] "
+                          f"{' | '.join(pending_agents)}  phase={last_phase}")
+
+                    parallel_results = self._dispatch_agents_parallel(pending_agents, state)
+
+                    for p_id, p_resp, p_parsed in parallel_results:
+                        tok = p_resp.tokens_used or 0
+                        print(f"  [{p_id}] status={p_parsed.status} tok={tok}")
+                        for err in p_parsed.parse_errors:
+                            print(f"  [parse_warn:{p_id}] {err}")
+                        if p_parsed.next_action == "escalate":
+                            raise _EscalationRequired(
+                                p_parsed.reasoning or f"Agent '{p_id}' requested escalation."
+                            )
+                        self._accept_pending_handoff(state, p_id, p_parsed)
+                        self._record_subagent_output(p_id, p_parsed)
+
+                    if parallel_results:
+                        last_agent = parallel_results[-1][0]
+
+                # Phase boundary check (all paths)
                 new_state = self._load_state()
                 new_phase = new_state.get("core_identity", {}).get("current_phase", last_phase)
                 if new_phase != last_phase:
@@ -268,28 +308,67 @@ class OrchestrationLoop:
 
         return _AgentResponse(agent_id=canonical_agent_id, raw_text=text, tokens_used=tokens)
 
-    def _determine_next_agent(self, state: dict) -> str:
+    def _determine_pending_agents(self, state: dict) -> list[str]:
         """
-        Returns which agent should run next.
-        Pending handoff → that agent. Accepted / no handoffs → master_orchestrator.
+        Return the list of agents with pending handoffs (in handoff order).
+        Empty list means no pending handoffs → master_orchestrator's turn.
+        Parallel handoffs issued in the same master step all appear as pending.
         """
         history = state.get("workflow", {}).get("handoff_history", [])
-        if not history:
-            return "master_orchestrator"
+        pending: list[str] = []
+        seen: set[str] = set()
+        for ho in history:
+            try:
+                from core.engine.handoff_engine import HandoffEngine
+                expanded = HandoffEngine.expand(ho)
+            except Exception:
+                expanded = ho
+            if expanded.get("acceptance", {}).get("status") == "pending":
+                raw = expanded.get("to_agent", "")
+                agent_id = normalize_agent_id(raw) or raw
+                if agent_id and agent_id not in seen:
+                    pending.append(agent_id)
+                    seen.add(agent_id)
+        return pending
 
-        last = history[-1]
-        # Expand compact format if needed
-        try:
-            from core.engine.handoff_engine import HandoffEngine
-            last = HandoffEngine.expand(last)
-        except Exception:
-            pass
+    def _determine_next_agent(self, state: dict) -> str:
+        """Backwards-compat single-agent variant of _determine_pending_agents."""
+        pending = self._determine_pending_agents(state)
+        return pending[0] if pending else "master_orchestrator"
 
-        acc_status = last.get("acceptance", {}).get("status", "pending")
-        if acc_status == "pending":
-            raw_to_agent = last.get("to_agent", "master_orchestrator")
-            return normalize_agent_id(raw_to_agent) or "master_orchestrator"
-        return "master_orchestrator"
+    def _dispatch_agents_parallel(
+            self, agent_ids: list[str], state: dict,
+    ) -> list[tuple[str, "_AgentResponse", "ParsedResponse"]]:
+        """
+        Dispatch multiple agents concurrently via ThreadPoolExecutor.
+        Returns a list of (agent_id, response, parsed) in completion order.
+        """
+        results: list[tuple[str, "_AgentResponse", "ParsedResponse"]] = []
+
+        def _run(aid: str) -> tuple[str, "_AgentResponse", "ParsedResponse"]:
+            resp = self._dispatch_agent(aid, state)
+            parsed = self._parse_response(resp.raw_text)
+            return aid, resp, parsed
+
+        with concurrent.futures.ThreadPoolExecutor(
+                max_workers=len(agent_ids),
+                thread_name_prefix="mas_parallel",
+        ) as executor:
+            futures = {executor.submit(_run, aid): aid for aid in agent_ids}
+            for future in concurrent.futures.as_completed(futures):
+                aid = futures[future]
+                try:
+                    results.append(future.result())
+                except Exception as exc:
+                    print(f"  [parallel_error] {aid}: {exc}")
+                    self._agent_error_counts[aid] = (
+                        self._agent_error_counts.get(aid, 0) + 1
+                    )
+
+        # Preserve original dispatch order for deterministic post-processing
+        order = {aid: i for i, aid in enumerate(agent_ids)}
+        results.sort(key=lambda t: order.get(t[0], 999))
+        return results
 
     def _pending_handoff_context(self, agent_id: str, state: dict) -> str:
         """Return the task_description from the pending handoff for this agent."""
@@ -361,16 +440,11 @@ class OrchestrationLoop:
         if parsed.next_action == "consult" and consultation_trigger is None:
             consultation_trigger = self._default_consultation_trigger(parsed, state)
 
-        # Group aliases ("experts", "wxperts", etc.) are treated as panel consultation.
+        # Group aliases ("experts", etc.) are treated as panel consultation.
+        # Master must specify the consultants in consultation_trigger.consultants —
+        # no engine-side defaults are added.
         if parsed.next_action == "delegate" and is_consultant_panel_alias(next_agent_raw):
             consultation_trigger = consultation_trigger or self._default_consultation_trigger(parsed, state)
-            consultation_trigger.setdefault("consultants", [
-                "risk_advisor",
-                "quality_advisor",
-                "devils_advocate",
-                "domain_expert",
-                "efficiency_advisor",
-            ])
 
         if consultation_trigger and not self._pending_consultation_synthesis:
             synthesis = self._run_consultation(consultation_trigger, state)
@@ -399,18 +473,40 @@ class OrchestrationLoop:
             if new_phase == "closed":
                 print("  [graph] skipped: graph memory is deprecated; prefer SQL-backed retrieval")
 
-        # 6. Delegate to next agent
+        # 6. Delegate to next agent(s)
         if (parsed.next_action == "delegate"
-                and next_agent_id
                 and not is_consultant_panel_alias(next_agent_raw)):
-            payload = self._build_handoff_payload(parsed)
-            he.create(sm,
-                      from_agent="master_orchestrator",
-                      to_agent=next_agent_id,
-                      phase=phase,
-                      task_description=parsed.reasoning or f"Execute {phase} tasks",
-                      payload=payload)
-            print(f"  [handoff] master_orchestrator → {next_agent_id}")
+
+            if parsed.parallel_agents:
+                # Multi-agent parallel dispatch — create one handoff per agent
+                task_base = parsed.reasoning or f"Execute {phase} tasks"
+                for pa_raw in parsed.parallel_agents:
+                    pa_id = normalize_agent_id(pa_raw) or pa_raw
+                    self._check_deployment_plan_deviation(
+                        pa_id, parsed.reasoning or "", sm, now)
+                    payload = self._build_handoff_payload(parsed, target_agent=pa_raw)
+                    he.create(sm,
+                              from_agent="master_orchestrator",
+                              to_agent=pa_id,
+                              phase=phase,
+                              task_description=task_base,
+                              payload=payload)
+                    print(f"  [handoff] master_orchestrator → {pa_id} [parallel]")
+                    self._consume_deployment_plan_entry(pa_id)
+
+            elif next_agent_id:
+                # Single-agent dispatch
+                self._check_deployment_plan_deviation(
+                    next_agent_id, parsed.reasoning or "", sm, now)
+                payload = self._build_handoff_payload(parsed)
+                he.create(sm,
+                          from_agent="master_orchestrator",
+                          to_agent=next_agent_id,
+                          phase=phase,
+                          task_description=parsed.reasoning or f"Execute {phase} tasks",
+                          payload=payload)
+                print(f"  [handoff] master_orchestrator → {next_agent_id}")
+                self._consume_deployment_plan_entry(next_agent_id)
 
         return None
 
@@ -473,6 +569,23 @@ class OrchestrationLoop:
                 pass
 
         self._materialize_artifacts(parsed.artifacts, sm.project_dir, author=agent_id)
+
+        # When HR returns a deployment plan, persist it and queue it for master's next step
+        if agent_id == "hr_agent" and parsed.deployment_plan:
+            self._pending_deployment_plan = parsed.deployment_plan
+            try:
+                sm.write("hr_agent", "capability", "deployment_plan",
+                         parsed.deployment_plan)
+            except Exception:
+                # deployment_plan may not yet be a registered field — store in reuse_candidates
+                try:
+                    sm.write("hr_agent", "capability", "reuse_candidates",
+                             parsed.deployment_plan)
+                except Exception:
+                    pass
+            ready = [e for e in parsed.deployment_plan if e.get("status") == "ready"]
+            gaps  = [e for e in parsed.deployment_plan if e.get("status") == "gap_certified"]
+            print(f"  [deploy_plan] {len(ready)} ready, {len(gaps)} gap_certified")
 
     # ------------------------------------------------------------------
     # Consultation
@@ -874,10 +987,17 @@ class OrchestrationLoop:
         if self._pending_grounded_context:
             ctx["injected_grounded_context"] = self._pending_grounded_context
             self._pending_grounded_context = ""
+        if self._pending_deployment_plan:
+            # Surface HR's deployment plan so master reads and routes from it
+            ctx["injected_hr_deployment_plan"] = yaml.dump(
+                self._pending_deployment_plan, default_flow_style=False
+            )
+            # Keep the plan in memory until master has processed all entries
         return ctx or None
 
-    def _build_handoff_payload(self, parsed: "ParsedResponse") -> dict:
-        return {
+    def _build_handoff_payload(self, parsed: "ParsedResponse",
+                              target_agent: str | None = None) -> dict:
+        payload: dict = {
             "_v": "1.0",
             "s": "task:delegated",
             "summary": parsed.reasoning[:300] if parsed.reasoning else "",
@@ -887,6 +1007,66 @@ class OrchestrationLoop:
             "constraints_for_next": [],
             "shared_state_fields_modified": [],
         }
+        # Enrich payload with HR's suggested parameters when a matching plan entry exists.
+        # target_agent overrides parsed.next_agent (used in parallel dispatch).
+        agent_lookup = target_agent or parsed.next_agent
+        if self._pending_deployment_plan and agent_lookup:
+            target = normalize_agent_id(agent_lookup) or agent_lookup
+            for entry in self._pending_deployment_plan:
+                if (normalize_agent_id(entry.get("agent", "")) == target
+                        and entry.get("status") == "ready"):
+                    if entry.get("payload"):
+                        payload["hr_suggested_params"] = entry["payload"]
+                    if entry.get("note"):
+                        payload["hr_parameterization_note"] = entry["note"]
+                    break
+        return payload
+
+    def _check_deployment_plan_deviation(
+            self, next_agent_id: str, reasoning: str,
+            sm: Any, now: str) -> None:
+        """Log a governance override if master delegates to an agent not in the deployment plan."""
+        if not self._pending_deployment_plan:
+            return
+        ready_agents = {
+            normalize_agent_id(e.get("agent", "")) or e.get("agent", "")
+            for e in self._pending_deployment_plan
+            if e.get("status") == "ready"
+        }
+        if next_agent_id not in ready_agents:
+            print(f"  [deploy_override] {next_agent_id} not in HR plan "
+                  f"(plan agents: {sorted(ready_agents)})")
+            try:
+                sm.append("master_orchestrator", "decisions", "decision_log", {
+                    "decision_id":             f"override-deploy-{now[:10]}-{next_agent_id}",
+                    "decided_by":              "master_orchestrator",
+                    "value":                   f"delegate to {next_agent_id}",
+                    "override_of":             "hr_deployment_recommendation",
+                    "hr_plan_agents":          sorted(ready_agents),
+                    "rationale":               reasoning[:300] if reasoning else "no rationale provided",
+                    "recorded_at":             now,
+                    "source":                  "orchestration_loop_deviation_check",
+                })
+            except Exception:
+                pass
+
+    def _consume_deployment_plan_entry(self, agent_id: str) -> None:
+        """Remove the consumed entry from the pending deployment plan.
+        When all ready entries are consumed, clear the plan."""
+        if not self._pending_deployment_plan:
+            return
+        target = normalize_agent_id(agent_id) or agent_id
+        self._pending_deployment_plan = [
+            e for e in self._pending_deployment_plan
+            if not (
+                (normalize_agent_id(e.get("agent", "")) or e.get("agent", "")) == target
+                and e.get("status") == "ready"
+            )
+        ]
+        remaining_ready = [e for e in self._pending_deployment_plan if e.get("status") == "ready"]
+        if not remaining_ready:
+            # All ready entries dispatched; clear the plan
+            self._pending_deployment_plan = []
 
     def _print_step(self, step: int, agent_id: str, phase: str) -> None:
         ts = datetime.now(timezone.utc).strftime("%H:%M:%S")

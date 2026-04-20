@@ -45,6 +45,9 @@ field_map:
   action:                       act
   path:                         path
   data:                         d
+  deployment_plan:              deploy       # HR agent only: ordered list of {need, status, agent, task, payload, note}
+  next_agent:                   next_agent   # single agent delegation target
+  next_agents:                  next_agents  # parallel agent list — triggers concurrent dispatch
 
 # ---------------------------------------------------------------------------
 # Finding item schema (used in findings arrays)
@@ -74,6 +77,7 @@ status_codes:
   capability:match:           "Required capability found in registry"
   capability:gap:             "Gap found — gap certificate issued"
   capability:no_gaps:         "No capability gaps — all covered"
+  capability:plan_ready:      "DeploymentPlan produced — all needs resolved (ready or gap_certified)"
 
   # Project Manager
   exec_plan:ready:            "Execution plan compiled"
@@ -117,18 +121,35 @@ message_schemas:
 
   handoff_payload:
     required: [s]             # status code
-    optional: [art, dec, oq, con, mod, f, d]
+    optional: [art, dec, oq, con, mod, f, d, next_agent, next_agents]
+    notes:
+      - "Use next_agent (string) to delegate to a single agent"
+      - "Use next_agents (list) to trigger concurrent parallel dispatch — all listed agents receive pending handoffs simultaneously"
+      - "next_agents and next_agent are mutually exclusive; next_agents takes precedence"
     example:
       _v: "1.0"
       s: "task:complete"
       art: ["mas/core/token_counter.py"]
       dec: [{id: "d-001", v: "char_over_4_heuristic"}]
 
+  master_delegation_parallel:
+    description: "Master emits this when dispatching multiple agents concurrently"
+    required: [s, next_agents]
+    optional: [art, dec, rsn]
+    example:
+      _v: "1.0"
+      s: "task:delegated"
+      next_agents: ["code_agent", "test_agent"]
+      rsn: "code_agent writes the module; test_agent writes tests — no data dependency between them"
+
   consultant_response:
     required: [s, rl, rec]   # status, risk_level, recommendation
     optional: [kc, rsn]      # key_concerns (list), reasoning (max 100 words)
     rl_values: [none, low, medium, high]
     rec_values: [consult:approve, consult:caution, consult:oppose]
+    notes:
+      - "Master MUST explicitly name which consultants to invoke via consultation_trigger.consultants"
+      - "Engine adds no default consultant list — master decides the panel composition"
     example:
       _v: "1.0"
       s: "consult:caution"
@@ -149,10 +170,36 @@ message_schemas:
 
   capability_assessment:
     required: [s]
-    optional: [d]   # gap details if capability:gap
+    optional: [d, deploy]
+    # deploy: required when s == capability:plan_ready
+    # Each entry: {need, status, agent, task, payload, note, parallel, parallel_group} for ready entries
+    #             {need, status, cert_id, cert_path} for gap_certified entries
+    # parallel: true → agent can run concurrently with others sharing the same parallel_group
+    # parallel_group: string identifier — master dispatches all same-group entries in one parallel step
     example:
       _v: "1.0"
-      s: "capability:no_gaps"
+      s: "capability:plan_ready"
+      deploy:
+        - need: "python_development"
+          status: "ready"
+          agent: "code_agent"
+          task: "Implement canonical models per spec"
+          payload: {context: "Phase M1", deliverable: "core/models.py", constraints: []}
+          note: ""
+          parallel: true
+          parallel_group: "implementation"
+        - need: "test_writing"
+          status: "ready"
+          agent: "test_agent"
+          task: "Write unit tests for canonical models"
+          payload: {context: "Phase M1", deliverable: "tests/test_models.py", constraints: []}
+          note: ""
+          parallel: true
+          parallel_group: "implementation"
+        - need: "ci_cd"
+          status: "gap_certified"
+          cert_id: "gap-proj-NNN-001"
+          cert_path: "mas/projects/.../hr/gap-proj-NNN-001.yaml"
 
 # ---------------------------------------------------------------------------
 # Compliance enforcement

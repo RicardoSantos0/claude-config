@@ -241,6 +241,26 @@ shared_state:
       type: "list[reuse_candidate]"
       set_by: "hr_agent"
       mutability: "hr_agent_only"
+    deployment_plan:
+      type: "list[deployment_plan_entry]"
+      set_by: "hr_agent"
+      mutability: "hr_agent_only"
+      description: >
+        The HR DeploymentPlan produced at capability_discovery.
+        Master Orchestrator reads this to route work; it does not write to this field.
+        Cleared (replaced with consumed entries marked dispatched) as master issues handoffs.
+      deployment_plan_entry_schema:
+        need:          "string — capability need description"
+        status:        "enum[ready, gap_certified, probation_risk]"
+        agent:         "string | null — recommended agent_id (when status=ready)"
+        task:          "string | null — concrete task description to assign"
+        payload:       "dict | null — suggested handoff payload fields"
+        note:          "string | null — parameterization note or warning"
+        cert_id:       "string | null — gap certificate ID (when status=gap_certified)"
+        cert_path:     "string | null — gap certificate file path"
+        dispatched_at: "datetime_iso8601 | null — set by orchestration loop when handoff issued"
+        parallel:       "boolean | null — true if this entry can be dispatched concurrently with others in the same parallel_group"
+        parallel_group: "string | null — group id; entries sharing the same group are dispatched simultaneously"
     capability_gap_certificates:
       type: "list[capability_gap_certificate]"
       set_by: "hr_agent"

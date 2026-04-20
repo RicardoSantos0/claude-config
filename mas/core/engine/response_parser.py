@@ -29,11 +29,18 @@ class ParsedResponse:
     artifacts: list[str]                 # art paths
     reasoning: str                       # rsn field
     next_action: str                     # "delegate" | "advance_phase" | "consult" | "escalate" | "wait"
-    next_agent: str | None               # who to delegate to (when next_action == "delegate")
-    consultation_trigger: dict | None    # {decision_type, question, context}
+    next_agent: str | None               # who to delegate to (single, when next_action == "delegate")
+    parallel_agents: list[str]           # next_agents list for concurrent dispatch
+    consultation_trigger: dict | None    # {decision_type, question, context, consultants}
     knowledge_request: dict | None       # KNOWLEDGE_REQUEST block
+    deployment_plan: list[dict]          # deploy array from HR capability assessment
     raw_wire: dict                       # full decoded wire dict (pass-through unknown keys)
     parse_errors: list[str] = field(default_factory=list)
+
+    @property
+    def next_agents_label(self) -> str:
+        """Short display label for parallel agents list."""
+        return "[" + ", ".join(self.parallel_agents) + "]"
 
 
 # ---------------------------------------------------------------------------
@@ -99,8 +106,10 @@ class ResponseParser:
 
         next_action       = self._resolve_next_action(wire, status, raw_text)
         next_agent        = wire.get("next_agent")
+        parallel_agents   = self._extract_parallel_agents(wire)
         consult_trigger   = wire.get("consultation_trigger")
         knowledge_request = self._extract_knowledge_request(raw_text)
+        deployment_plan   = self._extract_deployment_plan(wire)
 
         return ParsedResponse(
             status=status,
@@ -109,8 +118,10 @@ class ResponseParser:
             reasoning=reasoning,
             next_action=next_action,
             next_agent=next_agent,
+            parallel_agents=parallel_agents,
             consultation_trigger=consult_trigger,
             knowledge_request=knowledge_request,
+            deployment_plan=deployment_plan,
             raw_wire=wire,
             parse_errors=errors,
         )
@@ -187,3 +198,17 @@ class ResponseParser:
             return json.loads(m.group(1))
         except json.JSONDecodeError:
             return None
+
+    def _extract_parallel_agents(self, wire: dict) -> list[str]:
+        """Extract next_agents list for concurrent parallel dispatch."""
+        raw = wire.get("next_agents", [])
+        if not isinstance(raw, list):
+            return []
+        return [str(a) for a in raw if a]
+
+    def _extract_deployment_plan(self, wire: dict) -> list[dict]:
+        """Extract the HR deploy array from the wire block."""
+        raw = wire.get("deploy", [])
+        if not isinstance(raw, list):
+            return []
+        return [entry for entry in raw if isinstance(entry, dict)]

@@ -89,6 +89,49 @@ governance_policy:
     required_at: "not required"
     command: "none"
 
+  # --- CONSULTANT PANEL COMPOSITION ---
+  consultant_panel_policy:
+    description: >
+      Master Orchestrator MUST specify which consultants to invoke via
+      consultation_trigger.consultants. The orchestration engine adds no defaults.
+      This ensures master owns the panel composition decision, not the engine.
+    rules:
+      - "consultation_trigger MUST include a consultants list when invoking consultation"
+      - "Engine-side default consultant lists are prohibited — master decides the panel"
+      - "Targeting zero consultants (empty list) is not permitted; minimum one consultant required"
+      - "Full panel (all five) is appropriate only for critical or governance-level decisions"
+    available_consultants:
+      - risk_advisor
+      - quality_advisor
+      - devils_advocate
+      - domain_expert
+      - efficiency_advisor
+
+  # --- HR DEPLOYMENT ROUTING ---
+  hr_deployment_routing:
+    description: >
+      When HR produces a DeploymentPlan, Master Orchestrator MUST route work
+      using that plan as the primary routing authority. Master does not re-derive
+      routing independently after HR has spoken.
+    rules:
+      - "Master MUST read HR's deploy array before issuing any handoffs post capability_discovery"
+      - "Each 'ready' entry in the DeploymentPlan maps directly to one handoff: to_agent=entry.agent, task=entry.task"
+      - "Handoffs MUST be issued in the order HR listed them (HR orders by dependency)"
+      - "HR's suggested_payload fields MUST be passed through to the receiving agent's handoff payload"
+      - "Any delegation to an agent NOT in HR's ready list is a ROUTING OVERRIDE and must be logged"
+    override_policy:
+      allowed: true
+      conditions:
+        - "Recommended agent is unavailable (probation, retired, or context HR lacked)"
+        - "A consultant has raised a specific concern about the recommended agent"
+        - "Master has project-specific information HR could not know at discovery time"
+      required_log_fields:
+        - override_of: "hr_deployment_recommendation"
+        - hr_plan_agents: "list of agents HR recommended"
+        - rationale: "why the override is necessary (required — not optional)"
+      violation_if_missing: true
+      note: "Override without a decision log entry is a governance violation, not a warning"
+
   # --- VIOLATION HANDLING ---
   violations:
     logging: "All violations are logged with full context"
