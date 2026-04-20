@@ -183,7 +183,7 @@ Version **0.2.0**. A governed multi-agent delivery system that coordinates 14 sp
 |------|-------|------|
 | **T0** | `master_orchestrator` | Overall coordination, governance, delegation, phase management, spawn approval |
 | **T0** | `scribe_agent` | Documentation, record-keeping, decision logging, artifact tracking, audit trail |
-| **T0** | `hr_agent` | Capability discovery, roster management, gap certification, agent registration |
+| **T0** | `hr_agent` | Capability discovery, DeploymentPlan production, roster management, gap certification, agent registration |
 | **T1** | `inquirer_agent` | Intake, requirements elicitation, clarification Q&A |
 | **T1** | `product_manager_agent` | Product planning, MoSCoW prioritization, acceptance criteria, scope definition |
 | **T1** | `project_manager_agent` | Execution planning, task decomposition, milestone tracking, dependency mapping |
@@ -302,14 +302,17 @@ All fields have `set_by` (owner), `mutability` rules, and type definitions. **No
 
 ### Consultation System
 
-The 5-member consultant panel (`risk_advisor`, `quality_advisor`, `devils_advocate`, `domain_expert`, `efficiency_advisor`) is always invoked for:
-- Spawn requests
-- Scope changes
-- Governance decisions
-- Escalations
-- Architecture decisions
+The 5-member consultant panel: `risk_advisor`, `quality_advisor`, `devils_advocate`, `domain_expert`, `efficiency_advisor`.
 
-**Hard stop**: If all 5 consultants return "high" risk → human escalation required. Master cannot override unanimous high-risk without human approval.
+**Master decides the panel composition** — the engine adds no defaults. Master specifies which consultants to invoke via `consultation_trigger.consultants` in its wire response. Typical selections:
+
+| Decision type | Consultants |
+|---------------|-------------|
+| Architecture / technical | `domain_expert`, `risk_advisor`, `quality_advisor` |
+| Scope / governance | `risk_advisor`, `devils_advocate`, `efficiency_advisor` |
+| Critical / high-stakes | All five |
+
+**Hard stop**: If all invoked consultants return "high" risk → human escalation required. Master cannot override unanimous high-risk without human approval.
 
 ### Communication Optimization
 
