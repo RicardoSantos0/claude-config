@@ -4,6 +4,20 @@ All notable changes to this repository are documented here.
 
 ---
 
+## [2026-04-21b] proj-20260420-001: evaluation complete, 4 agents promoted to T1_established
+
+All 3 sprints delivered and evaluated for `proj-20260420-001-notion-zotero-platform`:
+- 94 tests passing (3 conditionally skipped), 8/9 ACs met, 16/18 must-haves fully met
+- Evaluation report: `mas/projects/proj-20260420-001-notion-zotero-platform/evaluation/sprint_final_report.md`
+- 4 agents promoted T3_provisional → T1_established with performance scores:
+  - `canonical_engineer`: 0.94
+  - `analysis_engineer`: 0.97
+  - `integration_engineer`: 0.95
+  - `reliability_engineer`: 0.93
+- Roster updated: active_agents 16 → 20, pending_activation 4 → 0
+
+---
+
 ## [2026-04-21] Repository cleanup
 
 - Removed deprecated graph-memory test files that were already quarantined from default runs:
