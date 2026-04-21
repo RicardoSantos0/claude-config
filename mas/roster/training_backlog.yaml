@@ -498,3 +498,137 @@ proposals:
   original_proposal_id: ''
   rejection_reason: ''
   tradeoffs: None — informational record only.
+
+# --- proj-20260420-001-notion-zotero-platform proposals (trainer_agent, 2026-04-21) ---
+
+- proposal_id: TP-001
+  title: "Wire coverage gate as canonical_engineer non-negotiable"
+  target_agent: canonical_engineer
+  target_artifact: agents/canonical_engineer.md
+  priority: high
+  status: pending
+  systemic: false
+  source_project: proj-20260420-001-notion-zotero-platform
+  created_at: '2026-04-21T00:00:00+00:00'
+  minimum_evidence_met: true
+  description: >
+    Add explicit requirement to canonical_engineer non-negotiables:
+    pyproject.toml must include addopts = "--cov --cov-fail-under=80"
+    before handoff. Tests passing without coverage measurement does not satisfy the gate.
+  evidence:
+    - sprint_final_report.md (AC-9 score 5/10, QF-001)
+  tradeoffs: Low risk — one-line pyproject.toml addition per sprint.
+  rejection_reason: ''
+
+- proposal_id: TP-002
+  title: "Require scenario-level integration tests for 'demonstrated' ACs"
+  target_agent: canonical_engineer
+  target_artifact: agents/canonical_engineer.md
+  priority: high
+  status: pending
+  systemic: false
+  source_project: proj-20260420-001-notion-zotero-platform
+  created_at: '2026-04-21T00:00:00+00:00'
+  minimum_evidence_met: true
+  description: >
+    Any AC containing 'demonstrated', 'validated', or 'exercised' must have
+    at least one integration test that instantiates the full scenario.
+    Structural presence of a capability is not sufficient AC evidence.
+  evidence:
+    - sprint_final_report.md (AC-10 score 6/10)
+  tradeoffs: Slightly increases test authoring effort per sprint.
+  rejection_reason: ''
+
+- proposal_id: TP-003
+  title: "Add delivery manifest uniqueness check to handoff checklist"
+  target_agent: canonical_engineer
+  target_artifact: agents/canonical_engineer.md
+  priority: medium
+  status: pending
+  systemic: false
+  source_project: proj-20260420-001-notion-zotero-platform
+  created_at: '2026-04-21T00:00:00+00:00'
+  minimum_evidence_met: true
+  description: >
+    Insert step 1a into handoff protocol: verify every artifact ID appears
+    exactly once in deliverables_manifest. Flag any duplicates in known_issues.
+  evidence:
+    - sprint_final_report.md (QF-003, delivery discipline 7/10, M-09 duplicate)
+  tradeoffs: Trivial overhead.
+  rejection_reason: ''
+
+- proposal_id: TP-004
+  title: "Make reliability_engineer a mandatory phase for Python sprints"
+  target_agent: system
+  target_artifact: policies/governance_policy.yaml
+  priority: high
+  status: pending
+  systemic: false
+  source_project: proj-20260420-001-notion-zotero-platform
+  created_at: '2026-04-21T00:00:00+00:00'
+  minimum_evidence_met: true
+  description: >
+    Python sprint workflow must include a reliability engineer pass between
+    canonical engineer handoff and evaluation. Reliability engineer
+    gates_wired payload must confirm --cov-fail-under is present before
+    evaluation begins.
+  evidence:
+    - sprint_final_report.md (reliability_engineer non-negotiables directly cover AC-9 and QF-003)
+  tradeoffs: Adds one agent pass to Python sprint timeline.
+  rejection_reason: ''
+
+- proposal_id: TP-005
+  title: "Encode Python CI baseline as spawn package pattern"
+  target_agent: system
+  target_artifact: Python delivery spawn package template
+  priority: medium
+  status: pending
+  systemic: false
+  source_project: proj-20260420-001-notion-zotero-platform
+  created_at: '2026-04-21T00:00:00+00:00'
+  minimum_evidence_met: true
+  description: >
+    Add python_ci_baseline section (coverage_gate, cov_fail_under: 80,
+    addopts, lint_gate) to all Python spawn packages. Spawn package validator
+    should reject Python projects missing this section.
+  evidence:
+    - sprint_final_report.md (QF-001 "one-line fix with systemic impact")
+  tradeoffs: Adds a required section to spawn templates; minor one-off setup cost.
+  rejection_reason: ''
+
+- proposal_id: TP-006
+  title: "Require provenance validation at Pydantic field level"
+  target_agent: system
+  target_artifact: Python delivery spawn package template
+  priority: medium
+  status: pending
+  systemic: false
+  source_project: proj-20260420-001-notion-zotero-platform
+  created_at: '2026-04-21T00:00:00+00:00'
+  minimum_evidence_met: true
+  description: >
+    Provenance fields must use Pydantic validators (not optional dicts).
+    A model that accepts a record without provenance must raise ValidationError.
+    Checklist item for any AC containing 'provenance' or 'ownership'.
+  evidence:
+    - sprint_final_report.md (AC-4 and AC-5 at 9/10)
+  tradeoffs: Tightens data integrity; may require model_validator adjustments in some pipelines.
+  rejection_reason: ''
+
+- proposal_id: TP-007
+  title: "Add verification phase efficiency gate to evaluation criteria"
+  target_agent: system
+  target_artifact: policies/evaluation_policy.yaml
+  priority: medium
+  status: pending
+  systemic: false
+  source_project: proj-20260420-001-notion-zotero-platform
+  created_at: '2026-04-21T00:00:00+00:00'
+  minimum_evidence_met: true
+  description: >
+    If verification phase efficiency < 75%, sprint cannot be graded above B
+    regardless of overall score. Evaluator must flag as blocking finding.
+  evidence:
+    - sprint_final_report.md (verification phase 70%, lowest phase score)
+  tradeoffs: Raises the bar for B+ grades; may delay closure on borderline sprints.
+  rejection_reason: ''
