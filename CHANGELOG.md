@@ -9,6 +9,8 @@ All notable changes to this repository are documented here.
 - Removed deprecated graph-memory test files that were already quarantined from default runs:
   - `mas/tests/unit/test_graph_memory.py`
   - `mas/tests/unit/test_graph_memory_cli.py`
+- Removed graph-memory prompt-assembler test block tied to legacy context injection paths:
+  - `mas/tests/prompts/test_prompt_assembler.py` (`TestGraphContext`)
 - Removed now-unneeded pytest quarantine hook file tied only to those tests:
   - `mas/tests/conftest.py`
 - Removed migration/seeding helper scripts no longer part of the active workflow:
