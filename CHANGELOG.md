@@ -4,6 +4,19 @@ All notable changes to this repository are documented here.
 
 ---
 
+## [2026-04-21] Repository cleanup
+
+- Removed deprecated graph-memory test files that were already quarantined from default runs:
+  - `mas/tests/unit/test_graph_memory.py`
+  - `mas/tests/unit/test_graph_memory_cli.py`
+- Removed now-unneeded pytest quarantine hook file tied only to those tests:
+  - `mas/tests/conftest.py`
+- Removed migration/seeding helper scripts no longer part of the active workflow:
+  - `mas/tools/seed_capability.py`
+  - `mas/tools/seed_plan.py`
+- Removed synced-folder marker file:
+  - `.stfolder/syncthing-folder-8699a1.txt`
+
 ## [2026-04-20b] proj-20260420-001: notion-zotero platform — spawn packages complete
 
 ### New MAS Project

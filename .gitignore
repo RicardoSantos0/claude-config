@@ -53,3 +53,5 @@ skills/notebooklm/data/auth_info.json
 
 # Editor
 .vscode/settings.json
+# Syncthing metadata
+.stfolder/
