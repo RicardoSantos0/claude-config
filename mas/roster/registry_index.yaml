@@ -1,6 +1,6 @@
 registry:
   version: 1.0.0
-  last_updated: '2026-04-09T20:35:49.918117+00:00'
+  last_updated: '2026-04-21T00:00:00+00:00'
   maintained_by: hr_agent
   agents:
   - agent_id: master_orchestrator
@@ -225,71 +225,80 @@ registry:
     created_at: '2026-04-15T00:00:00+00:00'
   - agent_id: canonical_engineer
     name: Canonical Engineer
-    version: 1.0.0
+    version: 2.0.0
     trust_tier: T1_established
     status: active
+    description: "Python delivery agent for hardening canonical data layers. Owns Pydantic v2 model design, provenance field patterns, schema registry, field ownership manifest, template validation, importer semantics, and legacy decoupling. Apply on any Python project needing a trustworthy domain model foundation."
     capabilities:
     - schema-hardening
-    - pydantic-modeling
+    - pydantic-v2-modeling
+    - provenance-validation
     - importer-semantics
-    - template-library
-    - domain-pack-refactoring
-    - legacy-decoupling
-    - canonical-field-registry
+    - template-validation
+    - schema-registry
     - field-ownership-manifest
+    - legacy-decoupling
+    - coverage-gate-enforcement
+    - integration-test-requirement
     performance_score: 0.94
+    generalised_at: '2026-04-21T00:00:00+00:00'
     spawn_origin: "proj-20260420-001-notion-zotero-platform"
-    gap_cert: "gap-proj-20260420-001-001"
     created_at: '2026-04-20T00:00:00+00:00'
     evaluated_at: '2026-04-21T00:00:00+00:00'
   - agent_id: analysis_engineer
     name: Analysis Engineer
-    version: 1.0.0
+    version: 2.0.0
     trust_tier: T1_established
     status: active
+    description: "Python delivery agent for analysis and reporting layers. Owns Polars DataFrame flattening service, CLI analysis reports, QA reports, migration audit, and package ergonomics. Apply on any Python project needing read-only analysis over canonical data without live sync."
     capabilities:
-    - flattening-service
+    - polars-flattening-service
     - cli-reports
     - qa-reports
     - migration-audit
     - package-ergonomics
+    - mode-documentation
     performance_score: 0.97
+    generalised_at: '2026-04-21T00:00:00+00:00'
     spawn_origin: "proj-20260420-001-notion-zotero-platform"
-    gap_cert: "gap-proj-20260420-001-002"
     created_at: '2026-04-20T00:00:00+00:00'
     evaluated_at: '2026-04-21T00:00:00+00:00'
   - agent_id: integration_engineer
     name: Integration Engineer
-    version: 1.0.0
+    version: 2.0.0
     trust_tier: T1_established
     status: active
+    description: "Python delivery agent for integration layers. Owns read-only external system connectors (API-key gated), field ownership enforcement, dry-run diff engine, dry-run writers, and sync/write-log design docs. Apply on any Python project needing safe, inspectable connectivity to external systems."
     capabilities:
-    - notion-read-connector
-    - zotero-read-connector
+    - read-only-connectors
+    - api-key-gating
     - field-ownership-enforcement
     - dry-run-diff-engine
     - dry-run-writers
     - sync-design
+    - write-log-design
     performance_score: 0.95
+    generalised_at: '2026-04-21T00:00:00+00:00'
     spawn_origin: "proj-20260420-001-notion-zotero-platform"
-    gap_cert: "gap-proj-20260420-001-003"
     created_at: '2026-04-20T00:00:00+00:00'
     evaluated_at: '2026-04-21T00:00:00+00:00'
   - agent_id: reliability_engineer
     name: Reliability Engineer
-    version: 1.0.0
+    version: 2.0.0
     trust_tier: T1_established
     status: active
+    description: "Python delivery agent for quality gates and test infrastructure. Owns CI baseline setup, test suite (>=80% coverage enforced), golden fixtures, module boundary lint guards, write-path interception tests at transport layer, and packaging cleanup. Runs parallel with primary delivery agents from sprint kickoff."
     capabilities:
-    - test-suite
+    - ci-baseline-setup
+    - coverage-gate-enforcement
     - golden-fixtures
     - ci-lint-guards
-    - coverage-gates
+    - write-path-interception
     - packaging-cleanup
-    - mode-documentation
+    - parallel-sprint-execution
     performance_score: 0.93
+    generalised_at: '2026-04-21T00:00:00+00:00'
     spawn_origin: "proj-20260420-001-notion-zotero-platform"
-    gap_cert: "gap-proj-20260420-001-004"
     created_at: '2026-04-20T00:00:00+00:00'
     evaluated_at: '2026-04-21T00:00:00+00:00'
   skills: []
