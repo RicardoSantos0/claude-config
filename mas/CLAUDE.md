@@ -26,7 +26,7 @@ if Windows App Store Python is active. Prefer the activated venv.
 
 ## Execution Modes
 
-### Mode 1 — Claude Code (Claude Pro, no API credits needed) ✅ Primary
+### Mode 1 — Claude Code (Claude Pro, no API credits needed) Primary
 
 Invoke `master_orchestrator` from Claude Code. Use `mas prompt` to assemble the
 next agent prompt, then run the agent manually in Claude Code — no
