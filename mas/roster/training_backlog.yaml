@@ -615,6 +615,114 @@ proposals:
   tradeoffs: Tightens data integrity; may require model_validator adjustments in some pipelines.
   rejection_reason: ''
 
+- proposal_id: TP-008
+  title: "MAS agents must not use bash Unix-style paths on Windows — use Write tool"
+  target_agent: master_orchestrator
+  target_artifact: agents/master_orchestrator.md
+  priority: high
+  status: pending
+  systemic: true
+  source_project: proj-20260424-001-notion-zotero-analysis-refactor
+  created_at: '2026-04-24T00:00:00+00:00'
+  minimum_evidence_met: true
+  description: >
+    In proj-20260424-001-notion-zotero-analysis-refactor, the master_orchestrator
+    spawned subagent work via bash heredoc writes to /c/Users/... paths. On Windows,
+    these paths do not map to real filesystem locations — the writes silently
+    disappear. The agent reported success and closed the project, but zero deliverables
+    existed. All file writes in MAS agents MUST use the Write tool with absolute
+    Windows paths (C:\Users\...). Bash can be used for read-only inspection and
+    running CLI commands, but never for writing source files.
+  evidence:
+    - proj-20260424-001-notion-zotero-analysis-refactor: agent reported 256 tests / 80.6%
+      coverage; actual state was 202 tests / 84.36% with no new files created.
+  tradeoffs: Slight friction when agent prompts are written generically for bash; fix
+    is to add an explicit Windows-file-write protocol to agent definitions.
+  rejection_reason: ''
+
+- proposal_id: TP-009
+  title: "MAS documentation must be written during execution, not post-hoc"
+  target_agent: master_orchestrator
+  target_artifact: agents/master_orchestrator.md
+  priority: medium
+  status: pending
+  systemic: true
+  source_project: proj-20260424-001-notion-zotero-analysis-refactor
+  created_at: '2026-04-24T00:00:00+00:00'
+  minimum_evidence_met: true
+  description: >
+    User instruction: "remember to document all stages of project naturally, if
+    documentation is performed after the fact, we need to insert this in evaluation
+    for improvement... the flow should be naturally followed." Documentation
+    (CHECKPOINT.md, shared_state.yaml, delivery_summary.md, decision_log.md) must
+    be written incrementally AT each phase transition, not all at once after
+    execution. If any documentation was written after the fact in a project, it must
+    be flagged in the evaluation report as a process deviation and included as an
+    improvement proposal in the trainer output.
+  evidence:
+    - proj-20260424-001-notion-zotero-analysis-refactor: master_orchestrator wrote
+      delivery_summary.md and closed shared_state AFTER execution was already
+      reported complete, rather than updating docs phase-by-phase.
+  tradeoffs: Requires slightly more discipline in agent orchestration; the benefit is
+    an accurate and auditable project timeline.
+  rejection_reason: ''
+
+- proposal_id: TP-010
+  title: "Master Orchestrator must verify file existence before reporting delivery complete"
+  target_agent: master_orchestrator
+  target_artifact: agents/master_orchestrator.md
+  priority: high
+  status: pending
+  systemic: true
+  source_project: proj-20260424-001-notion-zotero-analysis-refactor
+  created_at: '2026-04-24T00:00:00+00:00'
+  minimum_evidence_met: true
+  description: >
+    After each agent handoff that claims to have written files, the master_orchestrator
+    MUST verify actual file existence before accepting the handoff as complete. The
+    verification step is: glob/read the claimed output paths and confirm non-empty
+    content. If files do not exist, the handoff must be REJECTED and the agent
+    re-tasked. In proj-20260424-001-notion-zotero-analysis-refactor, the orchestrator
+    accepted a completion report claiming 7 files and 256 tests without verifying
+    any of it — resulting in a project that was closed with zero actual deliverables.
+    The human user had to discover the failure and request remediation manually.
+  evidence:
+    - proj-20260424-001-notion-zotero-analysis-refactor: agent claimed 256 tests,
+      80.6% coverage, 7 files created. Actual state: 202 tests, 0 new files.
+      Master accepted the report without running a single verification command.
+  tradeoffs: Adds one verification step per handoff. Without it, the MAS can silently
+    fail and report success — making it untrustworthy for production use.
+  rejection_reason: ''
+
+- proposal_id: TP-011
+  title: "Scribe agent must be explicitly invoked at each phase transition — not optional"
+  target_agent: master_orchestrator
+  target_artifact: agents/master_orchestrator.md
+  priority: high
+  status: pending
+  systemic: true
+  source_project: proj-20260424-001-notion-zotero-analysis-refactor
+  created_at: '2026-04-24T00:00:00+00:00'
+  minimum_evidence_met: true
+  description: >
+    In proj-20260424-001-notion-zotero-analysis-refactor, the scribe agent was never
+    invoked at any point. The project folder contained only CHECKPOINT.md and
+    shared_state.yaml when the user inspected it. Standard artifacts —
+    intake/project_brief.md, planning/sprint_plan.md, decisions/decision_log.md,
+    execution/delivery_summary.md, evaluation/sprint_final_report.md — were all missing.
+    The master_orchestrator MUST issue a scribe handoff at each phase transition:
+    after intake (write project_brief), after planning (write sprint_plan), after
+    each execution handoff (update delivery_summary), after evaluation (write
+    sprint_final_report). Scribe invocation is not optional — it is a non-negotiable
+    governance step in every MAS project regardless of project size.
+  evidence:
+    - proj-20260424-001-notion-zotero-analysis-refactor: project marked closed with
+      zero scribe handoffs issued. User had to explicitly flag the empty project
+      folder before any documentation was created.
+  tradeoffs: Adds one scribe call per phase (typically 2-4 per project). Without it,
+    the project folder is empty and the audit trail is broken.
+  rejection_reason: ''
+
 - proposal_id: TP-007
   title: "Add verification phase efficiency gate to evaluation criteria"
   target_agent: system
