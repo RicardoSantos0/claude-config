@@ -28,7 +28,7 @@ from typing import Optional
 
 import yaml
 
-ROOT = Path(__file__).parent.parent.parent
+ROOT = Path(__file__).parent.parent.parent.resolve()
 
 from .shared_state_manager import SharedStateManager
 from core.engine.audit_logger import get_logger

@@ -35,6 +35,28 @@ try:
 except ImportError:
     MetricsEngine = None  # type: ignore
 
+try:
+    from core.db import append_event as _append_event
+except Exception:
+    _append_event = None  # type: ignore
+
+
+def _log_training_event(project_id: str, agent_id: str, action_type: str,
+                        intent: str, payload: dict) -> None:
+    if _append_event is None:
+        return
+    try:
+        _append_event(
+            project_id=project_id,
+            agent_id=agent_id,
+            action_type=action_type,
+            intent=intent,
+            result_shape="training",
+            payload=payload,
+        )
+    except Exception:
+        pass  # DB logging must never block training operations
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -371,6 +393,15 @@ class TrainingEngine:
                 backlog["proposals"].append(_proposal_to_dict(p))
                 existing_ids.add(p.proposal_id)
                 added += 1
+                _log_training_event(
+                    project_id=(p.project_ids[0] if p.project_ids else "__system__"),
+                    agent_id="trainer_agent",
+                    action_type="proposal_added",
+                    intent=f"New proposal {p.proposal_id}: {p.description[:80]}",
+                    payload={"proposal_id": p.proposal_id, "description": p.description[:120],
+                             "priority": p.priority, "target_agent": p.target_agent,
+                             "proposal_type": p.proposal_type},
+                )
         backlog["last_updated"] = datetime.now(timezone.utc).isoformat()
         _save_backlog(backlog)
         return added
@@ -387,6 +418,14 @@ class TrainingEngine:
                     p["approved_by"] = authorized_by
                     p["approved_at"] = datetime.now(timezone.utc).isoformat()
                     _save_backlog(backlog)
+                    _log_training_event(
+                        project_id=p.get("source_project", "__system__"),
+                        agent_id=authorized_by,
+                        action_type="proposal_approved",
+                        intent=f"Approved {proposal_id}: {p.get('title', '')}",
+                        payload={"proposal_id": proposal_id, "title": p.get("title", ""),
+                                 "target_agent": p.get("target_agent", "")},
+                    )
                     return True
         return False
 
@@ -408,6 +447,14 @@ class TrainingEngine:
                     p["rejected_by"] = authorized_by
                     p["rejected_at"] = datetime.now(timezone.utc).isoformat()
                     _save_backlog(backlog)
+                    _log_training_event(
+                        project_id=p.get("source_project", "__system__"),
+                        agent_id=authorized_by,
+                        action_type="proposal_rejected",
+                        intent=f"Rejected {proposal_id}: {reason[:120]}",
+                        payload={"proposal_id": proposal_id, "title": p.get("title", ""),
+                                 "reason": reason},
+                    )
                     return True
         return False
 
@@ -421,6 +468,15 @@ class TrainingEngine:
                 p["status"] = "applied"
                 p["applied_at"] = datetime.now(timezone.utc).isoformat()
                 _save_backlog(backlog)
+                _log_training_event(
+                    project_id=p.get("source_project", "__system__"),
+                    agent_id=authorized_by,
+                    action_type="proposal_applied",
+                    intent=f"Applied {proposal_id}: {p.get('title', '')}",
+                    payload={"proposal_id": proposal_id, "title": p.get("title", ""),
+                             "target_agent": p.get("target_agent", ""),
+                             "target_artifact": p.get("target_artifact", "")},
+                )
                 return True
         return False
 

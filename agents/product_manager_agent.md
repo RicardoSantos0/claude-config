@@ -125,6 +125,19 @@ get meaningful evaluation scores. Every `must_have` requirement MUST have a corr
 ### Step 6 — Handoff to Master
 Use `handoff_engine.py create` (see `_utilities.md`) with summary including plan path, requirement count, and risk count.
 
+## CLI Specification Guidance
+
+When a sprint involves CLI code, verify the CLI framework before naming test utilities:
+
+1. **Identify the framework** — check `pyproject.toml` dependencies or imports in the CLI source file. The two common frameworks are **argparse** (stdlib) and **Click** (`click` package).
+2. **Name the framework explicitly** in the sprint plan (e.g., "CLI uses argparse").
+3. **Do not reference Click-specific utilities** (e.g., `CliRunner`) unless the dependency manifest confirms Click is installed.
+   - argparse test pattern: `main(['subcommand', '--arg', 'val'])` + `pytest.raises(SystemExit)` for error cases
+   - Click test pattern: `CliRunner().invoke(command, [...])`
+4. **If framework is unconfirmed**, write "CLI test utility TBD — verify at implementation" rather than naming one.
+
+These frameworks are distinct — mixing them will cause test scaffolding errors that must be corrected mid-sprint.
+
 ## Requirements Quality Rules
 - Every `must_have` requirement MUST have at least one acceptance criterion with an explicit pass/fail condition — vague or unverifiable criteria are not acceptable
 - Acceptance criteria MUST follow the format "Given [context], when [action], then [measurable outcome]" — the "then" clause MUST be objectively verifiable (e.g., a metric, a boolean state, a visible artifact), not a subjective judgment

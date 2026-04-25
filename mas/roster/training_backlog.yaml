@@ -1,4 +1,4 @@
-last_updated: '2026-04-15T12:02:00.000000+00:00'
+last_updated: '2026-04-25T22:00:00.000000+00:00'
 proposals:
 - applied_at: '2026-04-15T19:00:42.704273+00:00'
   applied_in_project: proj-20260415-004-mas-improvements-full
@@ -620,7 +620,10 @@ proposals:
   target_agent: master_orchestrator
   target_artifact: agents/master_orchestrator.md
   priority: high
-  status: pending
+  status: applied
+  applied_at: '2026-04-25T00:00:00+00:00'
+  applied_by: master_orchestrator
+  applied_in_project: proj-20260424-001-notion-zotero-analysis-refactor
   systemic: true
   source_project: proj-20260424-001-notion-zotero-analysis-refactor
   created_at: '2026-04-24T00:00:00+00:00'
@@ -634,8 +637,7 @@ proposals:
     Windows paths (C:\Users\...). Bash can be used for read-only inspection and
     running CLI commands, but never for writing source files.
   evidence:
-    - proj-20260424-001-notion-zotero-analysis-refactor: agent reported 256 tests / 80.6%
-      coverage; actual state was 202 tests / 84.36% with no new files created.
+    - "proj-20260424-001-notion-zotero-analysis-refactor: agent reported 256 tests / 80.6% coverage; actual state was 202 tests / 84.36% with no new files created."
   tradeoffs: Slight friction when agent prompts are written generically for bash; fix
     is to add an explicit Windows-file-write protocol to agent definitions.
   rejection_reason: ''
@@ -645,7 +647,10 @@ proposals:
   target_agent: master_orchestrator
   target_artifact: agents/master_orchestrator.md
   priority: medium
-  status: pending
+  status: applied
+  applied_at: '2026-04-25T00:00:00+00:00'
+  applied_by: master_orchestrator
+  applied_in_project: proj-20260424-001-notion-zotero-analysis-refactor
   systemic: true
   source_project: proj-20260424-001-notion-zotero-analysis-refactor
   created_at: '2026-04-24T00:00:00+00:00'
@@ -660,9 +665,7 @@ proposals:
     be flagged in the evaluation report as a process deviation and included as an
     improvement proposal in the trainer output.
   evidence:
-    - proj-20260424-001-notion-zotero-analysis-refactor: master_orchestrator wrote
-      delivery_summary.md and closed shared_state AFTER execution was already
-      reported complete, rather than updating docs phase-by-phase.
+    - "proj-20260424-001-notion-zotero-analysis-refactor: master_orchestrator wrote delivery_summary.md and closed shared_state AFTER execution was already reported complete, rather than updating docs phase-by-phase."
   tradeoffs: Requires slightly more discipline in agent orchestration; the benefit is
     an accurate and auditable project timeline.
   rejection_reason: ''
@@ -672,7 +675,10 @@ proposals:
   target_agent: master_orchestrator
   target_artifact: agents/master_orchestrator.md
   priority: high
-  status: pending
+  status: applied
+  applied_at: '2026-04-25T00:00:00+00:00'
+  applied_by: master_orchestrator
+  applied_in_project: proj-20260424-001-notion-zotero-analysis-refactor
   systemic: true
   source_project: proj-20260424-001-notion-zotero-analysis-refactor
   created_at: '2026-04-24T00:00:00+00:00'
@@ -687,9 +693,7 @@ proposals:
     any of it — resulting in a project that was closed with zero actual deliverables.
     The human user had to discover the failure and request remediation manually.
   evidence:
-    - proj-20260424-001-notion-zotero-analysis-refactor: agent claimed 256 tests,
-      80.6% coverage, 7 files created. Actual state: 202 tests, 0 new files.
-      Master accepted the report without running a single verification command.
+    - "proj-20260424-001-notion-zotero-analysis-refactor: agent claimed 256 tests, 80.6% coverage, 7 files created. Actual state: 202 tests, 0 new files. Master accepted the report without running a single verification command."
   tradeoffs: Adds one verification step per handoff. Without it, the MAS can silently
     fail and report success — making it untrustworthy for production use.
   rejection_reason: ''
@@ -699,7 +703,10 @@ proposals:
   target_agent: master_orchestrator
   target_artifact: agents/master_orchestrator.md
   priority: high
-  status: pending
+  status: applied
+  applied_at: '2026-04-25T00:00:00+00:00'
+  applied_by: master_orchestrator
+  applied_in_project: proj-20260424-001-notion-zotero-analysis-refactor
   systemic: true
   source_project: proj-20260424-001-notion-zotero-analysis-refactor
   created_at: '2026-04-24T00:00:00+00:00'
@@ -716,9 +723,7 @@ proposals:
     sprint_final_report). Scribe invocation is not optional — it is a non-negotiable
     governance step in every MAS project regardless of project size.
   evidence:
-    - proj-20260424-001-notion-zotero-analysis-refactor: project marked closed with
-      zero scribe handoffs issued. User had to explicitly flag the empty project
-      folder before any documentation was created.
+    - "proj-20260424-001-notion-zotero-analysis-refactor: project marked closed with zero scribe handoffs issued. User had to explicitly flag the empty project folder before any documentation was created."
   tradeoffs: Adds one scribe call per phase (typically 2-4 per project). Without it,
     the project folder is empty and the audit trail is broken.
   rejection_reason: ''
@@ -739,4 +744,138 @@ proposals:
   evidence:
     - sprint_final_report.md (verification phase 70%, lowest phase score)
   tradeoffs: Raises the bar for B+ grades; may delay closure on borderline sprints.
+  rejection_reason: ''
+
+# --- proj-20260425-001-notion-zotero-live-pull proposals (trainer_agent, 2026-04-25) ---
+
+- proposal_id: TP-012
+  title: "Capability Registry Tag Vocabulary — Add Missing API and Library Tags"
+  target_agent: system
+  target_artifact: mas/roster/capability_registry.yaml
+  priority: high
+  status: applied
+  systemic: false
+  source_project: proj-20260425-001-notion-zotero-live-pull
+  created_at: '2026-04-25T18:00:00+00:00'
+  minimum_evidence_met: true
+  description: >
+    The HR agent's capability discovery in proj-20260425-001 showed registry scores of 20%
+    for integration_engineer because the vocabulary lacks tags: notion-api, zotero-api,
+    tenacity, http-pagination, atomic-write, argparse-cli. Future projects involving these
+    capabilities will show false capability gaps, potentially triggering unnecessary spawn
+    requests or misrouting. The gap is factual and unambiguous.
+  recommended_change: >
+    Add to capability registry tag vocabulary: notion-api, zotero-api, tenacity
+    (note: v9+ removed wait_callable — only wait_fixed/wait_exponential are supported),
+    http-pagination, atomic-write, argparse-cli (distinct from click-cli).
+  evidence:
+    - "proj-20260425-001: HR search returned 20% score for integration_engineer due to missing tags. Semantic charter assessment confirmed strong match, overriding the score."
+  tradeoffs: >
+    Increases registry maintenance surface by 6 tags. Cost is far lower than repeated
+    false capability gaps in future projects.
+  rejection_reason: ''
+
+- proposal_id: TP-013
+  title: "PM Spec Accuracy — Verify Library Identity Before Naming Test Utilities"
+  target_agent: product_manager_agent
+  target_artifact: agents/product_manager_agent.md
+  priority: high
+  status: applied
+  systemic: false
+  source_project: proj-20260425-001-notion-zotero-live-pull
+  created_at: '2026-04-25T18:00:00+00:00'
+  minimum_evidence_met: true
+  description: >
+    In proj-20260425-001, the sprint plan specified "Click CliRunner" as the CLI test
+    utility. The package uses argparse (not Click). CliRunner is Click-specific and does
+    not apply to argparse CLIs. The spec error propagated into initial test scaffolding,
+    requiring correction mid-sprint. Root cause: PM named a specific test utility without
+    verifying the underlying CLI framework in the dependency manifest.
+  recommended_change: >
+    Add to product_manager_agent planning guidance under "CLI specification":
+    "Name the CLI framework explicitly (argparse or Click). Do not reference
+    Click-specific utilities (CliRunner) unless the project dependency manifest
+    confirms notion-client or Click is installed. If framework is unconfirmed,
+    write 'CLI test utility TBD — verify at implementation'."
+  evidence:
+    - "proj-20260425-001: sprint plan specified Click CliRunner; actual package uses argparse. Reliability engineer had to correct the approach during T-009/T-010/T-011."
+  tradeoffs: Adds one verification bullet to PM guidance. Prevents a class of spec errors.
+  rejection_reason: ''
+
+- proposal_id: TP-014
+  title: "Handoff ID Persistence — Subagent Handoffs in Unix Path Mode Do Not Survive Session Boundary"
+  target_agent: system
+  target_artifact: mas/core/engine/handoff_engine.py
+  priority: high
+  status: applied
+  systemic: true
+  source_project: proj-20260425-001-notion-zotero-live-pull
+  created_at: '2026-04-25T18:00:00+00:00'
+  minimum_evidence_met: true
+  description: >
+    Handoff IDs created by subagents running in Unix path mode (e.g. /c/Users/... on
+    Windows) did not persist to the engine state file that master reads from C:\Users\....
+    Master had to recreate the handoffs manually, creating gaps in the audit trail.
+    This is a Windows-specific path divergence issue in the handoff engine.
+  recommended_change: >
+    1. In handoff_engine.py: normalize all incoming paths via pathlib.Path.resolve()
+    at write time to prevent divergent path representations.
+    2. In _utilities.md subagent guidance: add explicit note that on Windows, handoff
+    paths must use C:/Users/... format, not /c/Users/... Unix format. Provide an example.
+  evidence:
+    - "proj-20260425-001: inquirer return handoff ho-20260425-163013-inquirer-master not found by master; master recreated as ho-proj-20260425-001-...-003. Same pattern seen in proj-20260424-001 (bash path writes)."
+  tradeoffs: >
+    pathlib.Path.resolve() adds one call per handoff write — negligible cost.
+    _utilities.md change is documentation only. Risk of not fixing: continued master
+    overhead and audit trail gaps on every Windows-hosted sprint.
+  rejection_reason: ''
+
+- proposal_id: TP-015
+  title: "Consultant Panel — Add Breaking-Change Library Version Check"
+  target_agent: quality_advisor
+  target_artifact: agents/quality_advisor.md
+  priority: medium
+  status: applied
+  systemic: false
+  source_project: proj-20260425-001-notion-zotero-live-pull
+  created_at: '2026-04-25T18:00:00+00:00'
+  minimum_evidence_met: true
+  description: >
+    tenacity v9 removed wait_callable (a breaking change from v8). The integration
+    engineer implemented using wait_callable; the reliability engineer caught this during
+    tests. The consultant panel ran in planning but did not include a dependency version
+    audit. The break was caught late (implementation phase) rather than early (planning).
+  recommended_change: >
+    Add to quality_advisor prompt under "Sprint plan review checklist":
+    "For each named third-party library in the sprint plan, flag any library that has
+    had a major version release in the past 12 months as a potential breaking-change
+    risk. Confirm planned API calls exist in the version that will be installed."
+  evidence:
+    - "proj-20260425-001: tenacity.wait_callable absent in v9.1.4; integration_engineer used it; reliability_engineer caught and fixed during T-009 test run."
+  tradeoffs: Adds one checklist item to consultant panel. May increase panel duration slightly.
+  rejection_reason: ''
+
+- proposal_id: TP-016
+  title: "argparse vs Click Tag Disambiguation — Prevent CLI Framework Conflation in Specs"
+  target_agent: product_manager_agent
+  target_artifact: agents/product_manager_agent.md
+  priority: low
+  status: applied
+  systemic: false
+  source_project: proj-20260425-001-notion-zotero-live-pull
+  created_at: '2026-04-25T18:00:00+00:00'
+  minimum_evidence_met: true
+  description: >
+    The sprint plan used "Click" and "CliRunner" as generic terms for any CLI test
+    utility, but they are Click-specific. argparse does not have a CliRunner; its
+    test pattern is parser.parse_args([...]). This conflation will recur in any
+    future sprint involving CLI code unless the vocabulary is clarified.
+  recommended_change: >
+    In capability registry (complementing TP-012), add note under argparse-cli:
+    "test pattern: main(['subcommand', '--arg', 'val']) or parser.parse_args([...])".
+    Add note under click-cli: "test pattern: CliRunner().invoke(command, [...])".
+    In PM agent guidance: one bullet clarifying these are distinct frameworks.
+  evidence:
+    - proj-20260425-001: sprint plan specified CliRunner (Click) for argparse CLI package.
+  tradeoffs: Documentation-only change. Zero runtime cost.
   rejection_reason: ''

@@ -277,6 +277,12 @@ registry:
     - dry-run-writers
     - sync-design
     - write-log-design
+    - notion-api
+    - zotero-api
+    - tenacity-retry
+    - http-pagination
+    - atomic-write
+    - argparse-cli
     performance_score: 0.95
     generalised_at: '2026-04-21T00:00:00+00:00'
     spawn_origin: "proj-20260420-001-notion-zotero-platform"
@@ -296,6 +302,8 @@ registry:
     - write-path-interception
     - packaging-cleanup
     - parallel-sprint-execution
+    - atomic-write
+    - tenacity-retry
     performance_score: 0.93
     generalised_at: '2026-04-21T00:00:00+00:00'
     spawn_origin: "proj-20260420-001-notion-zotero-platform"
@@ -309,3 +317,26 @@ counts:
   retired_agents: 0
   spawned_total: 5
   pending_activation: 0
+
+# Capability vocabulary — definitions and disambiguation notes for HR scoring
+# Added: TP-012, TP-016 (proj-20260425-001)
+capability_vocabulary:
+  notion-api:
+    description: Read/write via Notion SDK (notion-client). Cursor-based pagination via has_more/next_cursor.
+  zotero-api:
+    description: Read via Zotero Web API (requests). Offset pagination via start/limit; Total-Results header.
+  tenacity-retry:
+    description: >
+      Retry logic using the tenacity library. IMPORTANT: tenacity v9+ removed wait_callable().
+      Use wait_base subclasses or wait_fixed/wait_exponential. Do not use wait_callable().
+  http-pagination:
+    description: Iterating multi-page HTTP responses (cursor-based or offset-based).
+  atomic-write:
+    description: Write to staging path first, swap to final on success; rollback staging on failure.
+  argparse-cli:
+    description: >
+      CLI built with Python argparse (NOT Click). Test pattern: main(['subcommand', '--arg', 'val'])
+      or parser.parse_args([...]). Do NOT use Click's CliRunner — it is Click-specific only.
+  click-cli:
+    description: >
+      CLI built with Click. Test pattern: CliRunner().invoke(command, [...]). Distinct from argparse-cli.

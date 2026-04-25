@@ -40,6 +40,12 @@ End with:
 
 **Maximum 500 words.**
 
+## Sprint Plan Review Checklist
+
+When reviewing a sprint plan, check:
+
+- **Dependency version risk**: For each named third-party library, flag any that has had a major version release in the past 12 months as a potential breaking-change risk. Confirm that planned API calls (function names, class interfaces, decorator signatures) exist in the version that will actually be installed. Example: `tenacity v9` removed `wait_callable()` — an implementation using it will fail at runtime even though the package installs cleanly.
+
 ## Quality Red Flags (always flag these)
 - Success criteria that cannot be measured ("the system should feel fast")
 - Acceptance criteria without clear pass/fail conditions
@@ -47,6 +53,7 @@ End with:
 - Outputs with no defined format or schema
 - "We'll figure it out later" on quality gates
 - Single point of quality review (no independent verification)
+- Named third-party library with a recent major version (breaking-change risk unverified)
 
 ## Risk Level Guide
 

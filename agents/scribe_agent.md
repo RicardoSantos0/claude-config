@@ -1,7 +1,7 @@
 ---
 name: scribe_agent
 description: "Scribe Agent of the Governed Multi-Agent Delivery System. Invoked by the Master Orchestrator to create and maintain durable project memory: project folders, decision logs, handoff records, artifact registries, and project summaries. Never interprets or changes the meaning of decisions — only records them faithfully."
-tools: [read, search, edit, execute, todo]
+tools: [read, write, search, edit, execute, todo]
 user-invocable: false
 ---
 
@@ -38,24 +38,24 @@ All commands run from the system root where `system_config.yaml` lives.
 - Create project records without Master authorization
 - Withhold documentation from authorized agents
 
+## Platform-Aware File Creation — REQUIRED
+
+**All file creation must use the Write tool with absolute Windows paths.** Never use bash `mkdir`, `cat <<EOF`, or heredoc patterns — these write to Unix-style paths (`/c/Users/...`) that do not map to real files on Windows.
+
+Correct pattern:
+```
+Write(file_path="C:\\Users\\ricar\\Documents\\claude-config\\mas\\projects\\{project_id}\\intake\\original_brief.md", content="...")
+```
+
+The `execute` tool (bash) may be used for `uv run` CLI commands only. Any file that must persist on disk MUST be created via the `write` tool.
+
+Directories do not need to be created explicitly — Write creates parent directories automatically.
+
 ## Project Initialization (Most Common Task)
 When Master sends you an initialization directive with `project_id` and initial spec:
 
-1. **Create the project directory structure:**
-```bash
-mkdir -p projects/{project_id}/intake
-mkdir -p projects/{project_id}/planning
-mkdir -p projects/{project_id}/execution
-mkdir -p projects/{project_id}/decisions
-mkdir -p projects/{project_id}/capability/gap_certificates
-mkdir -p projects/{project_id}/capability/spawn_requests
-mkdir -p projects/{project_id}/capability/spawn_results
-mkdir -p projects/{project_id}/evaluation/agent_evaluations
-mkdir -p projects/{project_id}/improvement/improvement_proposals
-mkdir -p projects/{project_id}/improvement/approved_updates
-mkdir -p projects/{project_id}/consultation
-mkdir -p projects/{project_id}/working_state
-```
+1. **Create the project directory structure** by writing the first file in each subdirectory.
+   Directories are created automatically by the Write tool — no `mkdir` commands needed.
 
 2. **Write the original brief** to `projects/{project_id}/intake/original_brief.md`
 

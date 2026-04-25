@@ -42,7 +42,12 @@ from core.utils.token_counter import TokenCounter
 
 _token_counter = TokenCounter()
 
-ROOT = Path(__file__).parent.parent.parent
+ROOT = Path(__file__).parent.parent.parent.resolve()
+
+try:
+    from core.db import append_event as _append_event
+except Exception:
+    _append_event = None  # type: ignore
 
 EXEMPLARY_THRESHOLD = 90.0    # Agent score above this → flagged exemplary
 PROBATION_THRESHOLD = 60.0    # Agent score below this → recommend probation
@@ -931,12 +936,29 @@ class MetricsEngine:
         report: "EvaluationReport",
         project_dir: Path,
     ) -> Path:
-        """Write the evaluation report to disk."""
+        """Write the evaluation report to disk and log the evaluation event to the DB."""
         eval_dir = project_dir / "evaluation"
         eval_dir.mkdir(parents=True, exist_ok=True)
         path = eval_dir / "evaluation_report.yaml"
         with open(path, "w", encoding="utf-8") as f:
             yaml.dump(report.to_dict(), f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+        if _append_event is not None:
+            try:
+                _append_event(
+                    project_id=report.project_id,
+                    agent_id="evaluator_agent",
+                    action_type="evaluation_completed",
+                    intent=f"Evaluation complete: overall score {report.overall_project_score:.1f}",
+                    result_shape="evaluation_report",
+                    payload={
+                        "overall_score": report.overall_project_score,
+                        "report_path": str(path),
+                        "agent_scores": {a.agent_id: a.overall_score
+                                         for a in report.agent_evaluations},
+                    },
+                )
+            except Exception:
+                pass  # DB logging must never block report saving
         return path
 
 

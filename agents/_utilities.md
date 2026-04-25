@@ -5,6 +5,18 @@ Shared CLI commands used across agents. All run from the repo root (where `pypro
 All engine modules live under `mas/core/engine/`. Top-level `mas/core/` contains the CLI
 (`cli.py`), database layer (`db.py`), and configuration (`config.py`).
 
+## Windows Path Rule (REQUIRED)
+
+On Windows, **always use `C:\Users\...` paths** — never `/c/Users/...` Unix-style paths.
+Unix-style paths do not map to real files on Windows and will silently write to the wrong location.
+
+When creating handoffs or writing shared state from within a subagent:
+- Correct: `C:\Users\ricar\Documents\claude-config\mas\projects\{project_id}\...`
+- Wrong: `/c/Users/ricar/Documents/claude-config/mas/projects/{project_id}/...`
+
+For file creation, use the **Write tool** with absolute Windows paths — never bash heredocs or
+`cat <<EOF` patterns, which inherit the Unix path context and will not persist on Windows.
+
 ## Handoff Commands
 ```bash
 # Accept a pending handoff
