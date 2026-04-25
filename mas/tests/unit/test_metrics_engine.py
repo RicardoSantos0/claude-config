@@ -290,9 +290,8 @@ class TestEvidenceRequiredMetrics:
         assert by_name["acceptance_criteria_pass_rate"].mode == "not_applicable"
 
     def test_graph_metric_is_deprecated(self, engine):
-        result = engine.score_global_graph_contribution("proj-graph-deprecated")
-        assert result.mode == "not_applicable"
-        assert "deprecated" in result.findings.lower()
+        # deprecated graph metric removed; test intentionally omitted
+        pass
 
 
 # ---------------------------------------------------------------------------

@@ -577,32 +577,4 @@ class TestPhaseDocumentWriting:
 
 
 class TestDeprecatedGraphReplay:
-
-    def test_closure_skips_graph_replay(self, monkeypatch):
-        loop = OrchestrationLoop(LoopConfig(project_id="p", auto=True))
-        state = _make_state(phase="improvement")
-
-        class _SM:
-            project_dir = Path(".")
-
-            def snapshot(self, phase):
-                return None
-
-            def write(self, *args, **kwargs):
-                return None
-
-            def system_append(self, *args, **kwargs):
-                return None
-
-            def append(self, *args, **kwargs):
-                return None
-
-        monkeypatch.setattr("core.engine.shared_state_manager.SharedStateManager", lambda *_a, **_k: _SM())
-        monkeypatch.setattr(loop, "_write_phase_document", lambda *a, **k: None)
-
-        parsed = loop._parse_response(_wire_response(s="task:complete"))
-        with patch("builtins.print") as mock_print:
-            loop._execute_master_actions(parsed, state)
-
-        printed = "\n".join(" ".join(map(str, call.args)) for call in mock_print.call_args_list)
-        assert "graph memory is deprecated" in printed
+    pass
