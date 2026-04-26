@@ -410,6 +410,8 @@ pytest mas/tests/governance/   # Access control & immutability
 pytest mas/tests/prompts/      # Agent prompt tests
 ```
 
+- **Total test files:** 50 Python test files (located under `mas/tests/`).
+
 Legacy graph-memory tests remain quarantined while the repo uses the SQL/vector path instead.
 
 ---

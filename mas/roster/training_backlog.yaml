@@ -879,3 +879,105 @@ proposals:
     - proj-20260425-001: sprint plan specified CliRunner (Click) for argparse CLI package.
   tradeoffs: Documentation-only change. Zero runtime cost.
   rejection_reason: ''
+
+- proposal_id: TP-017
+  title: "Master Orchestrator — Create Project Folder Before Dispatching Any Delivery Agent"
+  target_agent: master_orchestrator
+  target_artifact: agents/master_orchestrator.md
+  priority: high
+  status: applied
+  applied_at: '2026-04-26T12:00:00+00:00'
+  applied_by: master_orchestrator
+  applied_in_project: proj-20260426-001-operational-readiness
+  systemic: true
+  source_project: proj-20260426-001-operational-readiness
+  created_at: '2026-04-26T11:00:00+00:00'
+  minimum_evidence_met: true
+  description: >
+    In proj-20260426-001-operational-readiness, the Master Orchestrator dispatched a
+    delivery agent (reliability_engineer) and produced code before any MAS project
+    folder existed. PRODUCT_PLAN.md, EXECUTION_PLAN.md, and CHECKPOINT.md were all
+    written retroactively. Process Compliance scored 2/5. The governance policy states
+    "document before forget" — the analogous rule for delivery is "plan before build."
+  recommended_change: >
+    Add an explicit pre-dispatch gate to the Master Orchestrator's execution checklist:
+    "Before issuing any handoff to a delivery agent, verify that the project folder
+    exists at mas/projects/{project_id}/ and contains at minimum PRODUCT_PLAN.md.
+    If either is absent, invoke scribe_agent to create them first. Do not proceed to
+    delivery until scribe confirms the folder is initialised."
+  evidence:
+    - "proj-20260426-001 EVALUATION.md: Process Compliance 2/5 — documentation written retroactively after code delivery."
+    - "proj-20260426-001 CHECKPOINT.md: 'MAS project documentation was written retroactively (no documentation was written during execution — backfilled after delivery)'"
+  tradeoffs: Adds one scribe_agent handoff per project before delivery begins. Adds
+    ~1 round-trip overhead but eliminates the retroactive documentation pattern that
+    scored 2/5 three projects in a row.
+  rejection_reason: ''
+
+- proposal_id: TP-018
+  title: "Scribe Agent — Initialize Project Folder at Phase Transition to execution"
+  target_agent: scribe_agent
+  target_artifact: agents/scribe_agent.md
+  priority: high
+  status: applied
+  applied_at: '2026-04-26T12:00:00+00:00'
+  applied_by: master_orchestrator
+  applied_in_project: proj-20260426-001-operational-readiness
+  systemic: true
+  source_project: proj-20260426-001-operational-readiness
+  created_at: '2026-04-26T11:00:00+00:00'
+  minimum_evidence_met: true
+  description: >
+    The scribe_agent is responsible for creating and maintaining durable project memory.
+    In practice it has only been invoked at sprint close (to record outcomes), not at
+    kickoff. The result: in proj-20260426-001, no project folder was initialised until
+    after delivery was complete. Scribe should be triggered at the start of the execution
+    phase (or earlier), not only at the end.
+  recommended_change: >
+    Add to scribe_agent instructions under "When I am invoked":
+    "At execution phase start: create the project folder structure
+    (mas/projects/{project_id}/), write PRODUCT_PLAN.md from the approved product plan,
+    and write an empty EXECUTION_PLAN.md template with milestones placeholder.
+    At sprint close: fill EXECUTION_PLAN.md with actual milestones, write CHECKPOINT.md,
+    write HANDOFF.md summarising outcomes and open items.
+    Do not wait for post-delivery to create the folder — it must exist before any
+    delivery handoff is issued."
+  evidence:
+    - "proj-20260426-001 EVALUATION.md: Documentation 1/5 — all docs backfilled after code delivery."
+    - "Pattern observed across proj-20260425-001 and proj-20260426-001: scribe only invoked at close."
+  tradeoffs: Requires Master to invoke scribe before dispatching delivery agents.
+    Adds one handoff. Eliminates documentation debt that has recurred in multiple sprints.
+  rejection_reason: ''
+
+- proposal_id: TP-019
+  title: "Reliability Engineer — Flag Tests With External Network Exposure"
+  target_agent: reliability_engineer
+  target_artifact: agents/reliability_engineer.md
+  priority: medium
+  status: applied
+  applied_at: '2026-04-26T12:00:00+00:00'
+  applied_by: master_orchestrator
+  applied_in_project: proj-20260426-001-operational-readiness
+  systemic: false
+  source_project: proj-20260426-001-operational-readiness
+  created_at: '2026-04-26T11:00:00+00:00'
+  minimum_evidence_met: true
+  description: >
+    In proj-20260426-001, the initial TestCliStatus tests ran ~90 seconds because
+    load_dotenv() inside cmd_status restored real API credentials from .env, causing
+    actual network calls to Notion/Zotero. The fix was to also clear NOTION_API_KEY
+    in monkeypatch. This pattern (dotenv + monkeypatch partial clearing) is a recurring
+    risk in any test that exercises CLI commands which call load_dotenv() internally.
+  recommended_change: >
+    Add to the reliability_engineer's test review checklist:
+    "For any test of a CLI command that calls load_dotenv() internally:
+    (a) Verify that ALL credential env vars used by the command are cleared or set
+        to fake values via monkeypatch — partial clearing is insufficient because
+        load_dotenv() will restore un-patched vars from .env.
+    (b) If the test is expected to complete in <1s but takes >5s in practice,
+        flag it as potentially hitting live network. Add @pytest.mark.slow and
+        investigate mock coverage."
+  evidence:
+    - "proj-20260426-001: TestCliStatus::test_status_no_zotero_key took ~88s on first run due to live Notion API timeout."
+    - "Root cause: monkeypatch deleted ZOTERO_API_KEY but not NOTION_API_KEY; load_dotenv() restored it from .env."
+  tradeoffs: Adds one checklist item to test review. No runtime cost.
+  rejection_reason: ''

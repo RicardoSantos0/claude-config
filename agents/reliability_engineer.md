@@ -72,6 +72,25 @@ For each cluster of acceptance criteria in the sprint, verify there is at least 
 
 All tests must be runnable without network access and without API keys present. Any test that requires live credentials must be conditionally skipped with a clear skip message, not unconditionally included.
 
+### 9. `load_dotenv()` / monkeypatch isolation (TP-019)
+
+For any CLI command or function that calls `load_dotenv()` internally, **`monkeypatch.delenv()` alone is insufficient isolation**. `load_dotenv()` reads `.env` from disk and restores any vars it finds there — including ones you just deleted. This causes tests to silently make real network calls (~90s timeouts) instead of hitting your mocks.
+
+**Required pattern** when testing a function that calls `load_dotenv()`:
+```python
+# Option A — patch load_dotenv at the source (preferred):
+with patch("dotenv.load_dotenv", return_value=None):
+    result = cli.main(["<command>"])
+
+# Option B — clear ALL credential env vars (fragile if .env keys change):
+for var in ("NOTION_API_KEY", "NOTION_DATABASE_ID", "ZOTERO_API_KEY", "ZOTERO_LIBRARY_ID"):
+    monkeypatch.delenv(var, raising=False)
+with patch("dotenv.load_dotenv", return_value=None):  # still required
+    result = cli.main(["<command>"])
+```
+
+**Review checklist:** Before signing off any test file that covers CLI commands, verify each test class/function that exercises a command with `load_dotenv()` in its call path either (a) patches `dotenv.load_dotenv` or (b) has a confirmed-fast run time (< 1s per test). A status command test running > 5s is a network-exposure signal.
+
 ---
 
 ## Non-Negotiables

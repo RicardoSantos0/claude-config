@@ -202,6 +202,7 @@ Max 3 spawns per project. Spawned agents start at T3_provisional.
 - **Accept a completion handoff without verifying claimed file deliverables exist on disk** (see Delivery Verification Protocol)
 - **Advance `current_phase` before the Scribe handoff for that phase is accepted** (see Phase Management)
 - **Mark a project closed with zero verified deliverables** — closure requires confirmed files + Scribe confirmation
+- **Dispatch any delivery agent (execution phase) before `mas/projects/{project_id}/PRODUCT_PLAN.md` exists on disk** — verify with Glob before issuing the handoff; if absent, invoke Scribe first (TP-017)
 
 ## MAS Workflow Restriction
 
@@ -221,6 +222,14 @@ When a user gives you a project brief:
 4. Accept Scribe's confirmation and verify at least one file exists in the new project folder
 5. Create handoff to Inquirer with the raw brief
 6. Continue through lifecycle phases
+
+**Pre-dispatch documentation gate (TP-017) — strictly enforced:**
+Before issuing ANY handoff to a delivery agent (i.e., at execution phase start), you MUST verify that `mas/projects/{project_id}/PRODUCT_PLAN.md` exists on disk:
+```bash
+# Use Glob to check:
+mas/projects/{project_id}/PRODUCT_PLAN.md
+```
+If the file is absent: invoke `scribe_agent` first with the approved product plan content and wait for confirmation before dispatching any delivery work. Dispatching a delivery agent without `PRODUCT_PLAN.md` on disk is a governance violation (see "What You Must Never Do").
 
 **File placement rule — strictly enforced:**
 - If you need to write a project brief document, it goes inside the project folder: `mas/projects/{project_id}/brief.md`

@@ -95,6 +95,21 @@ A decision entry missing `rationale` or `alternatives_considered` is incomplete 
 ## Recording Artifacts
 When an agent produces an artifact, use `shared_state_manager.py append` to add to `artifacts.documents` (see `_utilities.md`).
 
+## Execution Phase Initialization (TP-018 — invoked by Master at execution phase START)
+When Master invokes you at the **start** of the execution phase (before any delivery agent is dispatched), write the planning artifacts to disk so delivery agents have a documented context to work from:
+
+1. **Write `PRODUCT_PLAN.md`** to `mas/projects/{project_id}/PRODUCT_PLAN.md`
+   — Content: the approved product plan from the planning phase (goals, must/should/could requirements, acceptance criteria, out-of-scope, risks).
+
+2. **Write `EXECUTION_PLAN.md`** to `mas/projects/{project_id}/EXECUTION_PLAN.md`
+   — Content: the execution plan from the project manager phase (milestones, task breakdown, agent assignments, dependencies). If the execution plan is not yet finalized, write a skeleton with placeholders and note "PENDING FINALIZATION".
+
+3. **Register both artifacts** in shared state via `shared_state_manager.py append`.
+
+4. **Return handoff to Master** with `s: "scribe:recorded"` and `art: [PRODUCT_PLAN.md, EXECUTION_PLAN.md]`.
+
+Master MUST NOT dispatch any delivery agent until this handoff is accepted and both files are confirmed on disk.
+
 ## Phase Summaries (D8 — invoked by Master at every phase-close)
 At each phase transition, Master Orchestrator will hand off to you. When invoked for a phase-close:
 
