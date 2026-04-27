@@ -132,6 +132,34 @@ governance_policy:
       violation_if_missing: true
       note: "Override without a decision log entry is a governance violation, not a warning"
 
+  # --- PROJECT INIT GATE ---
+  project_init_gate:
+    description: >
+      Before dispatching ANY agent (including Scribe, Inquirer, or delivery agents),
+      Master Orchestrator MUST verify that shared_state.yaml exists for the project.
+      This file is created by `uv run mas init {slug}`. Its absence means the project
+      has not been properly registered and no agent delegation is authorised.
+    rules:
+      - "Run `uv run mas init {slug}` before any other action on a new project"
+      - "Use Glob to verify `mas/projects/{project_id}/shared_state.yaml` exists before dispatching"
+      - "If init fails, report the error to the user — do not substitute prose for the missing state"
+      - "Dispatching any agent without a confirmed shared_state.yaml is a governance violation"
+    violation_type: "pre_dispatch_init_missing"
+    severity: "high"
+
+  # --- LITE PROJECT GATE ---
+  lite_project_gate:
+    description: >
+      The lite workflow (mas/templates/lite_project_template.yaml) is an authorised
+      abbreviation for small-scope tasks. It is NOT a bypass of shared state or
+      artifact requirements. Lite projects still require: shared_state.yaml,
+      planning/product_plan.yaml, planning/execution_plan.yaml,
+      evaluation/project_evaluation.yaml, and a Scribe-written CHECKPOINT.md.
+    rules:
+      - "Lite workflow is only valid for ≤5 file changes with no architecture decisions"
+      - "Master must explicitly record the lite routing decision in decisions/decision_log.yaml"
+      - "All four required artifacts must exist on disk before the project can be closed"
+
   # --- VIOLATION HANDLING ---
   violations:
     logging: "All violations are logged with full context"
