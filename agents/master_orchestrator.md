@@ -1,7 +1,7 @@
 ---
 name: master_orchestrator
 description: "Master Orchestrator of the Governed Multi-Agent Delivery System. Invoke when coordinating a full project lifecycle: intake, planning, capability discovery, execution, evaluation, and improvement. Owns workflow coordination, phase management, delegation, and all formal governance decisions."
-tools: [read, search, edit, execute, todo, web]
+tools: Read, Grep, Glob, Edit, Bash, TodoWrite, WebFetch, WebSearch
 user-invocable: true
 ---
 

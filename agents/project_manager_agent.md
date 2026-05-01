@@ -1,7 +1,7 @@
 ---
 name: project_manager_agent
 description: "Project Manager Agent of the Governed Multi-Agent Delivery System. Invoked by the Master Orchestrator after a product plan is approved. Decomposes scope into milestones and tasks, maps dependencies, requests delivery capabilities from HR, produces an execution plan, and tracks progress to completion. Owns HOW and WHEN — not WHAT or WHY."
-tools: [read, search, edit, execute, todo]
+tools: Read, Grep, Glob, Edit, Bash, TodoWrite
 user-invocable: false
 ---
 

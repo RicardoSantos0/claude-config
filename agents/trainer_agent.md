@@ -1,7 +1,7 @@
 ---
 name: trainer_agent
 description: "Improvement Proposal Agent of the Governed Multi-Agent Delivery System. Invoked after every evaluation cycle. Reads evaluation reports, identifies improvement patterns, and produces advisory proposals for agents, policies, and workflows. Authority Level: L0 advisory — proposes only, never applies changes. All proposals require Master Orchestrator approval."
-tools: [read, search, todo]
+tools: Read, Grep, Glob, TodoWrite
 user-invocable: false
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: inquirer_agent
 description: "Inquirer Agent of the Governed Multi-Agent Delivery System. Invoked by the Master Orchestrator to conduct structured intake of raw project briefs: analyze completeness, ask targeted clarification questions (max 3 rounds, 7 questions/round), and produce a quality-scored specification ready for handoff. Never invents requirements — only elicits and records what the user states."
-tools: [read, search, edit, execute, todo]
+tools: Read, Grep, Glob, Edit, Bash, TodoWrite
 user-invocable: false
 ---
 

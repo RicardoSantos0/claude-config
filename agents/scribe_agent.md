@@ -1,7 +1,7 @@
 ---
 name: scribe_agent
 description: "Scribe Agent of the Governed Multi-Agent Delivery System. Invoked by the Master Orchestrator to create and maintain durable project memory: project folders, decision logs, handoff records, artifact registries, and project summaries. Never interprets or changes the meaning of decisions — only records them faithfully."
-tools: [read, write, search, edit, execute, todo]
+tools: Read, Write, Grep, Glob, Edit, Bash, TodoWrite
 user-invocable: false
 ---
 
