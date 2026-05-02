@@ -466,6 +466,11 @@ def _build_parser() -> argparse.ArgumentParser:
     show_p = sub.add_parser("show", help="Print current state")
     show_p.add_argument("--project-id", required=True)
 
+    # cleanup
+    cleanup_p = sub.add_parser("cleanup", help="Remove snapshot files from project directory, keeping shared_state.yaml")
+    cleanup_p.add_argument("--project-id", required=True)
+    cleanup_p.add_argument("--dry-run", action="store_true", help="Print what would be deleted without deleting")
+
     return p
 
 
@@ -517,6 +522,21 @@ def main_cli(args=None) -> int:
     elif ns.command == "show":
         state = sm.load()
         print(yaml.dump(state, default_flow_style=False, allow_unicode=True, sort_keys=False))
+
+    elif ns.command == "cleanup":
+        project_dir = sm.project_dir
+        snapshots = sorted(project_dir.glob("shared_state_snapshot_*.yaml"))
+        if not snapshots:
+            print(f"Nothing to clean up in {project_dir}")
+            return 0
+        if ns.dry_run:
+            print(f"[dry-run] Would delete {len(snapshots)} snapshot(s) from {project_dir}:")
+            for f in snapshots:
+                print(f"  {f.name}")
+        else:
+            for f in snapshots:
+                f.unlink()
+            print(f"Deleted {len(snapshots)} snapshot(s) from {project_dir}")
 
     return 0
 
