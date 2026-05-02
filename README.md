@@ -87,7 +87,7 @@ claude-config/
 ├── setup.ps1              # Windows symlink setup (run as Admin)
 ├── setup.sh               # macOS/Linux symlink setup
 │
-├── agents/                # Custom Claude Code agents (14 MAS agents + utilities)
+├── agents/                # Custom Claude Code agents (20 MAS agents + utilities)
 │   ├── master_orchestrator.md
 │   ├── scribe_agent.md
 │   ├── hr_agent.md
@@ -97,19 +97,44 @@ claude-config/
 │   ├── evaluator_agent.md
 │   ├── trainer_agent.md
 │   ├── spawner_agent.md
+│   ├── librarian_agent.md
 │   ├── risk_advisor.md
 │   ├── quality_advisor.md
 │   ├── devils_advocate.md
 │   ├── domain_expert.md
 │   ├── efficiency_advisor.md
 │   ├── session_scheduler.md
+│   ├── canonical_engineer.md
+│   ├── analysis_engineer.md
+│   ├── integration_engineer.md
+│   ├── reliability_engineer.md
 │   └── _utilities.md
 │
 ├── commands/              # Custom slash commands
 │   └── resume-mas.md      # Resume a paused MAS project
 │
+├── standards/             # Engineering standards (agent frontmatter, wire protocol, security, …)
+│   ├── README.md
+│   ├── agent-frontmatter.md
+│   ├── commit-style.md
+│   ├── documentation-format.md
+│   ├── mas-governance.md
+│   ├── mas-project-lifecycle.md
+│   ├── python-standards.md
+│   ├── security-and-permissions.md
+│   ├── sql-conventions.md
+│   └── wire-protocol.md
+│
 ├── skills/                # Skill packages
 │   ├── frontend-design/
+│   ├── mas-clarify/       # MAS workflow: surface blocking questions
+│   ├── mas-document/      # MAS workflow: update checkpoints and logs
+│   ├── mas-examine/       # MAS workflow: analyze without modifying
+│   ├── mas-handoff/       # MAS workflow: produce human-readable handoff
+│   ├── mas-logwork/       # MAS workflow: track session work
+│   ├── mas-plan/          # MAS workflow: produce or update execution plan
+│   ├── mas-postmortem/    # MAS workflow: analyze failures and produce proposals
+│   ├── mas-review/        # MAS workflow: review project state and next action
 │   ├── notebooklm/
 │   ├── research-extract/
 │   ├── research-sync/
@@ -137,13 +162,13 @@ claude-config/
 
 ## Multi-Agent System (MAS)
 
-Version **0.2.0**. A governed multi-agent delivery system that coordinates 14 specialized AI agents through formal handoff protocols, access-controlled shared state, and policy enforcement.
+Version **0.2.0**. A governed multi-agent delivery system that coordinates 20 specialized AI agents through formal handoff protocols, access-controlled shared state, and policy enforcement.
 
 **Key dependencies**: `anthropic>=0.49.0`, `pyyaml>=6.0`, `python-dotenv>=1.0`, `click>=8.1`, `rich>=13.0`, `networkx>=3.0`
 
 ### Agent Network
 
-14 agents organized across 4 trust tiers:
+20 agents organized across 4 trust tiers:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -167,6 +192,16 @@ Version **0.2.0**. A governed multi-agent delivery system that coordinates 14 sp
 │  │   risk   │ │ quality  │ │ devil's  │ │ domain │ │ effic. │ │
 │  │ advisor  │ │ advisor  │ │ advocate │ │ expert │ │advisor │ │
 │  └──────────┘ └──────────┘ └──────────┘ └────────┘ └────────┘ │
+├─────────────────────────────────────────────────────────────────┤
+│  T1 DELIVERY ENGINEERS (file/code delivery)                     │
+│  ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐       │
+│  │ canonical │ │ analysis  │ │integration│ │reliability│       │
+│  │ engineer  │ │ engineer  │ │ engineer  │ │ engineer  │       │
+│  └───────────┘ └───────────┘ └───────────┘ └───────────┘       │
+│  ┌───────────┐  ┌──────────┐                                    │
+│  │ session   │  │librarian │                                     │
+│  │ scheduler │  │ (db ops) │                                     │
+│  └───────────┘  └──────────┘                                    │
 ├─────────────────────────────────────────────────────────────────┤
 │  T2 SUPERVISED (require Master oversight)                       │
 │  ┌───────────┐  ┌───────────┐                                   │
@@ -193,7 +228,13 @@ Version **0.2.0**. A governed multi-agent delivery system that coordinates 14 sp
 | **T1 Consultant** | `devils_advocate` | Assumption challenging, alternative perspectives, blind spot detection |
 | **T1 Consultant** | `domain_expert` | Domain knowledge, best practices, prior art (auto-injects from `mas/domains/`) |
 | **T1 Consultant** | `efficiency_advisor` | Overengineering detection, cost estimation, simplification |
-| **T2** | `trainer_agent` | Improvement proposals, pattern detection (L0 advisory only) |
+| **T1** | `trainer_agent` | Improvement proposals, pattern detection (L0 advisory only) |
+| **T1** | `session_scheduler` | Scheduled session-resume, project lock management, cron-triggered checkpoint continuation |
+| **T1** | `canonical_engineer` | Pydantic v2 model design, schema registry, provenance field patterns |
+| **T1** | `analysis_engineer` | DataFrame flattening (Polars), CLI analysis reports, review QA reports |
+| **T1** | `integration_engineer` | Read-only external connectors, dry-run diff engine, API-key-gated sync |
+| **T1** | `reliability_engineer` | Test suite (≥80% coverage), golden fixtures, CI lint guards, quality gates |
+| **T2** | `librarian_agent` | Database operations: FTS5 maintenance, graph migration, vacuum on episodic.db |
 | **T2** | `spawner_agent` | Agent design, capability packaging, draft generation |
 
 ### Project Lifecycle
@@ -237,7 +278,14 @@ Each standard phase transition requires:
 | `cli.py` | CLI entry point (`mas init`, `mas status`, `mas init --mode=lite`, …) |
 | `db.py` | Central SQL layer: `append_event`, `semantic_search`, `query_token_usage`, shared-state SQL helpers |
 | `wire_protocol.py` | Compact wire format for handoff payloads |
-| `config.py` | System configuration loader |
+| `config.py` | System configuration loader (reads `mas/system_config.yaml`) |
+
+**`mas/data/`** — runtime databases and sync scripts:
+
+| Module | Purpose |
+|--------|---------|
+| `episodic.db` | SQLite: agent events, FTS5 index, agents table (queryable projection of registry) |
+| `roster_sync.py` | Sync `registry_canonical.yaml` → `episodic.db` agents table (idempotent upsert) |
 
 **`mas/core/engine/`** — engine subpackage (import as `core.engine.*`):
 
@@ -347,8 +395,11 @@ The runtime uses a SQL event store:
 
 | Agent | Model | Max Tokens | Temperature |
 |-------|-------|------------|-------------|
-| `master_orchestrator` | `claude-opus-4-6` | 4096 | 0.3 |
+| `master_orchestrator` | `claude-opus-4-7` | 4096 | 0.3 |
+| `efficiency_advisor` | `claude-haiku-4-5` | 4096 | 0.3 |
 | All others | `claude-sonnet-4-6` | 4096 | 0.3 |
+
+Model selection is canonical in `mas/system_config.yaml` (llm block) and per-agent in `mas/roster/registry_canonical.yaml`. Override at runtime via `MAS_MASTER_MODEL` / `MAS_DEFAULT_MODEL` env vars.
 
 ### Domain Contexts
 
@@ -362,6 +413,23 @@ Markdown files in `mas/domains/` auto-injected into `domain_expert`:
 ---
 
 ## Skills
+
+### MAS Workflow Skills
+
+These skills provide ergonomic session workflows over MAS governance state. They wrap MAS concepts without replacing them.
+
+| Skill | Trigger | Description |
+|-------|---------|-------------|
+| `mas-review` | Start/resume a session | Review MAS project state, pending handoffs, risks, and recommended next action |
+| `mas-plan` | Need a phase-aware plan | Produce or update an execution plan from project state and objectives |
+| `mas-clarify` | Ambiguity blocks work | Surface and prioritize blocking questions; propose safe assumptions |
+| `mas-examine` | Need to analyze before acting | Analyze code, docs, state, policies, or architecture without modifying anything |
+| `mas-document` | Completing a phase or session | Update checkpoints, decision logs, artifact indexes, and progress summaries |
+| `mas-handoff` | Ending a session or handing off | Produce a human-readable handoff from MAS state (session, PR, agent, incident) |
+| `mas-logwork` | Track session work | Record start/stop/pause/resume and feed work context into MAS evaluation |
+| `mas-postmortem` | After a failure or violation | Analyze root causes and produce action items and training proposals |
+
+### Other Skills
 
 | Skill | Description |
 |-------|-------------|
@@ -435,4 +503,30 @@ The system forces human intervention when:
 - **Agent**: Create `agents/{name}.md` with frontmatter (`name`, `description`, `tools`)
 - **Skill**: Create `skills/{name}/SKILL.md`
 - **Command**: Create `commands/{name}.md`
+
+---
+
+## Sharing / Exporting This Repo
+
+**Do not zip the working tree directly.**
+
+The working tree may contain runtime state, local Claude permissions, browser state,
+databases, logs, or credentials that must not be shared.
+
+Use the source-only export scripts instead:
+
+```bash
+# Bash / macOS / Linux
+scripts/export_source.sh
+python scripts/check_archive_clean.py claude-config-source.zip
+
+# PowerShell / Windows
+.\scripts\export_source.ps1
+python scripts/check_archive_clean.py claude-config-source.zip
+```
+
+The export scripts use `git archive` which only includes tracked source files and
+honours `.gitattributes` export-ignore rules. The scanner will fail with a non-zero
+exit code if any blocked path (`.env`, `.venv/`, `mas/projects/`, browser state, etc.)
+is present in the archive.
 - Push to GitHub — other machines pull to sync

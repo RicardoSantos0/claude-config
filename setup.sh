@@ -25,3 +25,4 @@ link() {
 link agents
 link commands
 link skills
+link standards

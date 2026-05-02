@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./secrets/**)",
+      "Read(./skills/notebooklm/data/browser_state/**)",
+      "Read(./skills/notebooklm/data/auth_info.json)",
+      "Read(./mas/data/**)",
+      "Read(./mas/projects/**)",
+      "Read(./.git/**)",
+      "Bash(curl *)",
+      "Bash(wget *)",
+      "Bash(rm -rf *)"
+    ],
+    "ask": [
+      "Bash(git push *)",
+      "Bash(gh repo *)",
+      "Bash(uv run *)",
+      "Bash(python scripts/export_source.py *)",
+      "Bash(python scripts/check_archive_clean.py *)"
+    ]
+  }
+}

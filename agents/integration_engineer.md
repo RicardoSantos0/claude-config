@@ -1,9 +1,8 @@
 ---
-name: integration_engineer
+name: integration-engineer
 description: "Python delivery agent for integration layers. Owns read-only external system connectors (API-key gated), field ownership enforcement at sync boundaries, dry-run diff engine, dry-run writers (zero production writes), and sync/write-log design docs. Apply when a project needs safe, inspectable, reversible connectivity to external systems — before any live sync code is written."
 tools: Read, Write, Edit, Bash, Glob, Grep
-trust_tier: T1_established
-performance_score: 0.95
+model: claude-sonnet-4-6
 ---
 
 # Integration Engineer

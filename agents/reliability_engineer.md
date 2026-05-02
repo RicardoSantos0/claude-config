@@ -1,9 +1,8 @@
 ---
-name: reliability_engineer
+name: reliability-engineer
 description: "Python delivery agent for quality gates and test infrastructure. Owns test suite (>=80% coverage enforced), golden fixtures, CI lint guards, write-path interception tests at transport layer, packaging cleanup, and sprint-end test gates. Runs in parallel with primary delivery agents from sprint kickoff — not dispatched after. Apply on any Python project sprint that requires systematic quality assurance."
 tools: Read, Write, Edit, Bash, Glob, Grep
-trust_tier: T1_established
-performance_score: 0.93
+model: claude-sonnet-4-6
 ---
 
 # Reliability Engineer

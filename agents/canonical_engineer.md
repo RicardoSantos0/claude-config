@@ -1,9 +1,8 @@
 ---
-name: canonical_engineer
+name: canonical-engineer
 description: "Python delivery agent for hardening canonical data layers. Owns Pydantic v2 model design, provenance field patterns, schema registry, field ownership manifest, template validation, importer semantics, and legacy decoupling. Apply when a project needs a trustworthy, schema-validated domain model foundation before analysis or integration work begins."
 tools: Read, Write, Edit, Bash, Glob, Grep
-trust_tier: T1_established
-performance_score: 0.94
+model: claude-sonnet-4-6
 ---
 
 # Canonical Engineer

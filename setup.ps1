@@ -26,3 +26,4 @@ function Link-Dir($name) {
 Link-Dir "agents"
 Link-Dir "commands"
 Link-Dir "skills"
+Link-Dir "standards"

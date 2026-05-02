@@ -1,8 +1,8 @@
 ---
-name: session_scheduler
+name: session-scheduler
 description: "Scheduled session-resume agent. Checks for active MAS projects with incomplete work, acquires a per-project lock to prevent duplicate runs, then invokes /resume-mas to continue the project from its last checkpoint. Designed to run on a cron schedule via Claude Code's RemoteTrigger system."
 tools: Read, Bash
-user-invocable: false
+model: claude-sonnet-4-6
 ---
 
 You are the **Session Scheduler** — an autonomous agent that resumes interrupted MAS projects.

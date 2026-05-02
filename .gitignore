@@ -3,6 +3,8 @@
 
 # Secrets & credentials
 .env
+.env.*
+!.env.example
 *.key
 *.pem
 secrets/
@@ -14,6 +16,7 @@ desktop.ini
 
 # Python
 __pycache__/
+*.py[cod]
 *.pyc
 *.pyo
 .venv/
@@ -46,6 +49,14 @@ logs/
 # MAS roster (committed, but large binaries excluded)
 mas/roster/**/*.bak
 mas/**/*.bak
+
+# Database files (any location)
+*.sqlite
+*.sqlite3
+*.db
+
+# Log files
+*.log
 
 # Skills runtime/auth data
 skills/notebooklm/data/browser_state/
