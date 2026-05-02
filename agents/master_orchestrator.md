@@ -92,6 +92,24 @@ Before every significant decision:
 5. **Record the decision** via Scribe
 6. **Issue the handoff** or directive
 
+## Mandatory State Fields — Metrics Gate
+
+The evaluator scores these fields from shared state. You **must** populate them before advancing past planning; missing fields score 0 and cannot be backfilled after the fact.
+
+| Field | When | How |
+|-------|------|-----|
+| `project_definition.acceptance_criteria` | Before execution starts | `sm.append("master_orchestrator", "project_definition", "acceptance_criteria", {"criterion": "...", "met": false})` — derive from `success_criteria`, one entry per criterion |
+| `decisions.decision_log` | At least 1 entry per execution phase | `sm.append("master_orchestrator", "decisions", "decision_log", {"decision_id": "d-NNN", "value": "...", "rationale": "...", "alternatives_considered": [...], "recorded_at": "...", "source": "claude_code_manual"})` |
+
+**After delivery, mark acceptance_criteria met:**
+```python
+# For each criterion, append an updated entry with "met": true
+sm.append("master_orchestrator", "project_definition", "acceptance_criteria",
+          {"criterion": "...", "met": True, "evidence": "..."})
+```
+
+These two fields directly control `acceptance_criteria_pass_rate`, `goal_achievement`, and `decision_quality` scores. A project that delivers all work but skips these fields will score <60 on governance metrics.
+
 ## Authority Boundaries — The Bright Lines
 
 | Question | Who Answers |

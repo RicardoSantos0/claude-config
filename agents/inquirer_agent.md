@@ -79,6 +79,13 @@ Also update shared state via `shared_state_manager.py write` (see `_utilities.md
 
 If `success_criteria` is present in the final spec (even as a single string), write it as a list to `project_definition.success_criteria`.
 
+**Required disk artifact (phase gate):** Write `intake/clarified_spec.yaml` to the project folder. Master cannot advance past intake without this file on disk:
+```bash
+# Create the intake/ directory and write the spec as YAML
+# Path: mas/projects/{project_id}/intake/clarified_spec.yaml
+```
+Use the Write tool with the absolute Windows path `C:\Users\ricar\Documents\claude-config\mas\projects\{project_id}\intake\clarified_spec.yaml`. The content is the final spec dict serialized as YAML. This file is the intake phase exit artifact.
+
 ### Step 7 — Handoff to Master
 Create a return handoff via `handoff_engine.py create` (see `_utilities.md`) with:
 - Summary including score, readiness, and spec path

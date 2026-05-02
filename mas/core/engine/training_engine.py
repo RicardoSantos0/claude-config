@@ -755,7 +755,7 @@ def _cli_analyze(args: list[str]) -> None:
     import argparse
     p = argparse.ArgumentParser(prog="training_engine analyze")
     p.add_argument("--project-id", required=True)
-    p.add_argument("--projects-root", default="projects")
+    p.add_argument("--projects-root", default="mas/projects")
     ns = p.parse_args(args)
 
     project_dir = Path(ns.projects_root) / ns.project_id

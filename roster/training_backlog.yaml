@@ -13,12 +13,15 @@ proposals:
   tradeoffs: Richer decision logging adds overhead per decision.
   minimum_evidence_met: true
   systemic: false
-  status: pending
+  status: applied
   rejection_reason: ''
   original_proposal_id: ''
   created_at: '2026-04-16T10:19:53.247523+00:00'
   project_ids:
   - proj-20260415-007-mas-run-fixes-db-consolidation
+  approved_by: master_orchestrator
+  approved_at: '2026-05-02T10:37:26.901130+00:00'
+  applied_at: '2026-05-02T10:39:18.462620+00:00'
 - proposal_id: prop-d84b1bf7
   proposal_type: governance_failure
   priority: 4
@@ -31,12 +34,15 @@ proposals:
   tradeoffs: Policy changes may slow workflow if overly restrictive.
   minimum_evidence_met: true
   systemic: true
-  status: pending
-  rejection_reason: ''
+  status: rejected
+  rejection_reason: 'False positive: engine artifact label fired on metric name without
+    real evidence. Same pattern rejected in all prior evals.'
   original_proposal_id: ''
   created_at: '2026-04-16T10:19:53.247544+00:00'
   project_ids:
   - proj-20260415-007-mas-run-fixes-db-consolidation
+  rejected_by: master_orchestrator
+  rejected_at: '2026-05-02T10:36:58.926470+00:00'
 - proposal_id: prop-93e4a4cf
   proposal_type: governance_failure
   priority: 4
@@ -49,12 +55,15 @@ proposals:
   tradeoffs: Policy changes may slow workflow if overly restrictive.
   minimum_evidence_met: true
   systemic: true
-  status: pending
-  rejection_reason: ''
+  status: rejected
+  rejection_reason: 'False positive: engine artifact label fired on metric name without
+    real evidence. Same pattern rejected in all prior evals.'
   original_proposal_id: ''
   created_at: '2026-04-16T10:19:53.247551+00:00'
   project_ids:
   - proj-20260415-007-mas-run-fixes-db-consolidation
+  rejected_by: master_orchestrator
+  rejected_at: '2026-05-02T10:36:59.364867+00:00'
 - proposal_id: prop-f0bf1131
   proposal_type: governance_failure
   priority: 4
@@ -67,12 +76,15 @@ proposals:
   tradeoffs: Policy changes may slow workflow if overly restrictive.
   minimum_evidence_met: true
   systemic: true
-  status: pending
-  rejection_reason: ''
+  status: rejected
+  rejection_reason: 'False positive: engine artifact label fired on metric name without
+    real evidence. Same pattern rejected in all prior evals.'
   original_proposal_id: ''
   created_at: '2026-04-16T10:19:53.247555+00:00'
   project_ids:
   - proj-20260415-007-mas-run-fixes-db-consolidation
+  rejected_by: master_orchestrator
+  rejected_at: '2026-05-02T10:36:59.708854+00:00'
 - proposal_id: prop-2c78bf71
   proposal_type: governance_failure
   priority: 4
@@ -85,12 +97,15 @@ proposals:
   tradeoffs: Policy changes may slow workflow if overly restrictive.
   minimum_evidence_met: true
   systemic: true
-  status: pending
-  rejection_reason: ''
+  status: rejected
+  rejection_reason: 'False positive: engine artifact label fired on metric name without
+    real evidence. Same pattern rejected in all prior evals.'
   original_proposal_id: ''
   created_at: '2026-04-16T10:19:53.247559+00:00'
   project_ids:
   - proj-20260415-007-mas-run-fixes-db-consolidation
+  rejected_by: master_orchestrator
+  rejected_at: '2026-05-02T10:37:00.055814+00:00'
 - proposal_id: prop-5bb4a78b
   proposal_type: efficiency_improvement
   priority: 2
@@ -104,12 +119,15 @@ proposals:
   tradeoffs: Investigation required before recommending specific change.
   minimum_evidence_met: true
   systemic: false
-  status: pending
+  status: applied
   rejection_reason: ''
   original_proposal_id: ''
   created_at: '2026-04-16T10:19:53.247565+00:00'
   project_ids:
   - proj-20260415-007-mas-run-fixes-db-consolidation
+  approved_by: master_orchestrator
+  approved_at: '2026-05-02T10:37:27.300159+00:00'
+  applied_at: '2026-05-02T10:39:18.512690+00:00'
 - proposal_id: prop-1735508f
   proposal_type: efficiency_improvement
   priority: 2
@@ -123,12 +141,15 @@ proposals:
   tradeoffs: Investigation required before recommending specific change.
   minimum_evidence_met: true
   systemic: false
-  status: pending
+  status: applied
   rejection_reason: ''
   original_proposal_id: ''
   created_at: '2026-04-16T10:19:53.247569+00:00'
   project_ids:
   - proj-20260415-007-mas-run-fixes-db-consolidation
+  approved_by: master_orchestrator
+  approved_at: '2026-05-02T10:37:27.672336+00:00'
+  applied_at: '2026-05-02T10:39:18.559650+00:00'
 - proposal_id: prop-c4174cbc
   proposal_type: efficiency_improvement
   priority: 2
@@ -142,12 +163,15 @@ proposals:
   tradeoffs: Investigation required before recommending specific change.
   minimum_evidence_met: true
   systemic: false
-  status: pending
+  status: applied
   rejection_reason: ''
   original_proposal_id: ''
   created_at: '2026-04-16T10:19:53.247572+00:00'
   project_ids:
   - proj-20260415-007-mas-run-fixes-db-consolidation
+  approved_by: master_orchestrator
+  approved_at: '2026-05-02T10:37:28.067313+00:00'
+  applied_at: '2026-05-02T10:39:18.607646+00:00'
 - proposal_id: prop-8f5a5203
   proposal_type: efficiency_improvement
   priority: 2
@@ -161,12 +185,15 @@ proposals:
   tradeoffs: Investigation required before recommending specific change.
   minimum_evidence_met: true
   systemic: false
-  status: pending
+  status: applied
   rejection_reason: ''
   original_proposal_id: ''
   created_at: '2026-04-16T10:19:53.247575+00:00'
   project_ids:
   - proj-20260415-007-mas-run-fixes-db-consolidation
+  approved_by: master_orchestrator
+  approved_at: '2026-05-02T10:37:28.445358+00:00'
+  applied_at: '2026-05-02T10:39:18.653930+00:00'
 - proposal_id: prop-bb27f197
   proposal_type: efficiency_improvement
   priority: 2
@@ -180,12 +207,15 @@ proposals:
   tradeoffs: Investigation required before recommending specific change.
   minimum_evidence_met: true
   systemic: false
-  status: pending
+  status: applied
   rejection_reason: ''
   original_proposal_id: ''
   created_at: '2026-04-16T10:19:53.247578+00:00'
   project_ids:
   - proj-20260415-007-mas-run-fixes-db-consolidation
+  approved_by: master_orchestrator
+  approved_at: '2026-05-02T10:37:28.823196+00:00'
+  applied_at: '2026-05-02T10:39:18.702189+00:00'
 - proposal_id: prop-99cec1ff
   proposal_type: efficiency_improvement
   priority: 2
@@ -199,10 +229,321 @@ proposals:
   tradeoffs: Investigation required before recommending specific change.
   minimum_evidence_met: true
   systemic: false
-  status: pending
+  status: applied
   rejection_reason: ''
   original_proposal_id: ''
   created_at: '2026-04-16T10:19:53.247583+00:00'
   project_ids:
   - proj-20260415-007-mas-run-fixes-db-consolidation
-last_updated: '2026-04-16T10:19:53.247646+00:00'
+  approved_by: master_orchestrator
+  approved_at: '2026-05-02T10:37:29.201748+00:00'
+  applied_at: '2026-05-02T10:39:18.750194+00:00'
+- proposal_id: prop-126c5518
+  proposal_type: efficiency_improvement
+  priority: 2
+  target_agent: system
+  target_artifact: agents/project_manager_agent.md
+  description: 'Metric ''acceptance_criteria_pass_rate'' scored 50.0/100 (below threshold
+    70.0). Evidence: No acceptance criteria defined'
+  recommended_change: Strengthen acceptance criteria definition in Product Manager
+    Agent. Ensure each AC is testable and has a clear pass/fail condition.
+  evidence:
+  - eval-proj-20260501-001-notion-zotero-sync-and-diff-20260502T10032
+  tradeoffs: Stricter AC may increase rejection rate during review.
+  minimum_evidence_met: true
+  systemic: false
+  status: applied
+  rejection_reason: ''
+  original_proposal_id: ''
+  created_at: '2026-05-02T10:19:42.124244+00:00'
+  project_ids:
+  - proj-20260501-001-notion-zotero-sync-and-diff
+  approved_by: master_orchestrator
+  approved_at: '2026-05-02T10:37:29.597923+00:00'
+  applied_at: '2026-05-02T10:39:18.799297+00:00'
+- proposal_id: prop-32df1c26
+  proposal_type: efficiency_improvement
+  priority: 2
+  target_agent: system
+  target_artifact: agents/project_manager_agent.md
+  description: 'Metric ''scope_adherence'' scored 50.0/100 (below threshold 70.0).
+    Evidence: No tasks planned'
+  recommended_change: Review task decomposition in Project Manager Agent. Investigate
+    blocked/failed tasks and over-effort patterns. Add pre-phase scope review step.
+  evidence:
+  - eval-proj-20260501-001-notion-zotero-sync-and-diff-20260502T10032
+  tradeoffs: Tighter scope control may require more planning time upfront.
+  minimum_evidence_met: true
+  systemic: false
+  status: applied
+  rejection_reason: ''
+  original_proposal_id: ''
+  created_at: '2026-05-02T10:19:42.124275+00:00'
+  project_ids:
+  - proj-20260501-001-notion-zotero-sync-and-diff
+  approved_by: master_orchestrator
+  approved_at: '2026-05-02T10:37:29.974758+00:00'
+  applied_at: '2026-05-02T10:39:18.849647+00:00'
+- proposal_id: prop-4c3cb10d
+  proposal_type: efficiency_improvement
+  priority: 2
+  target_agent: system
+  target_artifact: agents/scribe_agent.md
+  description: 'Metric ''documentation_completeness'' scored 0.0/100 (below threshold
+    70.0). Evidence: 0/3 required docs present'
+  recommended_change: Review the Scribe Agent definition to ensure all required documents
+    are produced in every phase. Consider adding checklist to handoff protocol.
+  evidence:
+  - eval-proj-20260501-001-notion-zotero-sync-and-diff-20260502T10032
+  tradeoffs: More documentation requirements slow delivery pace.
+  minimum_evidence_met: true
+  systemic: false
+  status: applied
+  rejection_reason: ''
+  original_proposal_id: ''
+  created_at: '2026-05-02T10:19:42.124284+00:00'
+  project_ids:
+  - proj-20260501-001-notion-zotero-sync-and-diff
+  approved_by: master_orchestrator
+  approved_at: '2026-05-02T10:37:30.390123+00:00'
+  applied_at: '2026-05-02T10:39:18.899179+00:00'
+- proposal_id: prop-e1a60269
+  proposal_type: efficiency_improvement
+  priority: 2
+  target_agent: system
+  target_artifact: agents/scribe_agent.md
+  description: 'Metric ''decision_quality'' scored 50.0/100 (below threshold 70.0).
+    Evidence: No decisions recorded'
+  recommended_change: Improve decision log richness. Add explicit rationale, alternatives
+    considered, and traceability fields to every decision entry.
+  evidence:
+  - eval-proj-20260501-001-notion-zotero-sync-and-diff-20260502T10032
+  tradeoffs: Richer decision logging adds overhead per decision.
+  minimum_evidence_met: true
+  systemic: false
+  status: applied
+  rejection_reason: ''
+  original_proposal_id: ''
+  created_at: '2026-05-02T10:19:42.124292+00:00'
+  project_ids:
+  - proj-20260501-001-notion-zotero-sync-and-diff
+  approved_by: master_orchestrator
+  approved_at: '2026-05-02T10:37:30.778848+00:00'
+  applied_at: '2026-05-02T10:39:18.947678+00:00'
+- proposal_id: prop-96145434
+  proposal_type: governance_failure
+  priority: 4
+  target_agent: system
+  target_artifact: policies/governance_policy.yaml
+  description: 'Systemic finding: bottlenecks'
+  recommended_change: Review governance policy and update to address systemic pattern.
+  evidence:
+  - eval-proj-20260501-001-notion-zotero-sync-and-diff-20260502T10032
+  tradeoffs: Policy changes may slow workflow if overly restrictive.
+  minimum_evidence_met: true
+  systemic: true
+  status: rejected
+  rejection_reason: 'False positive: engine artifact label fired on metric name without
+    real evidence. Same pattern rejected in all prior evals.'
+  original_proposal_id: ''
+  created_at: '2026-05-02T10:19:42.124301+00:00'
+  project_ids:
+  - proj-20260501-001-notion-zotero-sync-and-diff
+  rejected_by: master_orchestrator
+  rejected_at: '2026-05-02T10:37:00.403687+00:00'
+- proposal_id: prop-23a692bf
+  proposal_type: governance_failure
+  priority: 4
+  target_agent: system
+  target_artifact: policies/governance_policy.yaml
+  description: 'Systemic finding: drift_detected'
+  recommended_change: Review governance policy and update to address systemic pattern.
+  evidence:
+  - eval-proj-20260501-001-notion-zotero-sync-and-diff-20260502T10032
+  tradeoffs: Policy changes may slow workflow if overly restrictive.
+  minimum_evidence_met: true
+  systemic: true
+  status: rejected
+  rejection_reason: 'False positive: engine artifact label fired on metric name without
+    real evidence. Same pattern rejected in all prior evals.'
+  original_proposal_id: ''
+  created_at: '2026-05-02T10:19:42.124306+00:00'
+  project_ids:
+  - proj-20260501-001-notion-zotero-sync-and-diff
+  rejected_by: master_orchestrator
+  rejected_at: '2026-05-02T10:37:00.745469+00:00'
+- proposal_id: prop-19de65a9
+  proposal_type: governance_failure
+  priority: 4
+  target_agent: system
+  target_artifact: policies/governance_policy.yaml
+  description: 'Systemic finding: pattern_issues'
+  recommended_change: Review governance policy and update to address systemic pattern.
+  evidence:
+  - eval-proj-20260501-001-notion-zotero-sync-and-diff-20260502T10032
+  tradeoffs: Policy changes may slow workflow if overly restrictive.
+  minimum_evidence_met: true
+  systemic: true
+  status: rejected
+  rejection_reason: 'False positive: engine artifact label fired on metric name without
+    real evidence. Same pattern rejected in all prior evals.'
+  original_proposal_id: ''
+  created_at: '2026-05-02T10:19:42.124310+00:00'
+  project_ids:
+  - proj-20260501-001-notion-zotero-sync-and-diff
+  rejected_by: master_orchestrator
+  rejected_at: '2026-05-02T10:37:01.158605+00:00'
+- proposal_id: prop-c91b8577
+  proposal_type: governance_failure
+  priority: 4
+  target_agent: system
+  target_artifact: policies/governance_policy.yaml
+  description: 'Systemic finding: total_violations'
+  recommended_change: Review governance policy and update to address systemic pattern.
+  evidence:
+  - eval-proj-20260501-001-notion-zotero-sync-and-diff-20260502T10032
+  tradeoffs: Policy changes may slow workflow if overly restrictive.
+  minimum_evidence_met: true
+  systemic: true
+  status: rejected
+  rejection_reason: 'False positive: engine artifact label fired on metric name without
+    real evidence. Same pattern rejected in all prior evals.'
+  original_proposal_id: ''
+  created_at: '2026-05-02T10:19:42.124314+00:00'
+  project_ids:
+  - proj-20260501-001-notion-zotero-sync-and-diff
+  rejected_by: master_orchestrator
+  rejected_at: '2026-05-02T10:37:01.502381+00:00'
+- proposal_id: prop-ff13cdbc
+  proposal_type: efficiency_improvement
+  priority: 2
+  target_agent: system
+  target_artifact: policies/
+  description: 'Improvement area identified: goal_achievement'
+  recommended_change: Investigate and address 'goal_achievement' in the relevant agent
+    or policy.
+  evidence:
+  - eval-proj-20260501-001-notion-zotero-sync-and-diff-20260502T10032
+  tradeoffs: Investigation required before recommending specific change.
+  minimum_evidence_met: true
+  systemic: false
+  status: rejected
+  rejection_reason: Duplicate of earlier proposal from same eval run targeting identical
+    metric. Consolidated into first-set proposals.
+  original_proposal_id: ''
+  created_at: '2026-05-02T10:19:42.124319+00:00'
+  project_ids:
+  - proj-20260501-001-notion-zotero-sync-and-diff
+  rejected_by: master_orchestrator
+  rejected_at: '2026-05-02T10:37:11.997144+00:00'
+- proposal_id: prop-35232205
+  proposal_type: efficiency_improvement
+  priority: 2
+  target_agent: system
+  target_artifact: policies/
+  description: 'Improvement area identified: acceptance_criteria_pass_rate'
+  recommended_change: Investigate and address 'acceptance_criteria_pass_rate' in the
+    relevant agent or policy.
+  evidence:
+  - eval-proj-20260501-001-notion-zotero-sync-and-diff-20260502T10032
+  tradeoffs: Investigation required before recommending specific change.
+  minimum_evidence_met: true
+  systemic: false
+  status: rejected
+  rejection_reason: Duplicate of earlier proposal from same eval run targeting identical
+    metric. Consolidated into first-set proposals.
+  original_proposal_id: ''
+  created_at: '2026-05-02T10:19:42.124323+00:00'
+  project_ids:
+  - proj-20260501-001-notion-zotero-sync-and-diff
+  rejected_by: master_orchestrator
+  rejected_at: '2026-05-02T10:37:12.360211+00:00'
+- proposal_id: prop-89d93028
+  proposal_type: efficiency_improvement
+  priority: 2
+  target_agent: system
+  target_artifact: policies/
+  description: 'Improvement area identified: scope_adherence'
+  recommended_change: Investigate and address 'scope_adherence' in the relevant agent
+    or policy.
+  evidence:
+  - eval-proj-20260501-001-notion-zotero-sync-and-diff-20260502T10032
+  tradeoffs: Investigation required before recommending specific change.
+  minimum_evidence_met: true
+  systemic: false
+  status: rejected
+  rejection_reason: Duplicate of earlier proposal from same eval run targeting identical
+    metric. Consolidated into first-set proposals.
+  original_proposal_id: ''
+  created_at: '2026-05-02T10:19:42.124327+00:00'
+  project_ids:
+  - proj-20260501-001-notion-zotero-sync-and-diff
+  rejected_by: master_orchestrator
+  rejected_at: '2026-05-02T10:37:12.723667+00:00'
+- proposal_id: prop-75501792
+  proposal_type: efficiency_improvement
+  priority: 2
+  target_agent: system
+  target_artifact: policies/
+  description: 'Improvement area identified: documentation_completeness'
+  recommended_change: Investigate and address 'documentation_completeness' in the
+    relevant agent or policy.
+  evidence:
+  - eval-proj-20260501-001-notion-zotero-sync-and-diff-20260502T10032
+  tradeoffs: Investigation required before recommending specific change.
+  minimum_evidence_met: true
+  systemic: false
+  status: rejected
+  rejection_reason: Duplicate of earlier proposal from same eval run targeting identical
+    metric. Consolidated into first-set proposals.
+  original_proposal_id: ''
+  created_at: '2026-05-02T10:19:42.124331+00:00'
+  project_ids:
+  - proj-20260501-001-notion-zotero-sync-and-diff
+  rejected_by: master_orchestrator
+  rejected_at: '2026-05-02T10:37:13.092916+00:00'
+- proposal_id: prop-ea69c6f8
+  proposal_type: efficiency_improvement
+  priority: 2
+  target_agent: system
+  target_artifact: policies/
+  description: 'Improvement area identified: decision_quality'
+  recommended_change: Investigate and address 'decision_quality' in the relevant agent
+    or policy.
+  evidence:
+  - eval-proj-20260501-001-notion-zotero-sync-and-diff-20260502T10032
+  tradeoffs: Investigation required before recommending specific change.
+  minimum_evidence_met: true
+  systemic: false
+  status: rejected
+  rejection_reason: Duplicate of earlier proposal from same eval run targeting identical
+    metric. Consolidated into first-set proposals.
+  original_proposal_id: ''
+  created_at: '2026-05-02T10:19:42.124335+00:00'
+  project_ids:
+  - proj-20260501-001-notion-zotero-sync-and-diff
+  rejected_by: master_orchestrator
+  rejected_at: '2026-05-02T10:37:13.453588+00:00'
+- proposal_id: prop-509f6cfe
+  proposal_type: efficiency_improvement
+  priority: 2
+  target_agent: system
+  target_artifact: policies/
+  description: 'Improvement area identified: global_graph_contribution'
+  recommended_change: Investigate and address 'global_graph_contribution' in the relevant
+    agent or policy.
+  evidence:
+  - eval-proj-20260501-001-notion-zotero-sync-and-diff-20260502T10032
+  tradeoffs: Investigation required before recommending specific change.
+  minimum_evidence_met: true
+  systemic: false
+  status: rejected
+  rejection_reason: Duplicate of earlier proposal from same eval run targeting identical
+    metric. Consolidated into first-set proposals.
+  original_proposal_id: ''
+  created_at: '2026-05-02T10:19:42.124338+00:00'
+  project_ids:
+  - proj-20260501-001-notion-zotero-sync-and-diff
+  rejected_by: master_orchestrator
+  rejected_at: '2026-05-02T10:37:13.849452+00:00'
+last_updated: '2026-05-02T10:19:42.334784+00:00'

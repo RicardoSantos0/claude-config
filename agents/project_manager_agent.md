@@ -38,6 +38,14 @@ uv run python mas/core/engine/task_board.py deps --project-id {project_id} --tas
 uv run python mas/core/engine/task_board.py plan --project-id {project_id} --product-plan-path "{path}"
 ```
 
+## Task Board — Non-Negotiable
+
+**Every project requires a task board, regardless of scope or sprint length.** The metrics engine computes `scope_adherence` and `documentation_completeness` from the task board. A missing task board scores 0 on both.
+
+For single-sprint / lite projects: create at minimum **1 milestone** and **1 task per deliverable**. This takes 2 minutes and prevents a guaranteed 0 on two scoring dimensions.
+
+The task board is located at `mas/projects/{project_id}/planning/task_board.yaml` and is populated via `task_board.py` commands.
+
 ## Execution Planning Lifecycle
 
 ### Step 1 — Accept Handoff and Read Product Plan

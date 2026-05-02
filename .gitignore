@@ -55,3 +55,4 @@ skills/notebooklm/data/auth_info.json
 .vscode/settings.json
 # Syncthing metadata
 .stfolder/
+CLAUDE_CONFIG_IMPROVEMENT_PLAN.md

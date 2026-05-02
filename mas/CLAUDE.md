@@ -98,13 +98,18 @@ Resume across sessions is local to this repository via `/resume-mas <project-id>
 When running projects in Claude Code manual mode (no API credits), enforce these
 steps to keep evaluation metrics meaningful:
 
-**Before advancing to execution phase:**
-- [ ] `project_definition.success_criteria` — at least 1 entry
-- [ ] `project_definition.acceptance_criteria` — at least 1 entry
-- [ ] `intake/clarified_spec.yaml` written on disk (or equivalent artifact)
+**Before advancing to execution phase — HARD GATES (missing = 0 score):**
+- [ ] `project_definition.success_criteria` — at least 1 entry (from inquirer spec)
+- [ ] `project_definition.acceptance_criteria` — at least 1 entry per success criterion:
+  ```python
+  sm.append("master_orchestrator", "project_definition", "acceptance_criteria",
+            {"criterion": "...", "met": False})
+  ```
+- [ ] `intake/clarified_spec.yaml` on disk — written by inquirer_agent (phase gate)
+- [ ] Task board populated — at least 1 milestone + 1 task per deliverable (scope_adherence gate)
 
-**During execution:**
-- [ ] Log each significant architectural decision to `decisions.decision_log`:
+**During execution — HARD GATES:**
+- [ ] Log each significant decision to `decisions.decision_log` (minimum 1 per phase):
   ```python
   sm.append("master_orchestrator", "decisions", "decision_log", {
       "decision_id": "d-NNN",
@@ -115,7 +120,14 @@ steps to keep evaluation metrics meaningful:
       "source": "claude_code_manual",
   })
   ```
-  Target: at least 1 decision per execution phase.
+
+**After delivery — mark acceptance criteria met:**
+  ```python
+  sm.append("master_orchestrator", "project_definition", "acceptance_criteria",
+            {"criterion": "...", "met": True, "evidence": "..."})
+  ```
+
+**For `global_graph_contribution`:** After closing a project, write key facts (architecture decisions, agent performance patterns, lessons learned) to the graph via `graph_memory.py write-episode`. This feeds cross-project learning.
 
 **Note:** `handoff_quality` scores 0 in Claude Code mode (no rejection cycle).
 This is expected — the metric is structurally not applicable in manual mode.
