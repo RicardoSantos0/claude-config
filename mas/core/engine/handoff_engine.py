@@ -151,21 +151,37 @@ class HandoffEngine:
         except Exception:
             pass
 
-        # Persist to SQLite event log (non-fatal)
+        # Persist to SQLite event log via typed EventRecorder (non-fatal)
         try:
-            from core.db import append_event
-            append_event(
+            from core.engine.event_recorder import EventRecorder
+            EventRecorder().record_simple(
                 project_id=sm.project_id,
-                agent_id=from_agent,
+                actor=from_agent,
                 action_type="handoff_created",
                 intent=task_description,
+                phase=phase,
                 result_shape="handoff",
-                payload={
-                    "handoff_id": handoff_id,
-                    "to_agent": to_agent,
-                    "phase": phase,
-                },
+                payload={"handoff_id": handoff_id, "to_agent": to_agent},
             )
+        except Exception:
+            pass
+
+        # Lint handoff summary for verbosity/compliance (non-fatal, never blocks)
+        try:
+            from core.engine.output_linter import OutputLinter
+            from core.engine.event_recorder import EventRecorder
+            summary = payload.get("summary", "")
+            if summary:
+                lint_result = OutputLinter().lint(summary, agent_id=from_agent)
+                if lint_result.findings:
+                    EventRecorder().record_simple(
+                        project_id=sm.project_id,
+                        actor=from_agent,
+                        action_type="output_lint",
+                        intent=f"Lint check on handoff {handoff_id} summary",
+                        payload={"findings": lint_result.findings,
+                                 "handoff_id": handoff_id},
+                    )
         except Exception:
             pass
 
@@ -261,12 +277,12 @@ class HandoffEngine:
             except Exception:
                 pass  # checkpoint failure must never block handoff acceptance
 
-            # Persist to SQLite event log (non-fatal)
+            # Persist to SQLite event log via typed EventRecorder (non-fatal)
             try:
-                from core.db import append_event
-                append_event(
+                from core.engine.event_recorder import EventRecorder
+                EventRecorder().record_simple(
                     project_id=sm.project_id,
-                    agent_id="system",
+                    actor="system",
                     action_type="handoff_accepted",
                     intent=f"{handoff_id} status={status}",
                     payload={"handoff_id": handoff_id, "status": status},
@@ -314,10 +330,10 @@ class HandoffEngine:
                 reason=reason,
             )
             try:
-                from core.db import append_event
-                append_event(
+                from core.engine.event_recorder import EventRecorder
+                EventRecorder().record_simple(
                     project_id=sm.project_id,
-                    agent_id="system",
+                    actor="system",
                     action_type="handoff_rejected",
                     intent=f"{handoff_id} reason={reason}",
                     payload={"handoff_id": handoff_id, "reason": reason},

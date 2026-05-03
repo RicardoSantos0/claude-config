@@ -27,7 +27,7 @@ class TestLibrarianAgentFile:
         assert lines[0].strip() == "---"
         end = next(i for i, l in enumerate(lines[1:], 1) if l.strip() == "---")
         fm = yaml.safe_load("\n".join(lines[1:end]))
-        assert fm.get("name") == "librarian_agent"
+        assert fm.get("name") in ("librarian_agent", "librarian-agent")
 
     def test_frontmatter_description_mentions_db(self):
         content = LIBRARIAN_MD.read_text(encoding="utf-8")

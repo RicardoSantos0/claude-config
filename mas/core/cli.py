@@ -581,6 +581,30 @@ def close(project_id: str):
             sm.system_append("workflow", "completed_phases", current_phase)
         click.echo(f"[ok] Project closed.")
 
+        # Clean up snapshots and record typed events (non-fatal)
+        try:
+            from core.engine.event_recorder import EventRecorder
+            er = EventRecorder()
+            deleted = sm.cleanup_snapshots()
+            if deleted:
+                er.record_simple(
+                    project_id=project_id,
+                    actor="master_orchestrator",
+                    action_type="snapshots_cleaned",
+                    intent=f"Cleaned {len(deleted)} snapshot(s) on project close",
+                    payload={"count": len(deleted)},
+                )
+                click.echo(f"[ok] Cleaned {len(deleted)} snapshot(s).")
+            er.record_simple(
+                project_id=project_id,
+                actor="master_orchestrator",
+                action_type="phase_transition",
+                intent="Project transitioned to closed status",
+                phase="closed",
+            )
+        except Exception as exc:
+            click.echo(f"[warn] Post-close event recording failed: {exc}", err=True)
+
     # Reload state after writes
     state = sm.load()
     try:
@@ -636,6 +660,43 @@ def roster(filter_status: str):
             )
     else:
         click.echo("\nNo agents registered yet.")
+
+
+# ---------------------------------------------------------------------------
+# mas events
+# ---------------------------------------------------------------------------
+
+@main.command()
+@click.argument("project_id")
+@click.option("--limit", default=20, show_default=True, help="Max events to show")
+@click.option("--action-type", default=None, metavar="TYPE",
+              help="Filter by action type (e.g. handoff_created)")
+def events(project_id: str, limit: int, action_type: str | None):
+    """Show recent agent events for a project.
+
+    Example: mas events proj-20260409-001
+             mas events proj-20260409-001 --action-type handoff_created --limit 5
+    """
+    _require_project(project_id)
+    from core.db import query_project_history
+
+    rows = query_project_history(project_id, limit=limit)
+    if action_type:
+        rows = [e for e in rows if e.get("action_type") == action_type]
+
+    if not rows:
+        click.echo("[ok] No events found.")
+        return
+
+    click.echo(f"\nEvents — {project_id}  ({len(rows)} shown)")
+    click.echo(f"{'Timestamp':<20} {'Actor':<25} {'Action Type':<30} Intent")
+    click.echo("-" * 100)
+    for e in rows:
+        ts = str(e.get("timestamp") or e.get("created_at") or "—")[:19]
+        actor = str(e.get("agent_id") or "—")[:24]
+        atype = str(e.get("action_type") or "—")[:29]
+        intent = str(e.get("intent") or "")[:50]
+        click.echo(f"{ts:<20} {actor:<25} {atype:<30} {intent}")
 
 
 # ---------------------------------------------------------------------------

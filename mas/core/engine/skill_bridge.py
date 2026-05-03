@@ -260,6 +260,24 @@ class SkillBridge:
             "tokens_used": tokens_used,
         }
 
+    def render_skill_prompt(self, agent_id: str, skill_name: str, query: str) -> str:
+        """
+        Render a skill invocation as a prompt block for injection into agent prompts.
+        Returns a markdown block the agent can act on, or an error string.
+        Never raises.
+        """
+        if not self.is_skill_authorized(agent_id, skill_name):
+            return f"[skill denied: {skill_name!r} not authorized for {agent_id!r}]"
+        skill = self.get_skill(skill_name)
+        if skill is None:
+            return f"[skill not found: {skill_name!r}]"
+        return (
+            f"## Skill: {skill_name}\n"
+            f"Description: {skill.description}\n"
+            f"Query: {query}\n"
+            f"Invoke with: /{skill_name} {query}\n"
+        )
+
     def audit_handoff(self, handoff: dict) -> None:
         """
         Called by handoff_engine after every handoff creation.
