@@ -76,7 +76,13 @@ class LifecycleGuard:
         warnings = []
 
         # no-close-with-open-handoffs
-        pending = shared_state.get("workflow", {}).get("pending_assignments", [])
+        workflow = shared_state.get("workflow", {})
+        pending = list(workflow.get("pending_assignments", []) or [])
+        for handoff in workflow.get("handoff_history", []) or []:
+            acceptance = handoff.get("acceptance", {})
+            status = acceptance.get("status") if isinstance(acceptance, dict) else handoff.get("status")
+            if status == "pending":
+                pending.append(handoff)
         if pending:
             violations.append({
                 "invariant": "no-close-with-open-handoffs",

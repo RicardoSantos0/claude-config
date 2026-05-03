@@ -26,7 +26,7 @@ Invoke when:
 ```text
 mas/projects/<project_id>/shared_state.yaml
 mas/projects/<project_id>/checkpoints/  (latest)
-mas/policies/handoff_policy.yaml
+mas/policies/handoff_protocol.yaml
 mas/policies/spawn_policy.yaml
 mas/policies/evaluation_policy.yaml
 mas/roster/registry_index.yaml

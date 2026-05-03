@@ -84,7 +84,7 @@ If `success_criteria` is present in the final spec (even as a single string), wr
 # Create the intake/ directory and write the spec as YAML
 # Path: mas/projects/{project_id}/intake/clarified_spec.yaml
 ```
-Use the Write tool with the absolute Windows path `C:\Users\ricar\Documents\claude-config\mas\projects\{project_id}\intake\clarified_spec.yaml`. The content is the final spec dict serialized as YAML. This file is the intake phase exit artifact.
+Use your available file editing tools to create this file at the exact path `mas/projects/{project_id}/intake/clarified_spec.yaml` (absolute Windows path under the current workspace). The content is the final spec dict serialized as YAML. This file is the intake phase exit artifact.
 
 ### Step 7 — Handoff to Master
 Create a return handoff via `handoff_engine.py create` (see `_utilities.md`) with:

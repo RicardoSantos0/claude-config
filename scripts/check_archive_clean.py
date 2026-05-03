@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-check_archive_clean.py — Verify a git archive contains no private/generated paths.
+check_archive_clean.py — Verify an archive contains no private/generated paths.
 
 Usage:
-    python scripts/check_archive_clean.py <archive.zip>
+    python scripts/check_archive_clean.py <archive.zip|archive.tar>
 
 Exit codes:
     0  — archive contains no blocked private/generated paths
@@ -14,6 +14,7 @@ Blocked path patterns (any archive member matching these is a violation):
     .env
     .env.*
     .claude/settings.local.json
+    .git/
     .venv/
     __pycache__/
     *.pyc
@@ -24,6 +25,7 @@ Blocked path patterns (any archive member matching these is a violation):
     mas/working_state/
     skills/notebooklm/data/browser_state/
     skills/notebooklm/data/auth_info.json
+    skills/notebooklm/.venv/
     *.sqlite
     *.sqlite3
     *.db
@@ -33,6 +35,7 @@ Blocked path patterns (any archive member matching these is a violation):
 """
 
 import sys
+import tarfile
 import zipfile
 import fnmatch
 from pathlib import Path
@@ -41,7 +44,10 @@ from pathlib import Path
 BLOCKED_PATTERNS = [
     ".env",
     ".env.*",
+    ".git",
+    ".git/*",
     ".claude/settings.local.json",
+    ".venv",
     ".venv/*",
     "__pycache__/*",
     "*.pyc",
@@ -52,6 +58,8 @@ BLOCKED_PATTERNS = [
     "mas/working_state/*",
     "skills/notebooklm/data/browser_state/*",
     "skills/notebooklm/data/auth_info.json",
+    "skills/notebooklm/.venv",
+    "skills/notebooklm/.venv/*",
     "*.sqlite",
     "*.sqlite3",
     "*.db",
@@ -61,34 +69,72 @@ BLOCKED_PATTERNS = [
 ]
 
 
+def _normalise_member_name(name: str) -> str:
+    """Normalise archive member names for cross-platform matching."""
+    name = name.replace("\\", "/").strip()
+    while name.startswith("./"):
+        name = name[2:]
+    return name.lstrip("/")
+
+
+def _candidate_names(name: str) -> list[str]:
+    """Return the raw member path plus suffixes without archive root prefixes."""
+    normalised = _normalise_member_name(name)
+    parts = [part for part in normalised.split("/") if part and part != "."]
+    candidates = [normalised]
+    for i in range(1, len(parts)):
+        candidates.append("/".join(parts[i:]))
+    return list(dict.fromkeys(candidates))
+
+
+def _matches_pattern(name: str, pattern: str) -> bool:
+    if fnmatch.fnmatch(name, pattern):
+        return True
+    # Also match if the name starts with a blocked prefix directory.
+    prefix = pattern.rstrip("*").rstrip("/")
+    return bool(prefix and (name == prefix or name.startswith(prefix + "/")))
+
+
 def is_blocked(name: str) -> bool:
     """Return True if the archive member name matches any blocked pattern."""
-    # Normalise to forward slashes for cross-platform matching
-    name = name.replace("\\", "/")
-    for pattern in BLOCKED_PATTERNS:
-        if fnmatch.fnmatch(name, pattern):
-            return True
-        # Also match if the name starts with a blocked prefix directory
-        prefix = pattern.rstrip("*").rstrip("/")
-        if prefix and (name == prefix or name.startswith(prefix + "/")):
-            return True
+    for candidate in _candidate_names(name):
+        for pattern in BLOCKED_PATTERNS:
+            if _matches_pattern(candidate, pattern):
+                return True
     return False
+
+
+def _archive_names(path: str) -> list[str]:
+    archive_path = Path(path)
+    if zipfile.is_zipfile(archive_path):
+        try:
+            with zipfile.ZipFile(archive_path, "r") as zf:
+                return zf.namelist()
+        except zipfile.BadZipFile as exc:
+            print(f"ERROR: cannot open ZIP archive: {exc}", file=sys.stderr)
+            sys.exit(2)
+
+    if tarfile.is_tarfile(archive_path):
+        try:
+            with tarfile.open(archive_path, "r:*") as tf:
+                return tf.getnames()
+        except tarfile.TarError as exc:
+            print(f"ERROR: cannot open TAR archive: {exc}", file=sys.stderr)
+            sys.exit(2)
+
+    print(f"ERROR: unsupported archive format: {path}", file=sys.stderr)
+    sys.exit(2)
 
 
 def check_archive(path: str) -> list[str]:
     """Return list of blocked paths found in the archive."""
-    try:
-        with zipfile.ZipFile(path, "r") as zf:
-            names = zf.namelist()
-    except zipfile.BadZipFile as exc:
-        print(f"ERROR: cannot open archive: {exc}", file=sys.stderr)
-        sys.exit(2)
+    names = _archive_names(path)
     return [n for n in names if is_blocked(n)]
 
 
 def main() -> None:
     if len(sys.argv) != 2:
-        print("Usage: python scripts/check_archive_clean.py <archive.zip>", file=sys.stderr)
+        print("Usage: python scripts/check_archive_clean.py <archive.zip|archive.tar>", file=sys.stderr)
         sys.exit(2)
 
     archive_path = sys.argv[1]

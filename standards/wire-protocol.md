@@ -32,6 +32,9 @@ All agent-to-agent outputs use MAS wire protocol v1.0:
 
 ## Fields
 
+Canonical transport keys are the compact forms defined in `mas/foundation/wire_protocol_spec.yaml`.
+Expanded aliases are accepted for compatibility and mapped by runtime decoding.
+
 | Field | Required | Description |
 |-------|----------|-------------|
 | `_v` | Yes | Protocol version — always `"1.0"` |
@@ -39,6 +42,8 @@ All agent-to-agent outputs use MAS wire protocol v1.0:
 | `art` | No | List of artifact paths on disk |
 | `dec` | No | List of decisions made |
 | `rsn` | No | Optional reasoning — max 100 words |
+| `skill_request` / `sk_req` | No | Skill request object; `sk_req` is canonical transport key and `skill_request` is accepted alias |
+| `skill_used` / `sk_used` | No | Skill usage list; `sk_used` is canonical transport key and `skill_used` is accepted alias |
 
 Omit empty lists and null values.
 
@@ -86,6 +91,18 @@ Used when `mas run` drives the project loop:
   "s": "task:complete",
   "next_action": "delegate",
   "next_agent": "inquirer_agent",
+  "skill_request": {
+    "name": "mas-examine",
+    "query": "Review runtime diff before delegation",
+    "required": true
+  },
+  "skill_used": [
+    {
+      "name": "mas-review",
+      "purpose": "state review before resume",
+      "output": "mas/projects/proj-.../logs/mas-review-20260502.md"
+    }
+  ],
   "consultation_trigger": {
     "decision_type": "architecture",
     "question": "Should we spawn a specialist agent for X?",
@@ -100,3 +117,5 @@ Used when `mas run` drives the project loop:
 | `next_action` | `delegate`, `advance_phase`, `consult`, `escalate`, `wait` | What the loop should do next |
 | `next_agent` | agent_id | Who to delegate to (when `next_action == "delegate"`) |
 | `next_agents` | [agent_id, ...] | Parallel dispatch (when HR marks `parallel: true`) |
+| `skill_request` / `sk_req` | object | Skill request; use `name`, `query`, and optional `required`; transport should prefer `sk_req` |
+| `skill_used` / `sk_used` | list | Skill usage records; string entries are accepted but object entries are preferred; transport should prefer `sk_used` |

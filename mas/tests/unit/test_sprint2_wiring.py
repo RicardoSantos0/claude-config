@@ -220,9 +220,9 @@ class TestSkillBridgeRenderPrompt:
         result = bridge.render_skill_prompt(
             "master_orchestrator", "research-extract", "query text"
         )
-        assert "## Skill: research-extract" in result
+        assert "You are executing the following Claude Code skill" in result
+        assert "# research-extract" in result
         assert "query text" in result
-        assert "/research-extract" in result
 
     def test_unauthorized_agent_gets_denied_message(self, tmp_path):
         from mas.core.engine.skill_bridge import SkillBridge

@@ -23,7 +23,8 @@ from mas.core.engine.event_recorder import EventRecorder, MASEvent, _find_repo_r
 
 ALL_VALID_TYPES = [
     # orchestration
-    "decision_made", "phase_transition", "stop_reason", "policy_block",
+    "decision_made", "phase_transition", "project_closed", "project_reopened",
+    "stop_reason", "policy_block",
     # skills
     "skill_recommended", "skill_requested", "skill_invoked",
     "skill_completed", "skill_skipped",
@@ -41,7 +42,7 @@ ALL_VALID_TYPES = [
     "spawn_approved", "spawn_rejected",
 ]
 
-EXPECTED_COUNT = 30
+EXPECTED_COUNT = 32
 
 
 def make_recorder(tmp_path: Path) -> EventRecorder:

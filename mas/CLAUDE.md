@@ -6,6 +6,13 @@ improvement loop.
 
 All commands must be run from the **repo root** (the directory containing `pyproject.toml`).
 
+## Memory Sources
+
+- `mas/data/episodic.db` is the durable, queryable event memory for MAS runtime history.
+- `mas/projects/<project_id>/shared_state.yaml` is the compact current-state projection used for orchestration.
+- `mas/roster/registry_index.yaml` is the design-time source of truth for agents, capabilities, and skill registry data.
+- Human docs (`CHECKPOINT.md`, `CLOSED.md`, summaries) are generated reports, not canonical event storage.
+
 **Recommended: activate the venv once per session, then use bare commands.**
 
 ```powershell

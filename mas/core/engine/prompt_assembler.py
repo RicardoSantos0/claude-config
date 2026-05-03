@@ -247,6 +247,39 @@ class PromptAssembler:
         ]
         return "\n".join(lines) + "\n"
 
+    def _build_recommended_skill_block(
+        self,
+        state: dict,
+        extra_context: dict | None,
+    ) -> str:
+        """Render phase-aware required/recommended skill triggers."""
+        try:
+            from core.engine.skill_trigger import SkillTriggerPolicy
+            project_id = state.get("core_identity", {}).get("project_id", "")
+            project_dir = ROOT / "projects" / project_id if project_id else None
+            event = None
+            changed_paths: list[str] = []
+            status = None
+            if extra_context:
+                event = extra_context.get("runtime_event")
+                raw_paths = extra_context.get("changed_paths", [])
+                if isinstance(raw_paths, str):
+                    changed_paths = [p.strip() for p in raw_paths.splitlines() if p.strip()]
+                elif isinstance(raw_paths, list):
+                    changed_paths = [str(p) for p in raw_paths]
+                status = extra_context.get("runtime_status")
+            policy = SkillTriggerPolicy()
+            recs = policy.recommendations_for(
+                state=state,
+                project_dir=project_dir,
+                event=str(event) if event else None,
+                changed_paths=changed_paths,
+                status=str(status) if status else None,
+            )
+            return policy.render_block(recs, project_id)
+        except Exception:
+            return ""
+
     def _append_missing_context_sections(
         self,
         prompt: str,
@@ -377,6 +410,9 @@ class PromptAssembler:
             ", ".join(s.get("name", "") for s in authorized_skills if s.get("name"))
             if authorized_skills else "(none)"
         )
+        context["injected_recommended_skill_use"] = self._build_recommended_skill_block(
+            state, extra_context
+        )
 
         # Graph memory context injection (replaces part of state dump when available)
         # Only used when graph has ≥ 5 nodes — not enough data otherwise.
@@ -401,6 +437,9 @@ class PromptAssembler:
         if ("{injected_authorized_skills}" not in template and
                 "{injected_authorized_skill_names}" not in template):
             prompt = f"{prompt.rstrip()}\n\n{self._build_skill_access_block(canonical_agent_id, authorized_skills)}"
+        if ("{injected_recommended_skill_use}" not in template and
+                context.get("injected_recommended_skill_use")):
+            prompt = f"{prompt.rstrip()}\n\n{context['injected_recommended_skill_use']}\n"
         self.last_token_count: int = _token_counter.count(prompt)
         return prompt
 

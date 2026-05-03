@@ -27,7 +27,7 @@ Invoke when:
 mas/projects/<project_id>/shared_state.yaml
 mas/projects/<project_id>/decisions/decision_log.yaml
 git diff (changes since last checkpoint)
-mas/projects/<project_id>/handoffs/ (completed handoffs)
+mas/projects/<project_id>/handoffs/ (completed handoffs, if directory exists)
 ```
 
 ## Writes (depending on mode and scope)
@@ -82,5 +82,7 @@ full:     all of the above + artifact index + handoff-ready summary
 - Separate completed work from planned work.
 - Record unresolved questions explicitly — never silently drop them.
 - Do not overwrite previous decisions; append with timestamp and context.
+- If expected documentation paths are missing, report missing evidence explicitly and continue with available sources.
+- Follow ownership boundaries: this skill prepares documentation content and updates only when invoked by an authorized owning role.
 - Reference `standards/documentation-format.md` for format conventions.
 - Reference `mas/policies/` for documentation requirements at phase boundaries.

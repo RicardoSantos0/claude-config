@@ -153,13 +153,12 @@ class ConsultationEngine:
         mandatory = decision_type in MANDATORY_DECISION_TYPES or decision_type in CORE_THREE_DECISION_TYPES
         if decision_type in MANDATORY_DECISION_TYPES:
             selected = list(ALL_CONSULTANTS)
+        elif consultants is not None and len(consultants) >= 2:
+            selected = consultants
         elif decision_type in CORE_THREE_DECISION_TYPES:
             selected = list(CORE_THREE_CONSULTANTS)
-        elif consultants is None:
-            selected = list(ALL_CONSULTANTS)
         else:
-            # Enforce minimum of 2
-            selected = consultants if len(consultants) >= 2 else list(ALL_CONSULTANTS)
+            selected = list(ALL_CONSULTANTS)
 
         return ConsultationRequest(
             request_id=f"consult-{project_id}-{uuid.uuid4().hex[:8]}",

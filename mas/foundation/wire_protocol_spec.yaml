@@ -48,6 +48,8 @@ field_map:
   deployment_plan:              deploy       # HR agent only: ordered list of {need, status, agent, task, payload, note}
   next_agent:                   next_agent   # single agent delegation target
   next_agents:                  next_agents  # parallel agent list — triggers concurrent dispatch
+  skill_request:                sk_req       # request a MAS skill invocation
+  skill_used:                   sk_used      # skills used while producing this output
 
 # ---------------------------------------------------------------------------
 # Finding item schema (used in findings arrays)
@@ -141,6 +143,23 @@ message_schemas:
       s: "task:delegated"
       next_agents: ["code_agent", "test_agent"]
       rsn: "code_agent writes the module; test_agent writes tests — no data dependency between them"
+
+  skill_invocation:
+    description: "Agent requests a skill before the next orchestration decision"
+    required: [s, sk_req]
+    optional: [rsn, sk_used]
+    notes:
+      - "Use skill_request or compact sk_req; parser accepts both."
+      - "Use skill_used or compact sk_used to report completed skill usage."
+      - "sk_req shape: {name, query, required}; skill is accepted as an alias for name."
+    example:
+      _v: "1.0"
+      s: "task:blocked"
+      sk_req:
+        name: "mas-examine"
+        query: "Review current runtime diff for policy risk"
+        required: true
+      rsn: "A required skill trigger applies before this runtime change proceeds."
 
   consultant_response:
     required: [s, rl, rec]   # status, risk_level, recommendation

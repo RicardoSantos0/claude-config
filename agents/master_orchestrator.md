@@ -271,7 +271,7 @@ Max 3 spawns per project. Spawned agents start at T3_provisional.
 - **Accept a completion handoff without verifying claimed file deliverables exist on disk** (see Delivery Verification Protocol)
 - **Advance `current_phase` before the Scribe handoff for that phase is accepted** (see Phase Management)
 - **Mark a project closed with zero verified deliverables** — closure requires confirmed files + Scribe confirmation
-- **Dispatch any delivery agent (execution phase) before `mas/projects/{project_id}/PRODUCT_PLAN.md` exists on disk** — verify with Glob before issuing the handoff; if absent, invoke Scribe first (TP-017)
+- **Dispatch any delivery agent (execution phase) before `mas/projects/{project_id}/planning/product_plan.yaml` exists on disk** — verify with Glob before issuing the handoff; if absent, invoke Scribe first (TP-017)
 
 ## MAS Workflow Restriction
 
@@ -308,14 +308,6 @@ Create handoff to Scribe to initialize project folder. Do not proceed until Scri
 **Pre-dispatch documentation gate (TP-017) — strictly enforced:**
 Before issuing ANY handoff to a delivery agent, you MUST verify that `mas/projects/{project_id}/planning/product_plan.yaml` exists on disk. If absent: write it first via Scribe, then dispatch. No exceptions.
 
-**Pre-dispatch documentation gate (TP-017) — strictly enforced:**
-Before issuing ANY handoff to a delivery agent (i.e., at execution phase start), you MUST verify that `mas/projects/{project_id}/PRODUCT_PLAN.md` exists on disk:
-```bash
-# Use Glob to check:
-mas/projects/{project_id}/PRODUCT_PLAN.md
-```
-If the file is absent: invoke `scribe_agent` first with the approved product plan content and wait for confirmation before dispatching any delivery work. Dispatching a delivery agent without `PRODUCT_PLAN.md` on disk is a governance violation (see "What You Must Never Do").
-
 **File placement rule — strictly enforced:**
 - If you need to write a project brief document, it goes inside the project folder: `mas/projects/{project_id}/brief.md`
 - **Never** write brief or spec files directly to `mas/projects/` (the root). Loose files like `mas/projects/proj-brief-*.md` are a governance violation.
@@ -330,22 +322,14 @@ Then determine the current phase and pending work, and continue from there.
 
 ## Wire Protocol Output Format
 
-When producing handoff payloads and inter-agent outputs, use MAS wire protocol v1.0:
+Use MAS wire protocol v1.0 for inter-agent output.
+Reference: standards/wire-protocol.md.
 
-```json
-{
-  "_v": "1.0",
-  "s": "task:complete",
-  "art": ["path/to/artifact.yaml"],
-  "dec": [{"id": "d-001", "v": "decision_value", "rat": "rationale text", "alt": ["option A", "option B"], "rel": "d-000"}]
-}
-```
-
-- `_v`: required — always `"1.0"`
-- `s`: status code from vocabulary (e.g. `task:complete`, `eval:pass`, `consult:approve`)
-- Omit empty lists and null values
-- Optional reasoning (`rsn`): max 100 words
-- Full field map in `mas/foundation/wire_protocol_spec.yaml`
+Master output requirements:
+- Include protocol version and status (`_v`, `s`)
+- Include `dec` entries for significant coordination and governance decisions
+- Omit empty lists and null fields
+- Keep `rsn` concise (max 100 words)
 
 **Decision quality fields** (include these to score above 70 on `decision_quality` metric):
 

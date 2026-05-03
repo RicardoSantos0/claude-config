@@ -355,6 +355,7 @@ def resume(project_id: str, show_prompt: bool):
             click.echo(f"[warn] Could not generate checkpoint: {exc}")
 
     state = _load_state(project_id)
+    _record_resume_skill_recommendations(project_id, state, project_dir)
     ci = state.get("core_identity", {})
     phase = ci.get("current_phase", "—")
     status = ci.get("status", "—")
@@ -391,6 +392,38 @@ def resume(project_id: str, show_prompt: bool):
     if show_prompt:
         assembled = _assemble_prompt(project_id, next_agent, state)
         _emit_prompt(project_id, next_agent, assembled)
+
+
+def _record_resume_skill_recommendations(project_id: str, state: dict, project_dir: Path) -> None:
+    """Record project-resume skill recommendations as typed DB events."""
+    try:
+        from core.engine.skill_trigger import SkillTriggerPolicy
+        from core.engine.event_recorder import EventRecorder
+        policy = SkillTriggerPolicy()
+        recs = policy.recommendations_for(
+            state=state,
+            project_dir=project_dir,
+            event="project_resume",
+        )
+        recorder = EventRecorder()
+        phase = state.get("core_identity", {}).get("current_phase", "")
+        for rec in recs:
+            recorder.record_simple(
+                project_id=project_id,
+                actor="system",
+                action_type="skill_recommended",
+                intent=f"Recommended skill on resume: {rec.skill}",
+                phase=phase,
+                rule_id=rec.rule_id,
+                payload={
+                    "skill": rec.skill,
+                    "required": rec.required,
+                    "reason": rec.reason,
+                    "event": "project_resume",
+                },
+            )
+    except Exception:
+        pass
 
 
 # ---------------------------------------------------------------------------
@@ -553,11 +586,7 @@ def snapshot(project_id: str, phase: str):
 @main.command()
 @click.argument("project_id")
 def close(project_id: str):
-    """Close a project and replay episodes into the graph.
-
-    Sets project status to 'closed', snapshots current state, then runs
-    EpisodeWriter.replay_from_state() to back-populate the graph with all
-    handoffs, phases, artifacts, and decisions from the project history.
+    """Finalize and close a project.
 
     Example: mas close proj-20260415-007-mas-run-fixes-db-consolidation
     """
@@ -571,8 +600,12 @@ def close(project_id: str):
     current_phase = state.get("core_identity", {}).get("current_phase", "")
     current_status = state.get("core_identity", {}).get("status", "active")
 
+    if _pending_handoffs_from_state(state):
+        click.echo("[error] Cannot close project with pending handoffs.", err=True)
+        sys.exit(1)
+
     if current_status == "closed":
-        click.echo(f"[info] Project is already closed — replaying episodes only.")
+        click.echo(f"[info] Project is already closed — ensuring final artifacts and cleanup.")
     else:
         sm.snapshot(current_phase or "pre-close")
         sm.write("master_orchestrator", "core_identity", "status", "closed")
@@ -581,37 +614,202 @@ def close(project_id: str):
             sm.system_append("workflow", "completed_phases", current_phase)
         click.echo(f"[ok] Project closed.")
 
-        # Clean up snapshots and record typed events (non-fatal)
-        try:
-            from core.engine.event_recorder import EventRecorder
-            er = EventRecorder()
-            deleted = sm.cleanup_snapshots()
-            if deleted:
-                er.record_simple(
-                    project_id=project_id,
-                    actor="master_orchestrator",
-                    action_type="snapshots_cleaned",
-                    intent=f"Cleaned {len(deleted)} snapshot(s) on project close",
-                    payload={"count": len(deleted)},
-                )
-                click.echo(f"[ok] Cleaned {len(deleted)} snapshot(s).")
-            er.record_simple(
-                project_id=project_id,
-                actor="master_orchestrator",
-                action_type="phase_transition",
-                intent="Project transitioned to closed status",
-                phase="closed",
-            )
-        except Exception as exc:
-            click.echo(f"[warn] Post-close event recording failed: {exc}", err=True)
-
-    # Reload state after writes
+    # Reload state after writes and preserve final human/readable artifacts.
     state = sm.load()
+    closed_at = datetime.now(timezone.utc).isoformat()
+    try:
+        from core.utils.config import load_config
+        storage_cfg = load_config().get("storage", {})
+    except Exception:
+        storage_cfg = {}
+    retention = storage_cfg.get("snapshot_retention", {}) or {}
+
+    if retention.get("write_final_state_copy", True):
+        final_state_path = sm.project_dir / "final_shared_state.yaml"
+        with final_state_path.open("w", encoding="utf-8") as f:
+            yaml.dump(state, f, default_flow_style=False,
+                      allow_unicode=True, sort_keys=False)
+        click.echo(f"[ok] Final state written: {final_state_path}")
+
+    closed_path = sm.project_dir / "CLOSED.md"
+    if not closed_path.exists():
+        closed_path.write_text(
+            "\n".join([
+                "# Project Closed",
+                "",
+                f"- project_id: {project_id}",
+                f"- closed_at: {closed_at}",
+                f"- final_phase: {state.get('core_identity', {}).get('current_phase', 'closed')}",
+                f"- status: {state.get('core_identity', {}).get('status', 'closed')}",
+                "",
+            ]),
+            encoding="utf-8",
+        )
+    click.echo(f"[ok] Closure report: {closed_path}")
+
+    try:
+        from core.engine.lifecycle_guard import LifecycleGuard
+        guard_result = LifecycleGuard().check_close(sm.project_dir, state)
+        for warning in guard_result.warnings:
+            click.echo(f"[warn] {warning.get('invariant')}: {warning.get('detail', '')}", err=True)
+        if guard_result.blocked:
+            for violation in guard_result.violations:
+                click.echo(f"[error] {violation.get('invariant')}: {violation}", err=True)
+            sys.exit(1)
+    except SystemExit:
+        raise
+    except Exception as exc:
+        click.echo(f"[warn] Close invariant check failed: {exc}", err=True)
+
+    try:
+        from core.engine.event_recorder import EventRecorder
+        er = EventRecorder()
+        delete_on_close = retention.get("delete_on_close", True)
+        keep_latest = int(retention.get("keep_latest_after_close", 0) or 0)
+        deleted = sm.cleanup_snapshots(keep_latest=keep_latest) if delete_on_close else []
+        er.record_simple(
+            project_id=project_id,
+            actor="master_orchestrator",
+            action_type="snapshots_cleaned",
+            intent=f"Cleaned {len(deleted)} snapshot(s) on project close",
+            payload={
+                "deleted_count": len(deleted),
+                "deleted_paths": [str(p) for p in deleted],
+                "keep_latest": keep_latest,
+            },
+        )
+        if deleted:
+            click.echo(f"[ok] Cleaned {len(deleted)} snapshot(s).")
+        er.record_simple(
+            project_id=project_id,
+            actor="master_orchestrator",
+            action_type="project_closed",
+            intent="Project finalized and closed",
+            phase="closed",
+            payload={
+                "closed_at": closed_at,
+                "closed_path": str(closed_path),
+                "final_state_path": str(sm.project_dir / "final_shared_state.yaml"),
+            },
+        )
+        er.record_simple(
+            project_id=project_id,
+            actor="master_orchestrator",
+            action_type="phase_transition",
+            intent="Project transitioned to closed status",
+            phase="closed",
+        )
+    except Exception as exc:
+        click.echo(f"[warn] Post-close event recording failed: {exc}", err=True)
+
     try:
         n = EpisodeWriter.replay_from_state(project_id, state)
         click.echo(f"[ok] Graph updated: {n} episodes replayed.")
     except Exception as e:
         click.echo(f"[warn] Episode replay failed: {e}", err=True)
+
+
+# ---------------------------------------------------------------------------
+# mas rebuild-state
+# ---------------------------------------------------------------------------
+
+@main.command("rebuild-state")
+@click.argument("project_id")
+@click.option("--limit", default=25, show_default=True,
+              help="Number of recent DB events to project into shared state.")
+def rebuild_state(project_id: str, limit: int):
+    """Rebuild compact working-state projection from DB events and artifacts.
+
+    This preserves the existing shared_state.yaml schema and adds/refreshes
+    compact `current` and `recent` projection sections.
+    """
+    _require_project(project_id)
+    from core.engine.shared_state_manager import SharedStateManager
+    from core.db import query_project_history, query_events
+    import json
+
+    sm = SharedStateManager(project_id)
+    state = sm.load()
+    ci = state.get("core_identity", {})
+    pd = state.get("project_definition", {})
+    wf = state.get("workflow", {})
+    decisions = state.get("decisions", {})
+    artifacts = state.get("artifacts", {})
+    execution = state.get("execution", {})
+
+    recent_events = query_project_history(project_id, limit=limit)
+
+    def _payload(row: dict) -> dict:
+        try:
+            raw = json.loads(row.get("payload") or "{}")
+            return raw.get("params", {}).get("inputs", raw)
+        except Exception:
+            return {}
+
+    skill_rows = query_events(project_id=project_id, action_type="skill_recommended", limit=50)
+    required_skills = []
+    for row in skill_rows:
+        payload = _payload(row)
+        if payload.get("required"):
+            required_skills.append({
+                "skill": payload.get("skill"),
+                "rule_id": payload.get("rule_id") or payload.get("rule"),
+                "reason": payload.get("reason", ""),
+            })
+
+    consult_rows = query_events(project_id=project_id, action_type="consultation_required", limit=50)
+    required_consultations = []
+    for row in consult_rows:
+        payload = _payload(row)
+        if not payload.get("satisfied", False):
+            required_consultations.append({
+                "rule_id": payload.get("rule_id") or _payload(row).get("rule"),
+                "decision_type": payload.get("decision_type", ""),
+                "consultants": payload.get("consultants", []),
+            })
+
+    pending_handoffs = _pending_handoffs_from_state(state)
+    state["current"] = {
+        "objective": pd.get("project_goal") or pd.get("problem_statement") or "",
+        "next_action": "resolve pending handoffs" if pending_handoffs else "continue orchestration",
+        "active_agent": wf.get("current_owner", "master_orchestrator"),
+        "active_handoffs": pending_handoffs,
+        "open_questions": decisions.get("open_questions", []),
+        "active_risks": execution.get("delivery_risks", []),
+        "required_consultations": required_consultations,
+        "required_skills": required_skills,
+    }
+    state["recent"] = {
+        "last_checkpoint": str((_get_projects_dir() / project_id / "CHECKPOINT.md")),
+        "last_decision": (decisions.get("decision_log") or [])[-1] if decisions.get("decision_log") else None,
+        "last_artifacts": (artifacts.get("documents") or [])[-5:],
+        "last_events": [
+            {
+                "timestamp": row.get("timestamp"),
+                "actor": row.get("agent_id"),
+                "action_type": row.get("action_type"),
+                "intent": row.get("intent"),
+            }
+            for row in recent_events[-5:]
+        ],
+    }
+    state.setdefault("_meta", {})["rebuilt_at"] = datetime.now(timezone.utc).isoformat()
+    sm._save(state)
+
+    try:
+        from core.engine.event_recorder import EventRecorder
+        EventRecorder().record_simple(
+            project_id=project_id,
+            actor="system",
+            action_type="shared_state_rebuilt",
+            intent="Rebuilt compact shared-state projection from episodic events",
+            payload={"event_count": len(recent_events), "limit": limit},
+            phase=ci.get("current_phase"),
+        )
+    except Exception:
+        pass
+
+    click.echo(f"[ok] Rebuilt shared_state.yaml projection for {project_id}")
 
 
 # ---------------------------------------------------------------------------
@@ -732,21 +930,28 @@ def tokens(project_id: str):
 
 @main.command()
 @click.argument("project_id")
-@click.argument("action_id")
-def explain(project_id: str, action_id: str):
+@click.argument("action_id", required=False)
+@click.option("--last", "show_last", is_flag=True, default=False,
+              help="Explain the most recent event for the project.")
+def explain(project_id: str, action_id: str | None, show_last: bool):
     """Show full detail for a single agent event by action_id.
 
     Example: mas explain proj-20260409-001 abc123def456
+             mas explain proj-20260409-001 --last
     """
     _require_project(project_id)
-    from core.db import query_by_action_id
+    from core.db import query_by_action_id, query_project_history
 
-    event = query_by_action_id(action_id)
+    if show_last or not action_id:
+        rows = query_project_history(project_id, limit=1)
+        event = rows[-1] if rows else None
+    else:
+        event = query_by_action_id(action_id)
     if not event:
-        click.echo(f"[error] Event '{action_id}' not found.", err=True)
+        click.echo(f"[error] Event '{action_id or 'last'}' not found.", err=True)
         sys.exit(1)
 
-    click.echo(f"\nEvent Detail — {action_id}")
+    click.echo(f"\nEvent Detail — {action_id or event.get('id') or 'last'}")
     click.echo("-" * 60)
     for key, value in event.items():
         if isinstance(value, (dict, list)):
@@ -907,27 +1112,46 @@ def check_config():
 @main.command("skill-usage")
 @click.argument("project_id")
 def skill_usage(project_id: str):
-    """Show per-project skill invocation history from the audit log.
+    """Show per-project skill recommendation and invocation history from episodic.db.
 
     Example: mas skill-usage proj-20260409-001
     """
     _require_project(project_id)
-    from core.engine.skill_bridge import SkillBridge
+    from core.db import query_events
+    import json
 
-    entries = SkillBridge().get_audit_log(project_id)
-    if not entries:
-        click.echo("[ok] No skill invocations recorded for this project.")
+    action_types = [
+        "skill_recommended",
+        "skill_requested",
+        "skill_invoked",
+        "skill_completed",
+        "skill_skipped",
+    ]
+    rows = []
+    for action_type in action_types:
+        rows.extend(query_events(project_id=project_id, action_type=action_type, limit=200))
+    rows.sort(key=lambda r: r.get("id", 0))
+
+    if not rows:
+        click.echo("[ok] No skill usage events recorded for this project.")
         return
 
-    click.echo(f"\nSkill usage — {project_id}  ({len(entries)} invocations)")
-    click.echo(f"{'Timestamp':<20} {'Agent':<25} {'Skill':<25} Outcome")
-    click.echo("-" * 85)
-    for e in entries:
-        ts = str(e.get("timestamp", "—"))[:19]
-        agent = str(e.get("agent_id", "—"))[:24]
-        skill = str(e.get("skill_name", "—"))[:24]
-        outcome = str(e.get("outcome", "—"))
-        click.echo(f"{ts:<20} {agent:<25} {skill:<25} {outcome}")
+    click.echo(f"\nSkill usage — {project_id}  ({len(rows)} events)")
+    click.echo(f"{'Timestamp':<20} {'Actor':<24} {'Event':<20} {'Skill':<22} Detail")
+    click.echo("-" * 110)
+    for row in rows:
+        payload = {}
+        try:
+            raw = json.loads(row.get("payload") or "{}")
+            payload = raw.get("params", {}).get("inputs", raw)
+        except Exception:
+            payload = {}
+        ts = str(row.get("timestamp", "—"))[:19]
+        actor = str(row.get("agent_id", "—"))[:23]
+        action_type = str(row.get("action_type", "—"))[:19]
+        skill = str(payload.get("skill") or payload.get("skill_name") or payload.get("name") or "—")[:21]
+        detail = str(payload.get("outcome") or payload.get("reason") or row.get("intent") or "")[:55]
+        click.echo(f"{ts:<20} {actor:<24} {action_type:<20} {skill:<22} {detail}")
 
 
 # ---------------------------------------------------------------------------
@@ -937,11 +1161,14 @@ def skill_usage(project_id: str):
 @main.command("consultation-status")
 @click.argument("project_id")
 def consultation_status(project_id: str):
-    """Show consultation state for a project.
+    """Show consultation lifecycle state for a project from episodic.db.
 
     Example: mas consultation-status proj-20260409-001
     """
     _require_project(project_id)
+    from core.db import query_events
+    import json
+
     state = _load_state(project_id)
     consult = state.get("consultation", {})
 
@@ -949,22 +1176,52 @@ def consultation_status(project_id: str):
     responses = consult.get("consultation_responses", [])
     synthesis = consult.get("synthesis", [])
 
-    click.echo(f"\nConsultation status — {project_id}")
-    click.echo(f"  Requests   : {len(requests)}")
-    click.echo(f"  Responses  : {len(responses)}")
-    click.echo(f"  Syntheses  : {len(synthesis)}")
+    def _rows(action_type: str) -> list[dict]:
+        return query_events(project_id=project_id, action_type=action_type, limit=100)
 
-    if not requests:
-        click.echo("\n[ok] No consultations initiated.")
+    def _payload(row: dict) -> dict:
+        try:
+            raw = json.loads(row.get("payload") or "{}")
+            return raw.get("params", {}).get("inputs", raw)
+        except Exception:
+            return {}
+
+    required_rows = _rows("consultation_required")
+    requested_rows = _rows("consultation_requested")
+    response_rows = _rows("consultation_response")
+    synthesis_rows = _rows("consultation_synthesis")
+
+    click.echo(f"\nConsultation status — {project_id}")
+    click.echo(f"  Required events : {len(required_rows)}")
+    click.echo(f"  Requested events: {len(requested_rows)}")
+    click.echo(f"  Response events : {len(response_rows)}")
+    click.echo(f"  Synthesis events: {len(synthesis_rows)}")
+    click.echo(f"  Shared state    : requests={len(requests)} responses={len(responses)} syntheses={len(synthesis)}")
+
+    if not (required_rows or requested_rows or requests):
+        click.echo("\n[ok] No consultations initiated or required.")
         return
 
-    for i, req in enumerate(requests, 1):
-        dt = str(req.get("requested_at") or req.get("timestamp") or "—")[:19]
-        dtype = req.get("decision_type") or req.get("type") or "—"
-        q = str(req.get("question") or req.get("context") or "")[:80]
-        click.echo(f"\n  [{i}] {dt}  type={dtype}")
-        if q:
-            click.echo(f"       {q}")
+    if required_rows:
+        click.echo("\nRequired consultations:")
+        for row in sorted(required_rows, key=lambda r: r.get("id", 0)):
+            payload = _payload(row)
+            rule = payload.get("rule_id") or "—"
+            dtype = payload.get("decision_type") or "—"
+            satisfied = payload.get("satisfied", False)
+            consultants = ", ".join(payload.get("consultants", [])) or "—"
+            click.echo(f"  - {rule}  type={dtype}  satisfied={satisfied}")
+            click.echo(f"    consultants: {consultants}")
+
+    if requested_rows:
+        click.echo("\nRequested consultations:")
+        for row in sorted(requested_rows, key=lambda r: r.get("id", 0)):
+            payload = _payload(row)
+            rid = payload.get("request_id") or "—"
+            dtype = payload.get("decision_type") or "—"
+            consultants = ", ".join(payload.get("consultants", [])) or "—"
+            click.echo(f"  - {rid}  type={dtype}")
+            click.echo(f"    consultants: {consultants}")
 
 
 # ---------------------------------------------------------------------------
@@ -975,7 +1232,8 @@ def consultation_status(project_id: str):
 @click.argument("project_id")
 @click.option("--phase", default="execution",
               help="Phase to reopen into (default: execution)")
-def reopen(project_id: str, phase: str):
+@click.option("--reason", default="", help="Reason for reopening the project.")
+def reopen(project_id: str, phase: str, reason: str):
     """Reopen a closed project for additional work.
 
     Sets status back to 'active' and current_phase to the specified phase.
@@ -1003,9 +1261,10 @@ def reopen(project_id: str, phase: str):
         EventRecorder().record_simple(
             project_id=project_id,
             actor="master_orchestrator",
-            action_type="phase_transition",
-            intent=f"Project reopened into phase={phase}",
+            action_type="project_reopened",
+            intent=reason or f"Project reopened into phase={phase}",
             phase=phase,
+            payload={"reason": reason, "phase": phase},
         )
     except Exception:
         pass
@@ -1231,6 +1490,9 @@ def run(project_id: str, max_steps: int, auto: bool, target_phase: str | None):
 
     if result.reason == StopReason.UNANIMOUS_RISK:
         click.echo("\n[GOVERNANCE] Unanimous high-risk — human review required.", err=True)
+        sys.exit(2)
+    elif result.reason == StopReason.CONSULTATION_REQUIRED:
+        click.echo("\n[GOVERNANCE] Required consultation is pending.", err=True)
         sys.exit(2)
     elif result.reason == StopReason.HUMAN_ESCALATION:
         click.echo("\n[GOVERNANCE] Human escalation required.", err=True)

@@ -71,3 +71,54 @@ def test_resume_shows_pending_handoff(runner, monkeypatch, tmp_path):
     assert "pending   : 1" in result.output
     assert "ho-resume-001" in result.output
     assert "resolve pending handoff" in result.output
+
+
+def test_close_writes_final_artifacts_and_cleans_snapshots(runner, monkeypatch, tmp_path):
+    _patch_project_roots(monkeypatch, tmp_path)
+    from core.engine.shared_state_manager import SharedStateManager
+
+    project_id = "proj-close-cli-001"
+    sm = SharedStateManager(project_id)
+    sm.initialize(request_id="req-close-001")
+    sm.snapshot("intake")
+
+    records = []
+
+    def _record(_self, project_id, actor, action_type, intent, **kwargs):
+        records.append((action_type, kwargs))
+        return "evt-1"
+
+    monkeypatch.setattr("core.engine.event_recorder.EventRecorder.record_simple", _record)
+    monkeypatch.setattr("core.engine.graph_memory.EpisodeWriter.replay_from_state",
+                        lambda *_a, **_kw: 0)
+
+    result = runner.invoke(main, ["close", project_id])
+
+    assert result.exit_code == 0
+    project_dir = tmp_path / "mas" / "projects" / project_id
+    assert (project_dir / "CLOSED.md").exists()
+    assert (project_dir / "final_shared_state.yaml").exists()
+    assert not list(project_dir.glob("shared_state_snapshot_*.yaml"))
+    action_types = [item[0] for item in records]
+    assert "snapshots_cleaned" in action_types
+    assert "project_closed" in action_types
+
+
+def test_rebuild_state_adds_projection(runner, monkeypatch, tmp_path):
+    _patch_project_roots(monkeypatch, tmp_path)
+    from core.engine.shared_state_manager import SharedStateManager
+
+    project_id = "proj-rebuild-cli-001"
+    sm = SharedStateManager(project_id)
+    sm.initialize(request_id="req-rebuild-001")
+
+    monkeypatch.setattr("core.engine.event_recorder.EventRecorder.record_simple",
+                        lambda *_a, **_kw: "evt-1")
+
+    result = runner.invoke(main, ["rebuild-state", project_id])
+
+    assert result.exit_code == 0
+    state = sm.load()
+    assert "current" in state
+    assert "recent" in state
+    assert state["_meta"].get("rebuilt_at")

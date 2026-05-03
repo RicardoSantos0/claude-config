@@ -9,6 +9,8 @@ event_types:
   orchestration:
     - decision_made
     - phase_transition
+    - project_closed
+    - project_reopened
     - stop_reason
     - policy_block
 

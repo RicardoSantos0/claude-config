@@ -40,7 +40,7 @@ mas/projects/<project_id>/intake/clarified_spec.yaml (if present)
 4. Identify safe assumptions the agent can make without user input.
 5. Propose defaults for deferrable questions.
 6. Present blocking questions to the user.
-7. When answers are provided, suggest updates to `shared_state.yaml decisions` and `open_questions.yaml`.
+7. When answers are provided, produce explicit proposed updates to `shared_state.yaml decisions` and `open_questions.yaml` for the owning agent to apply.
 
 ## Output Format
 
@@ -69,6 +69,6 @@ mas/projects/<project_id>/intake/clarified_spec.yaml (if present)
 - Prioritize blockers — do not ask endless questions.
 - Maximum 7 questions per round; priority: blocking → non-blocking → deferrable.
 - Never fabricate answers the user has not provided.
-- Record resolved answers in `decisions/open_questions.yaml` and `shared_state.yaml`.
+- Return proposed state/file updates; the owning agent performs the actual writes.
 - Reference `standards/mas-governance.md` for decision recording requirements.
 - If a user refuses to answer a required field after 2 rounds, escalate to master_orchestrator.

@@ -169,8 +169,12 @@ class TestAccessRuleCoverage:
 
     def test_no_agent_grants_access_to_nonexistent_skill(self):
         """All explicit skill names in SKILL_ACCESS should match known skill dirs."""
-        known_skills = {"research-extract", "research-sync", "notebooklm",
-                        "frontend-design", "skill-builder"}  # real skills in repo
+        from pathlib import Path
+        repo_root = Path(__file__).resolve().parents[3]
+        known_skills = {
+            p.name for p in (repo_root / "skills").iterdir()
+            if p.is_dir() and (p / "SKILL.md").exists()
+        }
         for agent, allowed in SKILL_ACCESS.items():
             for skill in allowed:
                 if skill == "*":

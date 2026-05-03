@@ -80,6 +80,16 @@ Handoffs are stored in `shared_state.workflow.handoff_history` and mirrored to t
 
 Each agent owns specific shared state fields. The `shared_state_manager.py` enforces field ownership — agents cannot write fields they don't own. Master Orchestrator owns `core_identity.*`.
 
+### Memory Model
+
+`mas/data/episodic.db` is MAS durable historical memory. It stores typed runtime events and queryable history of what happened across runs.
+
+`mas/projects/<project_id>/shared_state.yaml` is the compact operational projection for current orchestration, not the long-term event ledger.
+
+`mas/roster/registry_index.yaml` remains the design-time source of truth for capabilities and agent metadata.
+
+Human-facing artifacts such as `CHECKPOINT.md` and `CLOSED.md` are generated summaries for operators and review, not authoritative event stores.
+
 ---
 
 ## Database Schema

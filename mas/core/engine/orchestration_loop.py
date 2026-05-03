@@ -50,6 +50,7 @@ class LoopConfig:
 class StopReason(str, Enum):
     MAX_STEPS        = "max_steps"
     UNANIMOUS_RISK   = "unanimous_risk"
+    CONSULTATION_REQUIRED = "consultation_required"
     HUMAN_ESCALATION = "human_escalation"
     PROJECT_CLOSED   = "project_closed"
     PHASE_CHECKPOINT = "phase_checkpoint"
@@ -112,6 +113,7 @@ class OrchestrationLoop:
         self._pending_grounded_context: str = ""
         self._pending_deployment_plan: list[dict] = []   # set when HR returns a deploy plan
         self._agent_error_counts: dict[str, int] = {}
+        self._recorded_skill_recommendations: set[tuple[str, str, str]] = set()
         # Lazy-loaded helpers
         self._runner = None
         self._assembler = None
@@ -161,6 +163,13 @@ class OrchestrationLoop:
                         self._pending_grounded_context = answer
                         print(f"  [notebooklm] grounded context injected for next step")
 
+                    if parsed.skill_request:
+                        self._handle_skill_request(agent_id, parsed.skill_request, last_phase)
+                        self._record_skills_used(agent_id, parsed.skills_used, last_phase)
+                        step += 1
+                        continue
+
+                    self._record_skills_used(agent_id, parsed.skills_used, last_phase)
                     stop = self._execute_master_actions(parsed, state)
                     if stop:
                         return stop
@@ -185,6 +194,12 @@ class OrchestrationLoop:
                         answer = self._handle_knowledge_request(parsed.knowledge_request)
                         self._pending_grounded_context = answer
                         print(f"  [notebooklm] grounded context injected for next step")
+
+                    if parsed.skill_request:
+                        self._handle_skill_request(agent_id, parsed.skill_request, last_phase)
+                        self._record_skills_used(agent_id, parsed.skills_used, last_phase)
+                        step += 1
+                        continue
 
                     if parsed.next_action == "escalate":
                         raise _EscalationRequired(
@@ -211,6 +226,10 @@ class OrchestrationLoop:
                             raise _EscalationRequired(
                                 p_parsed.reasoning or f"Agent '{p_id}' requested escalation."
                             )
+                        if p_parsed.skill_request:
+                            self._handle_skill_request(p_id, p_parsed.skill_request, last_phase)
+                            self._record_skills_used(p_id, p_parsed.skills_used, last_phase)
+                            continue
                         self._accept_pending_handoff(state, p_id, p_parsed)
                         self._record_subagent_output(p_id, p_parsed)
 
@@ -263,6 +282,7 @@ class OrchestrationLoop:
 
         phase = state.get("core_identity", {}).get("current_phase", "intake")
         extra_ctx = self._build_extra_context()
+        self._record_skill_recommendations(state, phase=phase)
 
         # Inject pending handoff task description for sub-agents
         if canonical_agent_id != "master_orchestrator":
@@ -307,6 +327,129 @@ class OrchestrationLoop:
             self._agent_error_counts.pop(canonical_agent_id, None)
 
         return _AgentResponse(agent_id=canonical_agent_id, raw_text=text, tokens_used=tokens)
+
+    def _handle_skill_request(
+        self,
+        agent_id: str,
+        skill_request: dict,
+        phase: str,
+    ) -> None:
+        """Authorize and render an agent-requested skill as a controlled MAS step."""
+        skill_name = skill_request.get("name") or skill_request.get("skill")
+        if not skill_name:
+            return
+        query = str(skill_request.get("query", ""))
+        required = bool(skill_request.get("required", False))
+        try:
+            from core.engine.skill_bridge import SkillBridge
+            from core.engine.event_recorder import EventRecorder
+            bridge = SkillBridge()
+            EventRecorder().record_simple(
+                project_id=self.config.project_id,
+                actor=agent_id,
+                action_type="skill_requested",
+                intent=f"Skill requested: {skill_name}",
+                phase=phase,
+                payload={"skill": skill_name, "query": query, "required": required},
+            )
+            result = bridge.invoke(agent_id, str(skill_name), query,
+                                   project_id=self.config.project_id)
+            if not result.success:
+                print(f"  [skill] {skill_name}: {result.outcome}")
+                return
+            rendered = bridge.render_skill_prompt(
+                agent_id, str(skill_name), query, project_id=self.config.project_id
+            )
+            self._pending_grounded_context = (
+                f"[skill_prompt:{skill_name}]\n{rendered}"
+            )
+            EventRecorder().record_simple(
+                project_id=self.config.project_id,
+                actor=agent_id,
+                action_type="skill_completed",
+                intent=f"Skill prompt rendered: {skill_name}",
+                phase=phase,
+                payload={
+                    "skill": skill_name,
+                    "query": query,
+                    "outcome": "rendered_prompt",
+                },
+            )
+            print(f"  [skill] {skill_name} prompt rendered for next step")
+        except Exception as exc:
+            print(f"  [skill_warn] {skill_name}: {exc}")
+
+    def _record_skills_used(
+        self,
+        agent_id: str,
+        skills_used: list[dict],
+        phase: str,
+    ) -> None:
+        if not skills_used:
+            return
+        try:
+            from core.engine.event_recorder import EventRecorder
+            recorder = EventRecorder()
+            for item in skills_used:
+                name = item.get("name") or item.get("skill")
+                if not name:
+                    continue
+                recorder.record_simple(
+                    project_id=self.config.project_id,
+                    actor=agent_id,
+                    action_type="skill_completed",
+                    intent=f"Agent reported skill used: {name}",
+                    phase=phase,
+                    payload=item,
+                )
+        except Exception:
+            pass
+
+    def _record_skill_recommendations(
+        self,
+        state: dict,
+        *,
+        phase: str | None = None,
+        event: str | None = None,
+        changed_paths: list[str] | None = None,
+        status: str | None = None,
+    ) -> None:
+        """Record required/recommended skill triggers as typed events."""
+        try:
+            from core.engine.skill_trigger import SkillTriggerPolicy
+            from core.engine.event_recorder import EventRecorder
+            policy = SkillTriggerPolicy()
+            project_dir = ROOT / "mas" / "projects" / self.config.project_id
+            recs = policy.recommendations_for(
+                state=state,
+                project_dir=project_dir,
+                event=event,
+                phase=phase,
+                changed_paths=changed_paths or [],
+                status=status,
+            )
+            recorder = EventRecorder()
+            for rec in recs:
+                key = (self.config.project_id, rec.rule_id, rec.skill)
+                if key in self._recorded_skill_recommendations:
+                    continue
+                recorder.record_simple(
+                    project_id=self.config.project_id,
+                    actor="system",
+                    action_type="skill_recommended",
+                    intent=f"Recommended skill: {rec.skill}",
+                    phase=phase,
+                    rule_id=rec.rule_id,
+                    payload={
+                        "skill": rec.skill,
+                        "required": rec.required,
+                        "reason": rec.reason,
+                        "event": event,
+                    },
+                )
+                self._recorded_skill_recommendations.add(key)
+        except Exception:
+            pass
 
     def _determine_pending_agents(self, state: dict) -> list[str]:
         """
@@ -456,6 +599,12 @@ class OrchestrationLoop:
                 raise _EscalationRequired("Human escalation required by consultation panel.")
             self._pending_consultation_synthesis = synthesis
 
+        consultation_stop = self._consultation_gate_stop(
+            parsed, state, consultation_trigger, phase
+        )
+        if consultation_stop:
+            return consultation_stop
+
         # 4. Escalation
         if parsed.next_action == "escalate":
             raise _EscalationRequired(parsed.reasoning or "Agent requested escalation.")
@@ -540,6 +689,8 @@ class OrchestrationLoop:
 
         sm = SharedStateManager(self.config.project_id)
         now = datetime.now(timezone.utc).isoformat()
+        phase = sm.load().get("core_identity", {}).get("current_phase", "")
+        self._record_skills_used(agent_id, parsed.skills_used, phase)
 
         for dec in parsed.decisions:
             if isinstance(dec, dict) and dec.get("id"):
@@ -628,6 +779,23 @@ class OrchestrationLoop:
         print(f"  [consult] decision_type={trigger.get('decision_type')} "
               f"consultants={request.consultants_selected}")
 
+        try:
+            from core.engine.event_recorder import EventRecorder
+            EventRecorder().record_simple(
+                project_id=self.config.project_id,
+                actor="master_orchestrator",
+                action_type="consultation_requested",
+                intent=trigger.get("question", "Consultation requested"),
+                payload={
+                    "request_id": request.request_id,
+                    "decision_type": request.decision_type,
+                    "consultants": request.consultants_selected,
+                },
+                phase=state.get("core_identity", {}).get("current_phase"),
+            )
+        except Exception:
+            pass
+
         for consultant_id in request.consultants_selected:
             extra = {
                 "injected_consultation_question": request.question,
@@ -662,6 +830,22 @@ class OrchestrationLoop:
                     recommendation=c_parsed.get("recommendation", "proceed"),
                     reasoning=c_parsed.get("reasoning", ""),
                 )
+                try:
+                    from core.engine.event_recorder import EventRecorder
+                    EventRecorder().record_simple(
+                        project_id=self.config.project_id,
+                        actor=consultant_id,
+                        action_type="consultation_response",
+                        intent=f"Consultation response for {request.request_id}",
+                        payload={
+                            "request_id": request.request_id,
+                            "risk_level": c_parsed.get("risk_level", "low"),
+                            "recommendation": c_parsed.get("recommendation", "proceed"),
+                        },
+                        phase=state.get("core_identity", {}).get("current_phase"),
+                    )
+                except Exception:
+                    pass
             except Exception as e:
                 print(f"  [consult_warn] record_response for {consultant_id}: {e}")
 
@@ -687,6 +871,24 @@ class OrchestrationLoop:
             print(f"  [consult_warn] synthesize failed: {e}")
             return None
 
+        try:
+            from core.engine.event_recorder import EventRecorder
+            EventRecorder().record_simple(
+                project_id=self.config.project_id,
+                actor="master_orchestrator",
+                action_type="consultation_synthesis",
+                intent=f"Consultation synthesis for {request.request_id}",
+                payload={
+                    "request_id": request.request_id,
+                    "synthesis_id": synthesis.synthesis_id,
+                    "decision_reached": synthesis.decision_reached,
+                    "human_escalation_required": synthesis.human_escalation_required,
+                },
+                phase=state.get("core_identity", {}).get("current_phase"),
+            )
+        except Exception:
+            pass
+
         # Save to shared state
         try:
             sm.append("master_orchestrator", "consultation", "synthesis",
@@ -696,6 +898,99 @@ class OrchestrationLoop:
             pass
 
         return synthesis
+
+    def _consultation_gate_stop(
+        self,
+        parsed: "ParsedResponse",
+        state: dict,
+        consultation_trigger: dict | None,
+        phase: str,
+    ) -> LoopResult | None:
+        """Block gated actions until required consultation is triggered or synthesized."""
+        if parsed.next_action not in {"delegate", "advance_phase"}:
+            return None
+        try:
+            from core.engine.consultation_gate import ConsultationGate
+            gate = ConsultationGate()
+            requirements = gate.required_for(
+                state=state,
+                parsed=parsed,
+                changed_paths=parsed.artifacts,
+                status=parsed.status,
+            )
+        except Exception:
+            return None
+
+        for req in requirements:
+            valid = gate.has_valid_trigger(req, consultation_trigger, state)
+            self._record_consultation_requirement(req, parsed, phase, satisfied=valid)
+            if valid:
+                continue
+            message = (
+                f"Consultation required by {req.rule_id}. "
+                f"Master must emit consultation_trigger with consultants={req.consultants}."
+            )
+            self._record_policy_block(req.rule_id, message, parsed, phase)
+            return LoopResult(
+                0,
+                StopReason.CONSULTATION_REQUIRED,
+                "master_orchestrator",
+                phase,
+                message,
+            )
+        return None
+
+    def _record_consultation_requirement(
+        self,
+        requirement: Any,
+        parsed: "ParsedResponse",
+        phase: str,
+        *,
+        satisfied: bool,
+    ) -> None:
+        try:
+            from core.engine.event_recorder import EventRecorder
+            EventRecorder().record_simple(
+                project_id=self.config.project_id,
+                actor="system",
+                action_type="consultation_required",
+                intent=f"Required consultation: {requirement.rule_id}",
+                phase=phase,
+                rule_id=requirement.rule_id,
+                payload={
+                    "decision_type": requirement.decision_type,
+                    "consultants": requirement.consultants,
+                    "next_action": parsed.next_action,
+                    "satisfied": satisfied,
+                },
+            )
+        except Exception:
+            pass
+
+    def _record_policy_block(
+        self,
+        rule_id: str,
+        message: str,
+        parsed: "ParsedResponse",
+        phase: str,
+    ) -> None:
+        try:
+            from core.engine.event_recorder import EventRecorder
+            EventRecorder().record_simple(
+                project_id=self.config.project_id,
+                actor="system",
+                action_type="policy_block",
+                intent=message,
+                phase=phase,
+                rule_id=rule_id,
+                payload={
+                    "next_action": parsed.next_action,
+                    "status": parsed.status,
+                    "artifacts": parsed.artifacts,
+                },
+            )
+        except Exception:
+            pass
 
     def _parse_consultant_response(self, text: str) -> dict:
         """

@@ -80,3 +80,4 @@ Depends on mode:
 - Reference `standards/` for applicable conventions.
 - Report what you found, not what you assumed.
 - If a finding requires action, recommend it — do not act.
+- Distinguish confirmed findings from hypotheses; label uncertain items explicitly.

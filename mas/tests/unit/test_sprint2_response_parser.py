@@ -11,7 +11,19 @@ class TestSkillFields:
 
     def test_skill_request_extracted(self):
         pr = self._parse(', "sk_req": {"skill": "research-extract", "query": "papers on LLM"}')
-        assert pr.skill_request == {"skill": "research-extract", "query": "papers on LLM"}
+        assert pr.skill_request == {
+            "skill": "research-extract",
+            "name": "research-extract",
+            "query": "papers on LLM",
+        }
+
+    def test_verbose_skill_request_extracted(self):
+        pr = self._parse(', "skill_request": {"name": "mas-examine", "query": "diff"}')
+        assert pr.skill_request == {
+            "name": "mas-examine",
+            "skill": "mas-examine",
+            "query": "diff",
+        }
 
     def test_skill_request_none_when_absent(self):
         pr = self._parse()
@@ -19,7 +31,18 @@ class TestSkillFields:
 
     def test_skills_used_extracted(self):
         pr = self._parse(', "sk_used": ["research-extract", "notebooklm"]')
-        assert pr.skills_used == ["research-extract", "notebooklm"]
+        assert pr.skills_used == [
+            {"name": "research-extract", "skill": "research-extract"},
+            {"name": "notebooklm", "skill": "notebooklm"},
+        ]
+
+    def test_verbose_skills_used_extracted(self):
+        pr = self._parse(
+            ', "skill_used": [{"name": "mas-review", "purpose": "resume"}]'
+        )
+        assert pr.skills_used == [
+            {"name": "mas-review", "skill": "mas-review", "purpose": "resume"}
+        ]
 
     def test_skills_used_empty_when_absent(self):
         pr = self._parse()
@@ -33,5 +56,5 @@ class TestSkillFields:
         pr = self._parse(
             ', "sk_req": {"skill": "mas-examine"}, "sk_used": ["mas-review"]'
         )
-        assert pr.skill_request == {"skill": "mas-examine"}
-        assert pr.skills_used == ["mas-review"]
+        assert pr.skill_request == {"skill": "mas-examine", "name": "mas-examine"}
+        assert pr.skills_used == [{"name": "mas-review", "skill": "mas-review"}]

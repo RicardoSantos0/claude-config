@@ -4,6 +4,16 @@
 **Applies to:** All MAS agents and skills
 **Source of truth:** `mas/policies/*.yaml`
 
+## Normative Hierarchy
+
+Use this precedence order when wording appears to conflict:
+1. Policy files under `mas/policies/*.yaml` are canonical runtime rules
+2. Foundation contracts under `mas/foundation/*` define schema and protocol structures
+3. Standards under `standards/*` provide human-readable obligations and must not override policy files
+4. Agent and skill files provide role-specific operating guidance and must defer to policy and foundation contracts
+
+If any rule in this file conflicts with policy text, follow policy text and treat this file as needing correction.
+
 ---
 
 ## Trust Tiers

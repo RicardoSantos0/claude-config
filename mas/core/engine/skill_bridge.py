@@ -27,19 +27,20 @@ SKILLS_DIR = REPO_ROOT / "skills"
 
 SKILL_ACCESS: dict[str, list[str]] = {
     "master_orchestrator": ["*"],
-    "scribe_agent": ["research-extract", "research-sync"],
-    "inquirer_agent": ["research-extract"],
-    "product_manager_agent": ["research-extract", "research-sync"],
-    "project_manager_agent": ["research-extract"],
+    "scribe_agent": ["research-extract", "research-sync", "mas-document", "mas-handoff"],
+    "inquirer_agent": ["research-extract", "mas-clarify"],
+    "product_manager_agent": ["research-extract", "research-sync", "mas-clarify"],
+    "project_manager_agent": ["research-extract", "mas-plan", "mas-examine"],
     "hr_agent": [],
-    "evaluator_agent": ["research-extract"],
-    "trainer_agent": [],
+    "evaluator_agent": ["research-extract", "mas-postmortem"],
+    "trainer_agent": ["mas-postmortem"],
     "spawner_agent": ["skill-builder"],
-    "risk_advisor": [],
-    "quality_advisor": [],
+    "risk_advisor": ["mas-examine"],
+    "quality_advisor": ["mas-examine"],
     "devils_advocate": [],
-    "domain_expert": ["research-extract"],
+    "domain_expert": ["research-extract", "mas-examine"],
     "efficiency_advisor": [],
+    "session_scheduler": ["mas-review", "mas-handoff", "mas-logwork"],
 }
 
 
@@ -148,6 +149,8 @@ class SkillBridge:
                 agent_id, skill_name, query, project_id,
                 outcome="denied", tokens_used=0, timestamp=timestamp,
             )
+            self._persist_invocation_event(project_id, audit, "skill_skipped",
+                                           "Skill invocation denied")
             return InvocationResult(
                 success=False,
                 skill_name=skill_name,
@@ -164,6 +167,8 @@ class SkillBridge:
                 agent_id, skill_name, query, project_id,
                 outcome="skill_not_found", tokens_used=0, timestamp=timestamp,
             )
+            self._persist_invocation_event(project_id, audit, "skill_skipped",
+                                           "Skill not found")
             return InvocationResult(
                 success=False,
                 skill_name=skill_name,
@@ -178,6 +183,8 @@ class SkillBridge:
             agent_id, skill_name, query, project_id,
             outcome="ok", tokens_used=tokens_used, timestamp=timestamp,
         )
+        self._persist_invocation_event(project_id, audit, "skill_invoked",
+                                       "Skill invocation authorized")
 
         return InvocationResult(
             success=True,
@@ -260,9 +267,10 @@ class SkillBridge:
             "tokens_used": tokens_used,
         }
 
-    def render_skill_prompt(self, agent_id: str, skill_name: str, query: str) -> str:
+    def render_skill_prompt(self, agent_id: str, skill_name: str, query: str,
+                            project_id: str = "") -> str:
         """
-        Render a skill invocation as a prompt block for injection into agent prompts.
+        Render a skill invocation as an executable prompt block.
         Returns a markdown block the agent can act on, or an error string.
         Never raises.
         """
@@ -271,12 +279,42 @@ class SkillBridge:
         skill = self.get_skill(skill_name)
         if skill is None:
             return f"[skill not found: {skill_name!r}]"
+        try:
+            skill_text = skill.path.read_text(encoding="utf-8")
+        except OSError:
+            skill_text = f"# {skill.name}\n\n{skill.description}"
         return (
-            f"## Skill: {skill_name}\n"
-            f"Description: {skill.description}\n"
-            f"Query: {query}\n"
-            f"Invoke with: /{skill_name} {query}\n"
+            "You are executing the following Claude Code skill.\n\n"
+            f"# Skill\n{skill_text}\n\n"
+            f"# Project\n{project_id or '(none)'}\n\n"
+            f"# Query\n{query}\n\n"
+            "Follow the skill procedure exactly. Return the skill output using the skill's Output Format.\n"
         )
+
+    def _persist_invocation_event(
+        self,
+        project_id: str,
+        audit: dict,
+        action_type: str,
+        intent: str,
+    ) -> None:
+        if not project_id:
+            return
+        try:
+            self.write_audit_entry(project_id, audit)
+        except Exception:
+            pass
+        try:
+            from core.engine.event_recorder import EventRecorder
+            EventRecorder().record_simple(
+                project_id=project_id,
+                actor=audit.get("agent_id", "unknown"),
+                action_type=action_type,
+                intent=intent,
+                payload=audit,
+            )
+        except Exception:
+            pass
 
     def audit_handoff(self, handoff: dict) -> None:
         """

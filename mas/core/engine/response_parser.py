@@ -34,8 +34,8 @@ class ParsedResponse:
     consultation_trigger: dict | None    # {decision_type, question, context, consultants}
     knowledge_request: dict | None       # KNOWLEDGE_REQUEST block
     deployment_plan: list[dict]          # deploy array from HR capability assessment
-    skill_request: dict | None           # sk_req: skill invocation requested by agent
-    skills_used: list[str]              # sk_used: skills agent reports having used
+    skill_request: dict | None           # skill_request/sk_req invocation requested by agent
+    skills_used: list[dict]              # skill_used/sk_used skills agent reports having used
     raw_wire: dict                       # full decoded wire dict (pass-through unknown keys)
     parse_errors: list[str] = field(default_factory=list)
 
@@ -112,7 +112,7 @@ class ResponseParser:
         consult_trigger   = wire.get("consultation_trigger")
         knowledge_request = self._extract_knowledge_request(raw_text)
         deployment_plan   = self._extract_deployment_plan(wire)
-        skill_request     = wire.get("sk_req")
+        skill_request     = self._extract_skill_request(wire)
         skills_used       = self._extract_skills_used(wire)
 
         return ParsedResponse(
@@ -219,9 +219,32 @@ class ResponseParser:
             return []
         return [entry for entry in raw if isinstance(entry, dict)]
 
-    def _extract_skills_used(self, wire: dict) -> list[str]:
-        """Extract the sk_used list — skills the agent reports having invoked."""
-        raw = wire.get("sk_used", [])
+    def _extract_skill_request(self, wire: dict) -> dict | None:
+        """Extract and normalize skill_request/sk_req."""
+        raw = wire.get("skill_request", wire.get("sk_req"))
+        if not isinstance(raw, dict):
+            return None
+        result = dict(raw)
+        if "name" not in result and "skill" in result:
+            result["name"] = result["skill"]
+        if "skill" not in result and "name" in result:
+            result["skill"] = result["name"]
+        return result
+
+    def _extract_skills_used(self, wire: dict) -> list[dict]:
+        """Extract skill_used/sk_used and normalize string entries to dicts."""
+        raw = wire.get("skill_used", wire.get("sk_used", []))
         if not isinstance(raw, list):
             return []
-        return [str(s) for s in raw if s]
+        skills: list[dict] = []
+        for item in raw:
+            if isinstance(item, dict):
+                if "name" not in item and "skill" in item:
+                    item = {**item, "name": item["skill"]}
+                if "skill" not in item and "name" in item:
+                    item = {**item, "skill": item["name"]}
+                skills.append(item)
+            elif item:
+                name = str(item)
+                skills.append({"name": name, "skill": name})
+        return skills

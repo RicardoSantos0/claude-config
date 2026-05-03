@@ -25,9 +25,10 @@ Invoke when:
 
 ```text
 mas/projects/<project_id>/shared_state.yaml
-mas/projects/<project_id>/checkpoints/  (latest file)
-mas/projects/<project_id>/handoffs/     (pending files)
-mas/projects/<project_id>/evaluations/  (latest if present)
+mas/projects/<project_id>/CHECKPOINT.md (if present)
+mas/projects/<project_id>/checkpoints/  (latest file, fallback)
+mas/projects/<project_id>/handoffs/     (pending files, if directory exists)
+mas/projects/<project_id>/evaluation/   (latest report, if directory exists)
 mas/roster/registry_index.yaml
 mas/policies/*.yaml
 git status
@@ -38,9 +39,9 @@ git log --oneline -n 10
 
 1. Identify the active project ID from the user, current directory, or MAS state.
 2. Read the project `shared_state.yaml` — extract: `current_phase`, `current_owner`, `acceptance_criteria`, `decision_log`, `completed_phases`.
-3. Read the latest checkpoint file if present.
-4. List pending handoffs (files in `handoffs/` with `status: pending`).
-5. Read the latest evaluation report if present.
+3. Read CHECKPOINT.md if present; otherwise read the latest file under checkpoints/.
+4. List pending handoffs from the handoffs directory when present; if absent, report missing handoff directory as missing evidence.
+5. Read the latest evaluation report from evaluation/ when present.
 6. Check `git status` and `git log --oneline -n 10` for recent changes.
 7. Identify: stale context, missing artifacts, blocked handoffs, unresolved questions, policy concerns.
 8. Return a concise review with the next recommended action.
@@ -80,6 +81,7 @@ git log --oneline -n 10
 - Do not modify MAS state unless explicitly asked.
 - Do not invent missing state; mark it as missing.
 - Treat MAS state (`shared_state.yaml`) as canonical.
+- If expected folders are absent, report missing evidence explicitly and continue with available sources.
 - Prefer specific file paths and concrete next actions over vague summaries.
 - Reference `mas/policies/` for governance constraints.
 - See `standards/mas-governance.md` for trust tier and phase gate rules.

@@ -205,6 +205,99 @@ class TestConsultFallback:
         assert calls["trigger"]["decision_type"] == "architecture"
 
 
+class TestConsultationGates:
+    def _patch_state_helpers(self, monkeypatch, tmp_path):
+        class _DummySM:
+            project_dir = tmp_path
+
+            def append(self, *args, **kwargs):
+                return None
+
+            def write(self, *args, **kwargs):
+                return None
+
+            def snapshot(self, *args, **kwargs):
+                return tmp_path / "snapshot.yaml"
+
+            def system_append(self, *args, **kwargs):
+                return None
+
+        class _DummyHE:
+            created = []
+
+            def create(self, *args, **kwargs):
+                self.created.append((args, kwargs))
+                return {}
+
+        monkeypatch.setattr("core.engine.shared_state_manager.SharedStateManager",
+                            lambda *_a, **_kw: _DummySM())
+        monkeypatch.setattr("core.engine.handoff_engine.HandoffEngine",
+                            lambda *_a, **_kw: _DummyHE())
+
+    def test_runtime_artifact_change_blocks_without_required_consultation(self, monkeypatch, tmp_path):
+        self._patch_state_helpers(monkeypatch, tmp_path)
+        records = []
+
+        def _record(_self, project_id, actor, action_type, intent, **kwargs):
+            records.append((action_type, kwargs))
+            return "evt-1"
+
+        monkeypatch.setattr("core.engine.event_recorder.EventRecorder.record_simple", _record)
+
+        loop = OrchestrationLoop(LoopConfig(project_id="proj-test", auto=True))
+        state = _make_state(phase="execution")
+        parsed = loop._parse_response(_wire_response(
+            s="task:delegated",
+            next_action="delegate",
+            next_agent="project_manager_agent",
+            art=["mas/core/engine/foo.py"],
+            rsn="Runtime change needs work",
+        ))
+
+        result = loop._execute_master_actions(parsed, state)
+
+        assert result is not None
+        assert result.reason == StopReason.CONSULTATION_REQUIRED
+        assert "runtime-change-requires-architecture-panel" in result.message
+        assert "consultation_required" in [r[0] for r in records]
+        assert "policy_block" in [r[0] for r in records]
+
+    def test_valid_required_consultation_trigger_allows_action(self, monkeypatch, tmp_path):
+        self._patch_state_helpers(monkeypatch, tmp_path)
+        calls = {}
+
+        class _Synth:
+            unanimous_high_risk = False
+            human_escalation_required = False
+
+        def _fake_run_consultation(trigger, _state):
+            calls["trigger"] = trigger
+            return _Synth()
+
+        loop = OrchestrationLoop(LoopConfig(project_id="proj-test", auto=True))
+        monkeypatch.setattr(loop, "_run_consultation", _fake_run_consultation)
+
+        state = _make_state(phase="execution")
+        parsed = loop._parse_response(_wire_response(
+            s="task:delegated",
+            next_action="delegate",
+            next_agent="project_manager_agent",
+            art=["mas/core/engine/foo.py"],
+            consultation_trigger={
+                "decision_type": "architecture",
+                "question": "Review runtime change",
+                "consultants": ["domain_expert", "risk_advisor", "quality_advisor"],
+                "context": {"path": "mas/core/engine/foo.py"},
+            },
+            rsn="Runtime change needs consultation",
+        ))
+
+        result = loop._execute_master_actions(parsed, state)
+
+        assert result is None
+        assert calls["trigger"]["decision_type"] == "architecture"
+
+
 class TestArtifactMaterialization:
     def test_materializes_missing_artifact_files(self, tmp_path):
         loop = OrchestrationLoop(LoopConfig(project_id="proj-artifacts"))
