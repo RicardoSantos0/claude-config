@@ -4,6 +4,17 @@ All notable changes to this repository are documented here.
 
 ---
 
+## [2026-05-03] Documentation and contract synchronization
+
+- Updated top-level and MAS documentation to reflect the current 20-agent roster and live trust-tier layout.
+- Corrected stale tier assignments in docs, including moving `hr_agent` to T1 and `session_scheduler` to Infrastructure where documented.
+- Rewrote the agent-network diagrams in `README.md` and `mas/CLAUDE.md` so the visuals match the live roster instead of older abbreviated layouts.
+- Aligned lifecycle docs with the canonical execution gate: `mas/projects/{project_id}/planning/product_plan.yaml` must exist before delivery dispatch.
+- Normalized MAS agent/skill documentation toward compact output-contract references instead of duplicated wire-protocol blocks.
+- Updated `mas/system_config.yaml` commentary and skill-access mappings to match the current runtime bridge expectations.
+
+---
+
 ## [2026-04-21b] proj-20260420-001: evaluation complete, 4 agents promoted to T1_established
 
 All 3 sprints delivered and evaluated for `proj-20260420-001-notion-zotero-platform`:

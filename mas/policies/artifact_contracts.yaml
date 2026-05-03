@@ -1,5 +1,6 @@
 # MAS Artifact Contracts
 # Per-phase required and optional artifacts. Used by lifecycle_guard and mas doctor.
+# Contract structure: phase -> required[] (must exist) and optional[] (may exist)
 version: "1.0"
 phases:
   intake:

@@ -1,6 +1,6 @@
 # claude-config
 
-Global Claude Code configuration repository synced across machines. Provides custom VS Code agents, slash commands, skill packages, and a **governed Multi-Agent System (MAS)** that coordinates 14 specialized AI agents through formal protocols for end-to-end project delivery.
+Global Claude Code configuration repository synced across machines. Provides custom VS Code agents, slash commands, skill packages, and a **governed Multi-Agent System (MAS)** that coordinates 20 specialized AI agents across core, established, supervised, and infrastructure roles through formal protocols for end-to-end project delivery.
 
 ---
 
@@ -168,47 +168,36 @@ Version **0.2.0**. A governed multi-agent delivery system that coordinates 20 sp
 
 ### Agent Network
 
-20 agents organized across 4 trust tiers:
+20 active agents organized across T0, T1, T2, and an infrastructure lane:
+
+The table below and `mas/roster/registry_index.yaml` are the canonical trust-tier sources.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  T0 CORE (highest trust)                                        │
-│  ┌──────────────────────┐  ┌────────────┐  ┌──────────┐        │
-│  │ master_orchestrator  │  │   scribe   │  │    hr    │        │
-│  │ (Opus · coordination │  │ (docs,     │  │ (roster, │        │
-│  │  governance, phases) │  │  audit)    │  │  gaps)   │        │
-│  └──────────────────────┘  └────────────┘  └──────────┘        │
+│  T0 CORE (workflow control and governance)                      │
+│  ┌──────────────────────┐  ┌──────────────┐                    │
+│  │ master_orchestrator  │  │ scribe_agent │                    │
+│  │ phases, delegation,  │  │ docs, audit, │                    │
+│  │ policy decisions     │  │ checkpoints  │                    │
+│  └──────────────────────┘  └──────────────┘                    │
 ├─────────────────────────────────────────────────────────────────┤
-│  T1 ESTABLISHED (independent specialists)                       │
-│  ┌───────────┐ ┌─────────────┐ ┌─────────────┐ ┌───────────┐  │
-│  │ inquirer  │ │  product_   │ │  project_   │ │ evaluator │  │
-│  │ (intake,  │ │  manager    │ │  manager    │ │ (metrics, │  │
-│  │  Q&A)     │ │ (MoSCoW,   │ │ (tasks,     │ │  scoring) │  │
-│  │           │ │  scope)     │ │  milestones)│ │           │  │
-│  └───────────┘ └─────────────┘ └─────────────┘ └───────────┘  │
+│  T1 ESTABLISHED (independent execution specialists)             │
+│  hr_agent | inquirer_agent | product_manager_agent             │
+│  project_manager_agent | evaluator_agent | trainer_agent       │
 ├─────────────────────────────────────────────────────────────────┤
 │  T1 CONSULTANT PANEL (advisory · invoked for high-impact)       │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌────────┐ ┌────────┐ │
-│  │   risk   │ │ quality  │ │ devil's  │ │ domain │ │ effic. │ │
-│  │ advisor  │ │ advisor  │ │ advocate │ │ expert │ │advisor │ │
-│  └──────────┘ └──────────┘ └──────────┘ └────────┘ └────────┘ │
+│  risk_advisor | quality_advisor | devils_advocate              │
+│  domain_expert | efficiency_advisor                            │
 ├─────────────────────────────────────────────────────────────────┤
-│  T1 DELIVERY ENGINEERS (file/code delivery)                     │
-│  ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐       │
-│  │ canonical │ │ analysis  │ │integration│ │reliability│       │
-│  │ engineer  │ │ engineer  │ │ engineer  │ │ engineer  │       │
-│  └───────────┘ └───────────┘ └───────────┘ └───────────┘       │
-│  ┌───────────┐  ┌──────────┐                                    │
-│  │ session   │  │librarian │                                     │
-│  │ scheduler │  │ (db ops) │                                     │
-│  └───────────┘  └──────────┘                                    │
+│  T1 DELIVERY (implementation and QA)                            │
+│  canonical_engineer | analysis_engineer                         │
+│  integration_engineer | reliability_engineer                    │
 ├─────────────────────────────────────────────────────────────────┤
 │  T2 SUPERVISED (require Master oversight)                       │
-│  ┌───────────┐  ┌───────────┐                                   │
-│  │  trainer  │  │  spawner  │                                   │
-│  │ (L0 advise│  │ (agent    │                                   │
-│  │  only)    │  │  design)  │                                   │
-│  └───────────┘  └───────────┘                                   │
+│  spawner_agent | librarian_agent                                │
+├─────────────────────────────────────────────────────────────────┤
+│  INFRASTRUCTURE (session automation)                            │
+│  session_scheduler                                              │
 ├─────────────────────────────────────────────────────────────────┤
 │  T3 PROVISIONAL (sandbox · spawned agents, none currently)      │
 └─────────────────────────────────────────────────────────────────┘
@@ -218,7 +207,7 @@ Version **0.2.0**. A governed multi-agent delivery system that coordinates 20 sp
 |------|-------|------|
 | **T0** | `master_orchestrator` | Overall coordination, governance, delegation, phase management, spawn approval |
 | **T0** | `scribe_agent` | Documentation, record-keeping, decision logging, artifact tracking, audit trail |
-| **T0** | `hr_agent` | Capability discovery, DeploymentPlan production, roster management, gap certification, agent registration |
+| **T1** | `hr_agent` | Capability discovery, DeploymentPlan production, roster management, gap certification, agent registration |
 | **T1** | `inquirer_agent` | Intake, requirements elicitation, clarification Q&A |
 | **T1** | `product_manager_agent` | Product planning, MoSCoW prioritization, acceptance criteria, scope definition |
 | **T1** | `project_manager_agent` | Execution planning, task decomposition, milestone tracking, dependency mapping |
@@ -229,7 +218,7 @@ Version **0.2.0**. A governed multi-agent delivery system that coordinates 20 sp
 | **T1 Consultant** | `domain_expert` | Domain knowledge, best practices, prior art (auto-injects from `mas/domains/`) |
 | **T1 Consultant** | `efficiency_advisor` | Overengineering detection, cost estimation, simplification |
 | **T1** | `trainer_agent` | Improvement proposals, pattern detection (L0 advisory only) |
-| **T1** | `session_scheduler` | Scheduled session-resume, project lock management, cron-triggered checkpoint continuation |
+| **Infrastructure** | `session_scheduler` | Scheduled session-resume, project lock management, cron-triggered checkpoint continuation |
 | **T1** | `canonical_engineer` | Pydantic v2 model design, schema registry, provenance field patterns |
 | **T1** | `analysis_engineer` | DataFrame flattening (Polars), CLI analysis reports, review QA reports |
 | **T1** | `integration_engineer` | Read-only external connectors, dry-run diff engine, API-key-gated sync |

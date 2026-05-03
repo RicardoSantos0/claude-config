@@ -63,7 +63,7 @@ Lite collapses intake+specification and skips the consultant review phase. Still
 - Gap certificates require a spawn/defer/no-action decision from Master
 
 ### execution
-**Pre-dispatch gate (TP-017):** `PRODUCT_PLAN.md` must exist before any delivery agent is dispatched.
+**Pre-dispatch gate (TP-017):** `mas/projects/{project_id}/planning/product_plan.yaml` must exist before any delivery agent is dispatched.
 **Owner:** Delivery agents per DeploymentPlan
 **Exit artifact:** All deliverable files confirmed on disk
 **Verification:** Master must verify every claimed file before accepting completion handoffs.

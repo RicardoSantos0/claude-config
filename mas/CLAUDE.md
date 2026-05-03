@@ -1,6 +1,6 @@
 # Multi-Agent System (MAS)
 
-A governed agent network for project delivery. Coordinates 14 specialized agents through
+A governed agent network for project delivery. Coordinates 20 specialized agents through
 a formal handoff protocol, shared state with access control, and a full evaluation +
 improvement loop.
 
@@ -174,26 +174,38 @@ Each phase transition requires:
 
 ## Agent Network
 
+The diagram below shows the current live network used by orchestration, delivery,
+consultation, supervised work, and session automation.
+
 ### Invoking the Network
 Always start by invoking `master_orchestrator`. It reads the project brief, initializes
 state, and coordinates the rest of the network.
 
 ```
 User → master_orchestrator
-         ├── scribe_agent          (project memory, folder init)
-         ├── inquirer_agent        (intake, clarification Q&A)
-         ├── product_manager_agent (requirements, product plan)
-         ├── hr_agent              (capability discovery, gap certs)
-         ├── project_manager_agent (milestones, tasks, execution)
-         ├── evaluator_agent       (metrics, evaluation report)
-         ├── trainer_agent         (improvement proposals — L0 advisory)
-         ├── spawner_agent         (draft agent packages — T2 supervised)
-         └── consultant_panel
-               ├── risk_advisor
-               ├── quality_advisor
-               ├── devils_advocate
-               ├── domain_expert
-               └── efficiency_advisor
+  ├── scribe_agent          (project memory, folder init)
+  ├── hr_agent              (capability discovery, gap certs)
+  ├── inquirer_agent        (intake, clarification Q&A)
+  ├── product_manager_agent (requirements, product plan)
+  ├── project_manager_agent (milestones, tasks, execution)
+  ├── evaluator_agent       (metrics, evaluation report)
+  ├── trainer_agent         (improvement proposals — L0 advisory)
+  ├── delivery_engineers
+  │   ├── canonical_engineer   (schemas, provenance, validation)
+  │   ├── analysis_engineer    (flattening, reports, QA views)
+  │   ├── integration_engineer (connectors, dry-run diffs)
+  │   └── reliability_engineer (tests, gates, coverage)
+  ├── supervised_agents
+  │   ├── spawner_agent        (draft agent packages — T2 supervised)
+  │   └── librarian_agent      (FTS, vacuum, graph migration)
+  ├── consultant_panel
+  │   ├── risk_advisor
+  │   ├── quality_advisor
+  │   ├── devils_advocate
+  │   ├── domain_expert
+  │   └── efficiency_advisor
+  └── infrastructure
+      └── session_scheduler    (scheduled resume + project locks)
 ```
 
 ### Consultation Triggers

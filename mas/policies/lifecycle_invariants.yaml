@@ -1,6 +1,7 @@
 # MAS Lifecycle Invariants
 # Runtime guards that block invalid phase transitions and missing artifacts.
 # severity: block = hard stop | warn = logged warning, execution continues
+# Invariant structure: condition (phase/event/state/artifact) -> severity outcome
 version: "1.0"
 invariants:
   - id: no-execution-without-plan

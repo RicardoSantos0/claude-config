@@ -20,8 +20,8 @@ If any rule in this file conflicts with policy text, follow policy text and trea
 
 | Tier | Label | Agents | Authority |
 |------|-------|--------|-----------|
-| T0 | Core | `master_orchestrator`, `scribe_agent`, `hr_agent` | Full workflow coordination; can advance phases; can approve spawns |
-| T1 | Established | `inquirer_agent`, `product_manager_agent`, `project_manager_agent`, `evaluator_agent`, `trainer_agent`, all consultants | Can execute assigned phases; cannot spawn; cannot modify core state |
+| T0 | Core | `master_orchestrator`, `scribe_agent` | Full workflow coordination; can advance phases; can approve spawns |
+| T1 | Established | `hr_agent`, `inquirer_agent`, `product_manager_agent`, `project_manager_agent`, `evaluator_agent`, `trainer_agent`, all consultants | Can execute assigned phases; cannot spawn; cannot modify core state |
 | T2 | Supervised | `spawner_agent` | Supervised execution only; all outputs reviewed by T0 |
 | T3 | Provisional | Spawned agents | Limited trust; cannot transition phases; all outputs reviewed |
 

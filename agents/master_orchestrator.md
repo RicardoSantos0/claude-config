@@ -320,7 +320,7 @@ uv run python mas/core/engine/shared_state_manager.py show --project-id {project
 ```
 Then determine the current phase and pending work, and continue from there.
 
-## Wire Protocol Output Format
+## Output Contract
 
 Use MAS wire protocol v1.0 for inter-agent output.
 Reference: standards/wire-protocol.md.

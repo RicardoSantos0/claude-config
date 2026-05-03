@@ -181,41 +181,14 @@ Your summary must include:
 - Your recommendation in plain English
 - Any warnings (probation, new version, unresolved ambiguity)
 
-## Wire Protocol Output Format
+## Output Contract
 
-When producing handoff payloads and inter-agent outputs, use MAS wire protocol v1.0:
+Use MAS wire protocol v1.0 for inter-agent output.
+Reference: standards/wire-protocol.md.
 
-```json
-{
-  "_v": "1.0",
-  "s": "task:complete",
-  "art": ["path/to/artifact.yaml"],
-  "dec": [{"id": "d-001", "v": "decision_value"}],
-  "deploy": [
-    {
-      "need": "capability need description",
-      "status": "ready",
-      "agent": "recommended_agent_id",
-      "task": "concrete task description to assign",
-      "payload": {"context": "...", "deliverable": "...", "constraints": []},
-      "note": "parameterization or warning note if any"
-    },
-    {
-      "need": "capability need with no match",
-      "status": "gap_certified",
-      "cert_id": "gap-proj-NNN-001",
-      "cert_path": "mas/projects/.../hr/gap-....yaml"
-    }
-  ]
-}
-```
-
-- `_v`: required — always `"1.0"`
-- `s`: status code from vocabulary (e.g. `task:complete`, `eval:pass`, `consult:approve`)
-- `deploy`: **required when capability discovery is complete** — one entry per need, ordered by recommended execution sequence
-- `status` per entry: `ready` (has agent), `gap_certified` (needs spawn), `probation_risk` (agent flagged)
-- Omit empty lists and null values
-- Optional reasoning (`rsn`): max 100 words
-- Full field map in `mas/foundation/wire_protocol_spec.yaml`
-
-**Human-facing output** (CHECKPOINT.md, project summaries) is always expanded by the system — stay structured here.
+HR payload requirements:
+- Include status code and protocol version (`s`, `_v`)
+- Include `deploy` when capability discovery is complete; one ordered entry per capability need
+- Entry statuses: `ready`, `gap_certified`, or `probation_risk`
+- Omit empty lists and null fields
+- Keep rsn under 100 words when provided

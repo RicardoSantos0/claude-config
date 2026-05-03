@@ -10,7 +10,7 @@ through a formal protocol; every decision, artifact, and phase transition is rec
 | Metric | Value |
 |--------|-------|
 | Active agents | 20 |
-| Trust tiers | T0 Core (3), T1 Established (13), T2 Supervised (2), Infrastructure (1) |
+| Trust tiers | T0 Core (2), T1 Established (15), T2 Supervised (2), Infrastructure (1) |
 | Projects run | 34 (project folders) |
 | Projects in DB | 25 |
 | Agent events logged | 1,302 |
@@ -26,7 +26,7 @@ through a formal protocol; every decision, artifact, and phase transition is rec
 |-------|------|------------------|------|
 | master_orchestrator | T0_core | — | Workflow coordination, governance, delegation |
 | scribe_agent | T0_core | — | Documentation, decision logging, artifact tracking |
-| hr_agent | T0_core | — | Capability discovery, roster management, gap certs |
+| hr_agent | T1_established | — | Capability discovery, roster management, gap certs |
 | inquirer_agent | T1_established | — | Intake, requirements elicitation |
 | product_manager_agent | T1_established | — | Product plan, MoSCoW requirements, acceptance criteria |
 | project_manager_agent | T1_established | — | Execution planning, task decomposition |

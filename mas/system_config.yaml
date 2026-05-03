@@ -43,7 +43,7 @@ defaults:
 # --- LLM CONFIGURATION ---
 llm:
   provider: "anthropic"
-  master_model: "claude-opus-4-6"       # Master Orchestrator uses Opus
+  master_model: "claude-opus-4-7"       # Master Orchestrator default
   default_model: "claude-sonnet-4-6"    # All other agents use Sonnet
   max_tokens: 4096
   temperature: 0.3
@@ -61,7 +61,6 @@ trust_tiers:
   T1_established:
     name: "Established"
     agents:
-      - "hr_agent"
       - "inquirer_agent"
       - "product_manager_agent"
       - "project_manager_agent"
@@ -72,6 +71,7 @@ trust_tiers:
       - "devils_advocate"
       - "domain_expert"
       - "efficiency_advisor"
+      - "hr_agent"
     can_do: "Operate independently within role boundaries"
     cannot_do: "Spawn, change governance, modify other agents"
   T2_supervised:
@@ -148,7 +148,7 @@ communication:
   wire_protocol_enabled: true
   wire_protocol_version: "1.0"
   wire_compliance_enforcement: "metric"  # metric (never governance violation)
-  consultation_reasoning_max_words: 100  # optional reasoning field cap
+  consultation_reasoning_max_words: 100  # optional reasoning field cap (wire rsn)
 
 # --- SKILL BRIDGE ---
 skill_access:
@@ -156,15 +156,20 @@ skill_access:
   skills_dir: "../skills"               # relative to mas/
   audit_log: "projects/{project_id}/skill_audit_log.yaml"
   unauthorized_outcome: "denied"         # denied (never governance violation for skill access)
+  # Keep this mapping aligned with core/engine/skill_bridge.py::SKILL_ACCESS.
   per_agent_access:
     master_orchestrator: ["*"]           # all skills
-    scribe_agent: ["research-extract", "research-sync"]
-    inquirer_agent: ["research-extract"]
-    product_manager_agent: ["research-extract", "research-sync"]
-    project_manager_agent: ["research-extract"]
+    scribe_agent: ["research-extract", "research-sync", "mas-document", "mas-handoff"]
+    inquirer_agent: ["research-extract", "mas-clarify"]
+    product_manager_agent: ["research-extract", "research-sync", "mas-clarify"]
+    project_manager_agent: ["research-extract", "mas-plan", "mas-examine"]
     hr_agent: []
-    evaluator_agent: ["research-extract"]
-    trainer_agent: []
+    evaluator_agent: ["research-extract", "mas-postmortem"]
+    trainer_agent: ["mas-postmortem"]
     spawner_agent: ["skill-builder"]
-    domain_expert: ["research-extract"]
-    # All other consultants: no skill access (empty = default)
+    risk_advisor: ["mas-examine"]
+    quality_advisor: ["mas-examine"]
+    devils_advocate: []
+    domain_expert: ["research-extract", "mas-examine"]
+    efficiency_advisor: []
+    session_scheduler: ["mas-review", "mas-handoff", "mas-logwork"]

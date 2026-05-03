@@ -1,6 +1,8 @@
 # MAS Consultation Trigger Policy
 # Defines when consultation is required or recommended before proceeding.
 # Required rules block delegation/phase-advance/spawn/close until satisfied or overridden.
+# Rule structure: when (deterministic conditions) + decision_type + consultants
+# Required entries are blocking; recommended entries are advisory.
 version: "1.0"
 consultation_trigger_policy:
   required:

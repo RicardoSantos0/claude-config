@@ -37,7 +37,7 @@ Bulleted list. Each item should reference a file path, handoff ID, or other conc
 ```markdown
 - Created `scripts/export_source.sh` — verified with git archive test
 - Accepted handoff `ho-proj-001-005` from inquirer_agent
-- Updated `mas/roster/registry_index.yaml` — 14 agents listed
+- Updated `mas/roster/registry_index.yaml` — 20 active agents listed
 ```
 
 ### Decisions

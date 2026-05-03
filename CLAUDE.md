@@ -57,14 +57,16 @@ uv run mas prompt <project-id> inquirer_agent # specific agent
 
 ## Agent Network
 
-The MAS has 14 agents across 4 trust tiers:
+The MAS has 20 agents across 4 trust tiers (including delivery and infrastructure agents):
 
 | Tier | Agents |
 |------|--------|
-| T0 Core | `master_orchestrator`, `scribe_agent`, `hr_agent` |
-| T1 Established | `inquirer_agent`, `product_manager_agent`, `project_manager_agent`, `evaluator_agent`, `trainer_agent` |
+| T0 Core | `master_orchestrator`, `scribe_agent` |
+| T1 Established | `hr_agent`, `inquirer_agent`, `product_manager_agent`, `project_manager_agent`, `evaluator_agent`, `trainer_agent` |
 | T1 Consultants | `risk_advisor`, `quality_advisor`, `devils_advocate`, `domain_expert`, `efficiency_advisor` |
-| T2 Supervised | `spawner_agent` |
+| T1 Delivery | `canonical_engineer`, `analysis_engineer`, `integration_engineer`, `reliability_engineer` |
+| T2 Supervised | `spawner_agent`, `librarian_agent` |
+| Infrastructure | `session_scheduler` |
 
 Invoke `master_orchestrator` to start a project. It coordinates all other agents.
 

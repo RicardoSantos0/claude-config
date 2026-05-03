@@ -1,6 +1,7 @@
 # MAS Skill Trigger Policy
 # Defines when skill use is recommended or required.
 # All rule IDs must be stable — do not rename once published.
+# Rule structure: when (deterministic conditions) -> recommend (skill + required flag + reason)
 version: "1.0"
 skill_trigger_policy:
   rules:
@@ -10,7 +11,7 @@ skill_trigger_policy:
       recommend:
         skill: mas-review
         required: true
-        reason: Every resumed project should start by reviewing state, pending handoffs, and stale context.
+        reason: Must review state, pending handoffs, and stale context when resuming a project.
 
     - id: skill-plan-before-execution
       when:
@@ -19,7 +20,7 @@ skill_trigger_policy:
       recommend:
         skill: mas-plan
         required: true
-        reason: Execution requires a current execution plan.
+        reason: Must maintain a current execution plan before entering execution.
 
     - id: skill-clarify-open-questions
       when:
@@ -27,7 +28,7 @@ skill_trigger_policy:
       recommend:
         skill: mas-clarify
         required: true
-        reason: Open questions should be categorized before proceeding.
+        reason: Must categorize open questions before proceeding.
 
     - id: skill-examine-before-policy-or-runtime-change
       when:
@@ -39,7 +40,7 @@ skill_trigger_policy:
       recommend:
         skill: mas-examine
         required: true
-        reason: Policy, agent, skill, and core runtime changes require read-only examination before modification.
+        reason: Must run read-only examination before policy, agent, skill, or core runtime modification.
 
     - id: skill-document-on-phase-close
       when:
@@ -47,7 +48,7 @@ skill_trigger_policy:
       recommend:
         skill: mas-document
         required: true
-        reason: Phase close must produce durable documentation.
+        reason: Must produce durable documentation at phase close.
 
     - id: skill-postmortem-on-evaluation-fail
       when:
@@ -55,4 +56,4 @@ skill_trigger_policy:
       recommend:
         skill: mas-postmortem
         required: true
-        reason: Evaluation failures require a postmortem before retry or closure.
+        reason: Must complete a postmortem after evaluation failure before retry or closure.

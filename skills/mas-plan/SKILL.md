@@ -25,12 +25,13 @@ Invoke when:
 
 ```text
 mas/projects/<project_id>/shared_state.yaml
-mas/projects/<project_id>/checkpoints/  (latest)
+mas/projects/<project_id>/CHECKPOINT.md (if present)
+mas/projects/<project_id>/checkpoints/  (latest file, fallback)
 mas/policies/handoff_protocol.yaml
 mas/policies/spawn_policy.yaml
 mas/policies/evaluation_policy.yaml
 mas/roster/registry_index.yaml
-planning/product_plan.yaml (if exists)
+mas/projects/<project_id>/planning/product_plan.yaml (if exists)
 ```
 
 ## Writes (when asked)

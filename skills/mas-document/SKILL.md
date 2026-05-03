@@ -26,6 +26,7 @@ Invoke when:
 ```text
 mas/projects/<project_id>/shared_state.yaml
 mas/projects/<project_id>/decisions/decision_log.yaml
+mas/projects/<project_id>/CHECKPOINT.md (if present)
 git diff (changes since last checkpoint)
 mas/projects/<project_id>/handoffs/ (completed handoffs, if directory exists)
 ```
@@ -34,7 +35,7 @@ mas/projects/<project_id>/handoffs/ (completed handoffs, if directory exists)
 
 ```text
 brief:    mas/projects/<project_id>/logs/session_<timestamp>.md
-standard: mas/projects/<project_id>/checkpoints/<timestamp>_checkpoint.yaml
+standard: mas/projects/<project_id>/CHECKPOINT.md (or checkpoints/<timestamp>_checkpoint.yaml when required)
           mas/projects/<project_id>/decisions/decision_log.yaml (append)
 full:     all of the above + artifact index + handoff-ready summary
 ```
