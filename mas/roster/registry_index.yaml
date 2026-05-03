@@ -313,7 +313,7 @@ registry:
   tools: []
 counts:
   active_agents: 20
-  active_skills: 0
+  active_skills: 13
   retired_agents: 0
   spawned_total: 5
   pending_activation: 0
@@ -390,3 +390,33 @@ skills:
     trigger_phases: [evaluation, blocked, incident]
     description: Analyze failed phases, rejected handoffs, violations, or regressions.
     recommended_for: [evaluator_agent, trainer_agent, master_orchestrator]
+  - skill_id: research-extract
+    status: active
+    category: research
+    trigger_phases: [intake, specification, execution]
+    description: Extract and analyze data from the Notion literature review database; generate Python scripts or notebooks from Notion queries.
+    recommended_for: [scribe_agent, inquirer_agent, product_manager_agent, domain_expert]
+  - skill_id: research-sync
+    status: active
+    category: research
+    trigger_phases: [execution, closed]
+    description: Sync Zotero papers to Notion, update the literature review database, poll Zotero for new research.
+    recommended_for: [scribe_agent, product_manager_agent]
+  - skill_id: skill-builder
+    status: active
+    category: meta
+    trigger_phases: [planning, execution]
+    description: Create new skills, optimize existing skills, or audit skill quality following Claude Code official best practices.
+    recommended_for: [spawner_agent, master_orchestrator]
+  - skill_id: notebooklm
+    status: active
+    category: research
+    trigger_phases: [intake, specification, execution, review]
+    description: Query Google NotebookLM notebooks for source-grounded, citation-backed answers. Drastically reduced hallucinations through document-only responses.
+    recommended_for: [inquirer_agent, domain_expert, master_orchestrator]
+  - skill_id: frontend-design
+    status: active
+    category: delivery
+    trigger_phases: [execution]
+    description: Create distinctive, production-grade frontend interfaces. Use when building web components, pages, or applications.
+    recommended_for: [master_orchestrator]

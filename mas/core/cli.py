@@ -727,6 +727,294 @@ def tokens(project_id: str):
 
 
 # ---------------------------------------------------------------------------
+# mas explain
+# ---------------------------------------------------------------------------
+
+@main.command()
+@click.argument("project_id")
+@click.argument("action_id")
+def explain(project_id: str, action_id: str):
+    """Show full detail for a single agent event by action_id.
+
+    Example: mas explain proj-20260409-001 abc123def456
+    """
+    _require_project(project_id)
+    from core.db import query_by_action_id
+
+    event = query_by_action_id(action_id)
+    if not event:
+        click.echo(f"[error] Event '{action_id}' not found.", err=True)
+        sys.exit(1)
+
+    click.echo(f"\nEvent Detail — {action_id}")
+    click.echo("-" * 60)
+    for key, value in event.items():
+        if isinstance(value, (dict, list)):
+            import json
+            click.echo(f"  {key}:\n{yaml.dump(value, default_flow_style=False, allow_unicode=True).rstrip()}")
+        else:
+            click.echo(f"  {key}: {value}")
+
+
+# ---------------------------------------------------------------------------
+# mas check-artifacts
+# ---------------------------------------------------------------------------
+
+@main.command("check-artifacts")
+@click.argument("project_id")
+@click.option("--phase", default=None, metavar="PHASE",
+              help="Override phase to check (default: current phase from state)")
+def check_artifacts(project_id: str, phase: str | None):
+    """Check that required phase artifacts exist on disk.
+
+    Example: mas check-artifacts proj-20260409-001
+             mas check-artifacts proj-20260409-001 --phase planning
+    """
+    _require_project(project_id)
+    project_dir = _get_projects_dir() / project_id
+
+    state = _load_state(project_id)
+    current_phase = phase or state.get("core_identity", {}).get("current_phase", "")
+    if not current_phase:
+        click.echo("[error] Could not determine project phase.", err=True)
+        sys.exit(1)
+
+    contracts_path = ROOT / "policies" / "artifact_contracts.yaml"
+    if not contracts_path.exists():
+        click.echo(f"[warn] artifact_contracts.yaml not found at {contracts_path}")
+        return
+
+    with open(contracts_path, encoding="utf-8") as f:
+        contracts = yaml.safe_load(f)
+
+    phase_contract = contracts.get("phases", {}).get(current_phase)
+    if phase_contract is None:
+        click.echo(f"[info] No artifact contract defined for phase '{current_phase}'.")
+        return
+
+    required = phase_contract.get("required", [])
+    optional = phase_contract.get("optional", [])
+
+    missing = [a for a in required if not (project_dir / a).exists()]
+    present = [a for a in required if (project_dir / a).exists()]
+    opt_present = [a for a in optional if (project_dir / a).exists()]
+
+    click.echo(f"\nArtifact check — {project_id}  phase={current_phase}")
+    click.echo(f"Required : {len(present)}/{len(required)} present")
+    for a in present:
+        click.echo(f"  [ok]   {a}")
+    for a in missing:
+        click.echo(f"  [MISS] {a}")
+    if opt_present:
+        click.echo(f"Optional : {len(opt_present)} found")
+        for a in opt_present:
+            click.echo(f"  [opt]  {a}")
+
+    if missing:
+        click.echo(f"\n[fail] {len(missing)} required artifact(s) missing.")
+        sys.exit(1)
+    else:
+        click.echo("\n[ok] All required artifacts present.")
+
+
+# ---------------------------------------------------------------------------
+# mas check-config
+# ---------------------------------------------------------------------------
+
+@main.command("check-config")
+def check_config():
+    """Validate MAS YAML configuration files (policies, system_config, foundation).
+
+    Example: mas check-config
+    """
+    checks: list[tuple[str, str, str]] = []
+
+    def add(status: str, name: str, detail: str) -> None:
+        checks.append((status, name, detail))
+
+    # System config
+    sc_path = ROOT / "system_config.yaml"
+    if sc_path.exists():
+        try:
+            with open(sc_path, encoding="utf-8") as f:
+                yaml.safe_load(f)
+            add("ok", "system_config.yaml", str(sc_path))
+        except yaml.YAMLError as e:
+            add("fail", "system_config.yaml", f"YAML parse error: {e}")
+    else:
+        add("fail", "system_config.yaml", f"Missing: {sc_path}")
+
+    # Policies
+    policies_dir = ROOT / "policies"
+    if policies_dir.exists():
+        for p in sorted(policies_dir.glob("*.yaml")):
+            try:
+                with open(p, encoding="utf-8") as f:
+                    yaml.safe_load(f)
+                add("ok", f"policies/{p.name}", str(p))
+            except yaml.YAMLError as e:
+                add("fail", f"policies/{p.name}", f"YAML parse error: {e}")
+    else:
+        add("fail", "policies_dir", f"Missing directory: {policies_dir}")
+
+    # Foundation
+    foundation_dir = ROOT / "foundation"
+    if foundation_dir.exists():
+        for p in sorted(foundation_dir.glob("*.yaml")):
+            try:
+                with open(p, encoding="utf-8") as f:
+                    yaml.safe_load(f)
+                add("ok", f"foundation/{p.name}", str(p))
+            except yaml.YAMLError as e:
+                add("fail", f"foundation/{p.name}", f"YAML parse error: {e}")
+    else:
+        add("warn", "foundation_dir", f"Missing: {foundation_dir}")
+
+    # Registry
+    reg_path = ROOT / "roster" / "registry_index.yaml"
+    if reg_path.exists():
+        try:
+            with open(reg_path, encoding="utf-8") as f:
+                data = yaml.safe_load(f)
+            agent_count = len(data.get("registry", {}).get("agents", []))
+            add("ok", "registry_index.yaml", f"{agent_count} agents registered")
+        except yaml.YAMLError as e:
+            add("fail", "registry_index.yaml", f"YAML parse error: {e}")
+    else:
+        add("fail", "registry_index.yaml", f"Missing: {reg_path}")
+
+    status_icons = {"ok": "[ok]", "warn": "[warn]", "fail": "[fail]"}
+    ok_count = warn_count = fail_count = 0
+    click.echo("\nMAS Config Check")
+    for status, name, detail in checks:
+        if status == "ok":
+            ok_count += 1
+        elif status == "warn":
+            warn_count += 1
+        else:
+            fail_count += 1
+        click.echo(f"{status_icons.get(status, '[?]')} {name}: {detail}")
+
+    click.echo(f"\nSummary: ok={ok_count} warn={warn_count} fail={fail_count}")
+    if fail_count:
+        sys.exit(1)
+
+
+# ---------------------------------------------------------------------------
+# mas skill-usage
+# ---------------------------------------------------------------------------
+
+@main.command("skill-usage")
+@click.argument("project_id")
+def skill_usage(project_id: str):
+    """Show per-project skill invocation history from the audit log.
+
+    Example: mas skill-usage proj-20260409-001
+    """
+    _require_project(project_id)
+    from core.engine.skill_bridge import SkillBridge
+
+    entries = SkillBridge().get_audit_log(project_id)
+    if not entries:
+        click.echo("[ok] No skill invocations recorded for this project.")
+        return
+
+    click.echo(f"\nSkill usage — {project_id}  ({len(entries)} invocations)")
+    click.echo(f"{'Timestamp':<20} {'Agent':<25} {'Skill':<25} Outcome")
+    click.echo("-" * 85)
+    for e in entries:
+        ts = str(e.get("timestamp", "—"))[:19]
+        agent = str(e.get("agent_id", "—"))[:24]
+        skill = str(e.get("skill_name", "—"))[:24]
+        outcome = str(e.get("outcome", "—"))
+        click.echo(f"{ts:<20} {agent:<25} {skill:<25} {outcome}")
+
+
+# ---------------------------------------------------------------------------
+# mas consultation-status
+# ---------------------------------------------------------------------------
+
+@main.command("consultation-status")
+@click.argument("project_id")
+def consultation_status(project_id: str):
+    """Show consultation state for a project.
+
+    Example: mas consultation-status proj-20260409-001
+    """
+    _require_project(project_id)
+    state = _load_state(project_id)
+    consult = state.get("consultation", {})
+
+    requests = consult.get("consultation_requests", [])
+    responses = consult.get("consultation_responses", [])
+    synthesis = consult.get("synthesis", [])
+
+    click.echo(f"\nConsultation status — {project_id}")
+    click.echo(f"  Requests   : {len(requests)}")
+    click.echo(f"  Responses  : {len(responses)}")
+    click.echo(f"  Syntheses  : {len(synthesis)}")
+
+    if not requests:
+        click.echo("\n[ok] No consultations initiated.")
+        return
+
+    for i, req in enumerate(requests, 1):
+        dt = str(req.get("requested_at") or req.get("timestamp") or "—")[:19]
+        dtype = req.get("decision_type") or req.get("type") or "—"
+        q = str(req.get("question") or req.get("context") or "")[:80]
+        click.echo(f"\n  [{i}] {dt}  type={dtype}")
+        if q:
+            click.echo(f"       {q}")
+
+
+# ---------------------------------------------------------------------------
+# mas reopen
+# ---------------------------------------------------------------------------
+
+@main.command()
+@click.argument("project_id")
+@click.option("--phase", default="execution",
+              help="Phase to reopen into (default: execution)")
+def reopen(project_id: str, phase: str):
+    """Reopen a closed project for additional work.
+
+    Sets status back to 'active' and current_phase to the specified phase.
+    Use with care — reopened projects lose their closed audit trail integrity.
+
+    Example: mas reopen proj-20260409-001
+             mas reopen proj-20260409-001 --phase review
+    """
+    _require_project(project_id)
+    from core.engine.shared_state_manager import SharedStateManager
+
+    sm = SharedStateManager(project_id)
+    state = sm.load()
+    current_status = state.get("core_identity", {}).get("status", "active")
+
+    if current_status != "closed":
+        click.echo(f"[warn] Project is not closed (status={current_status}). No change made.")
+        return
+
+    sm.write("master_orchestrator", "core_identity", "status", "active")
+    sm.write("master_orchestrator", "core_identity", "current_phase", phase)
+
+    try:
+        from core.engine.event_recorder import EventRecorder
+        EventRecorder().record_simple(
+            project_id=project_id,
+            actor="master_orchestrator",
+            action_type="phase_transition",
+            intent=f"Project reopened into phase={phase}",
+            phase=phase,
+        )
+    except Exception:
+        pass
+
+    click.echo(f"[ok] Project reopened: status=active  phase={phase}")
+    click.echo(f"     Note: re-run `mas snapshot` to capture the reopen state.")
+
+
+# ---------------------------------------------------------------------------
 # mas db rebuild-fts
 # ---------------------------------------------------------------------------
 

@@ -34,6 +34,8 @@ class ParsedResponse:
     consultation_trigger: dict | None    # {decision_type, question, context, consultants}
     knowledge_request: dict | None       # KNOWLEDGE_REQUEST block
     deployment_plan: list[dict]          # deploy array from HR capability assessment
+    skill_request: dict | None           # sk_req: skill invocation requested by agent
+    skills_used: list[str]              # sk_used: skills agent reports having used
     raw_wire: dict                       # full decoded wire dict (pass-through unknown keys)
     parse_errors: list[str] = field(default_factory=list)
 
@@ -110,6 +112,8 @@ class ResponseParser:
         consult_trigger   = wire.get("consultation_trigger")
         knowledge_request = self._extract_knowledge_request(raw_text)
         deployment_plan   = self._extract_deployment_plan(wire)
+        skill_request     = wire.get("sk_req")
+        skills_used       = self._extract_skills_used(wire)
 
         return ParsedResponse(
             status=status,
@@ -122,6 +126,8 @@ class ResponseParser:
             consultation_trigger=consult_trigger,
             knowledge_request=knowledge_request,
             deployment_plan=deployment_plan,
+            skill_request=skill_request,
+            skills_used=skills_used,
             raw_wire=wire,
             parse_errors=errors,
         )
@@ -212,3 +218,10 @@ class ResponseParser:
         if not isinstance(raw, list):
             return []
         return [entry for entry in raw if isinstance(entry, dict)]
+
+    def _extract_skills_used(self, wire: dict) -> list[str]:
+        """Extract the sk_used list — skills the agent reports having invoked."""
+        raw = wire.get("sk_used", [])
+        if not isinstance(raw, list):
+            return []
+        return [str(s) for s in raw if s]
