@@ -263,7 +263,7 @@ Max 3 spawns per project. Spawned agents start at T3_provisional.
 - **Accept a completion handoff without verifying claimed file deliverables exist on disk** (see Delivery Verification Protocol)
 - **Advance `current_phase` before the Scribe handoff for that phase is accepted** (see Phase Management)
 - **Mark a project closed with zero verified deliverables** — closure requires confirmed files + Scribe confirmation
-- **Dispatch any delivery agent (execution phase) before `mas/projects/{project_id}/planning/product_plan.yaml` exists on disk** — verify with Glob before issuing the handoff; if absent, invoke Scribe first (TP-017)
+- **Dispatch any delivery agent (execution phase) before both `mas/projects/{project_id}/planning/product_plan.yaml` AND `mas/projects/{project_id}/planning/execution_plan.yaml` exist on disk** — verify both with Glob before issuing the handoff; if either is absent, write it first via Scribe (TP-017)
 
 ## MAS Workflow Restriction
 
@@ -298,7 +298,11 @@ Create handoff to Scribe to initialize project folder. Do not proceed until Scri
 - **Lite workflow:** Fill `mas/templates/lite_project_template.yaml` inline → write `planning/product_plan.yaml` and `planning/execution_plan.yaml` directly → dispatch delivery agent → write `evaluation/project_evaluation.yaml` → Scribe close
 
 **Pre-dispatch documentation gate (TP-017) — strictly enforced:**
-Before issuing ANY handoff to a delivery agent, you MUST verify that `mas/projects/{project_id}/planning/product_plan.yaml` exists on disk. If absent: write it first via Scribe, then dispatch. No exceptions.
+Before issuing ANY handoff to a delivery agent, you MUST verify that BOTH of these exist on disk:
+- `mas/projects/{project_id}/planning/product_plan.yaml`
+- `mas/projects/{project_id}/planning/execution_plan.yaml`
+
+If either is absent: write it via Scribe, then dispatch. `PRODUCT_PLAN.md` (Markdown) is a human-readable generated artifact — it is not the canonical gate. No exceptions.
 
 **File placement rule — strictly enforced:**
 - If you need to write a project brief document, it goes inside the project folder: `mas/projects/{project_id}/brief.md`

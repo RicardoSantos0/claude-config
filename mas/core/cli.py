@@ -222,9 +222,142 @@ def init(name_or_id: str, request_id: str, mode: str):
 # mas doctor
 # ---------------------------------------------------------------------------
 
+def _doctor_project_health(project_id: str) -> list[tuple[str, str, str]]:
+    """Return health check tuples (status, name, detail) for a project."""
+    from core.utils.log_helpers import query_events as _qe
+    checks: list[tuple[str, str, str]] = []
+
+    def add(status: str, name: str, detail: str) -> None:
+        checks.append((status, name, detail))
+
+    projects_dir = _get_projects_dir()
+    project_dir = projects_dir / project_id
+
+    # 1. Project exists
+    if not project_dir.exists():
+        add("fail", "project_exists", f"Project directory not found: {project_dir}")
+        return checks
+    add("ok", "project_exists", str(project_dir))
+
+    # 2. Load shared state
+    state_path = project_dir / "shared_state.yaml"
+    try:
+        with state_path.open(encoding="utf-8") as f:
+            state = yaml.safe_load(f) or {}
+    except Exception as exc:
+        add("fail", "shared_state", f"Cannot read shared_state.yaml: {exc}")
+        return checks
+    add("ok", "shared_state", "shared_state.yaml readable")
+
+    phase = state.get("core_identity", {}).get("current_phase", "unknown")
+    status_val = state.get("core_identity", {}).get("status", "unknown")
+    add("ok", "phase", f"phase={phase}  status={status_val}")
+
+    # 3. Artifact contracts check
+    contracts_path = ROOT / "policies" / "artifact_contracts.yaml"
+    if contracts_path.exists():
+        try:
+            with contracts_path.open(encoding="utf-8") as f:
+                contracts = yaml.safe_load(f) or {}
+            phase_contract = contracts.get("phases", {}).get(phase, {})
+            required = phase_contract.get("required", [])
+            missing = [r for r in required if not (project_dir / r).exists()]
+            if missing:
+                for m in missing:
+                    add("fail", "artifact", f"Missing required artifact: {m}")
+            else:
+                add("ok", "artifacts", f"All {len(required)} required artifacts present for phase={phase}")
+        except Exception as exc:
+            add("warn", "artifacts", f"Cannot check artifact contracts: {exc}")
+    else:
+        add("warn", "artifacts", "artifact_contracts.yaml not found")
+
+    # 4. Open handoffs
+    pending_handoffs = state.get("workflow", {}).get("pending_handoffs", [])
+    if pending_handoffs:
+        add("warn", "open_handoffs", f"{len(pending_handoffs)} open handoff(s): {[h.get('handoff_id','?') for h in pending_handoffs]}")
+    else:
+        add("ok", "open_handoffs", "No open handoffs")
+
+    # 5. Snapshots after close
+    if status_val == "closed":
+        snapshots = list(project_dir.glob("shared_state_snapshot_*.yaml"))
+        if snapshots:
+            add("warn", "snapshots_after_close", f"{len(snapshots)} snapshot(s) remain after close")
+        else:
+            add("ok", "snapshots_after_close", "No stale snapshots")
+        final = project_dir / "final_shared_state.yaml"
+        if final.exists():
+            add("ok", "final_state", "final_shared_state.yaml present")
+        else:
+            add("warn", "final_state", "final_shared_state.yaml missing for closed project")
+
+    # 6. Required consultation from episodic.db
+    try:
+        req_events = _qe(project_id=project_id, action_type="consultation_required", limit=20)
+        synth_events = _qe(project_id=project_id, action_type="consultation_synthesis", limit=20)
+        if req_events and not synth_events:
+            add("warn", "consultation", f"{len(req_events)} required consultation(s) with no synthesis recorded")
+        elif req_events:
+            add("ok", "consultation", f"{len(req_events)} required, {len(synth_events)} synthesis recorded")
+        else:
+            add("ok", "consultation", "No required consultation events recorded")
+    except Exception as exc:
+        add("warn", "consultation", f"Cannot query consultation events: {exc}")
+
+    # 7. Required skills skipped
+    try:
+        rec_events = _qe(project_id=project_id, action_type="skill_recommended", limit=50)
+        used_events = _qe(project_id=project_id, action_type="skill_invoked", limit=50)
+        skipped_events = _qe(project_id=project_id, action_type="skill_skipped", limit=50)
+        required_rec = [e for e in rec_events if (e.get("payload") or {}).get("required")]
+        if required_rec and not used_events:
+            add("warn", "skills", f"{len(required_rec)} required skill(s) recommended but none invoked")
+        elif skipped_events:
+            add("warn", "skills", f"{len(skipped_events)} skill invocation(s) skipped")
+        else:
+            add("ok", "skills", f"{len(rec_events)} recommended, {len(used_events)} invoked")
+    except Exception as exc:
+        add("warn", "skills", f"Cannot query skill events: {exc}")
+
+    return checks
+
+
+def _doctor_next_action(checks: list[tuple[str, str, str]], project_id: str, state: dict | None = None) -> str:
+    """Return one recommended next action based on health checks."""
+    fails = [name for s, name, _ in checks if s == "fail"]
+    warns = [name for s, name, _ in checks if s == "warn"]
+    if "project_exists" in fails:
+        return f"Run `mas init {project_id}` or check the project ID."
+    if "artifact" in fails:
+        return "Create missing required artifacts before advancing the phase."
+    if "consultation" in warns:
+        return "Trigger required consultation: add `consultation_trigger` to next Master response."
+    if "skills" in warns:
+        return "Run recommended required skill(s) before the next phase action."
+    if "open_handoffs" in warns:
+        return "Resolve or accept pending handoffs via `mas pending`."
+    if "snapshots_after_close" in warns:
+        return "Run `mas close` again or manually delete stale snapshot files."
+    if "final_state" in warns:
+        return "Re-run `mas close` to write final_shared_state.yaml."
+    if warns:
+        return f"Address warnings: {', '.join(warns[:3])}."
+    return "Project looks healthy. Continue with the current phase."
+
+
 @main.command()
-def doctor():
-    """Run runtime and environment diagnostics for MAS CLI usage."""
+@click.argument("project_id", required=False, default=None)
+def doctor(project_id: str | None):
+    """Run runtime and environment diagnostics for MAS CLI usage.
+
+    When PROJECT_ID is provided, also performs project-health checks:
+    artifact contracts, open handoffs, consultation requirements,
+    skill usage, and post-close state.
+
+    Example: mas doctor
+             mas doctor proj-20260503-001-my-project
+    """
     checks: list[tuple[str, str, str]] = []
 
     def add(status: str, name: str, detail: str) -> None:
@@ -316,9 +449,23 @@ def doctor():
     except Exception as exc:
         add("fail", "vector_backend", str(exc))
 
+    # Project-health checks (only when project_id supplied)
+    project_state: dict | None = None
+    health_checks: list[tuple[str, str, str]] = []
+    if project_id:
+        health_checks = _doctor_project_health(project_id)
+        # Extract state for next-action recommendation
+        projects_dir2 = _get_projects_dir()
+        state_path2 = projects_dir2 / project_id / "shared_state.yaml"
+        try:
+            with state_path2.open(encoding="utf-8") as f:
+                project_state = yaml.safe_load(f) or {}
+        except Exception:
+            project_state = None
+
     status_icons = {"ok": "[ok]", "warn": "[warn]", "fail": "[fail]"}
     ok_count = warn_count = fail_count = 0
-    click.echo("\nMAS Doctor")
+    click.echo("\nMAS Doctor — Environment")
     for status, name, detail in checks:
         if status == "ok":
             ok_count += 1
@@ -327,6 +474,28 @@ def doctor():
         else:
             fail_count += 1
         click.echo(f"{status_icons.get(status, '[?]')} {name}: {detail}")
+
+    if health_checks:
+        click.echo(f"\nProject Health — {project_id}")
+        h_ok = h_warn = h_fail = 0
+        for status, name, detail in health_checks:
+            if status == "ok":
+                h_ok += 1
+            elif status == "warn":
+                h_warn += 1
+            else:
+                h_fail += 1
+            click.echo(f"{status_icons.get(status, '[?]')} {name}: {detail}")
+
+        overall = "ok" if h_fail == 0 and h_warn == 0 else ("degraded" if h_fail == 0 else "critical")
+        click.echo(f"\nProject health: {overall}  ok={h_ok} warn={h_warn} fail={h_fail}")
+
+        next_action = _doctor_next_action(health_checks, project_id, project_state)
+        click.echo(f"Suggested next action: {next_action}")
+
+        ok_count += h_ok
+        warn_count += h_warn
+        fail_count += h_fail
 
     click.echo(f"\nSummary: ok={ok_count} warn={warn_count} fail={fail_count}")
     if fail_count:

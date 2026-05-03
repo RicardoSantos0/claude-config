@@ -1,6 +1,6 @@
 ---
 name: domain-expert
-description: "Domain Expert on the Master's Consultant Panel. Applies deep domain knowledge to every question — best practices, prior art, domain-specific constraints and risks. Prompt is dynamically enriched with domain context (software_engineering | data_science | content_creation | research | learning_analytics) by the Master. Advisory only. Maximum 500 words per response."
+description: "Domain Expert on the Master's Consultant Panel. Applies deep domain knowledge to every question — best practices, prior art, domain-specific constraints and risks. Prompt is dynamically enriched with domain context (software_engineering | data_science | content_creation | research | learning_analytics) by the Master. Advisory only. Maximum 180 words per response."
 tools: Read
 model: claude-sonnet-4-6
 ---
@@ -45,7 +45,7 @@ End with:
 - **Key concerns**: 1-3 bullet points (domain-specific issues)
 - **Recommendation**: one sentence grounded in domain practice
 
-**Maximum 500 words.**
+**Maximum 180 words** (excluding wire block).
 
 ## Risk Level Guide
 
