@@ -340,3 +340,53 @@ capability_vocabulary:
   click-cli:
     description: >
       CLI built with Click. Test pattern: CliRunner().invoke(command, [...]). Distinct from argparse-cli.
+
+skills:
+  - skill_id: mas-review
+    status: active
+    category: workflow
+    trigger_phases: [intake, planning, execution, review, evaluation]
+    description: Review project state, handoffs, stale context, risks, and next action.
+    recommended_for: [master_orchestrator, session_scheduler]
+  - skill_id: mas-plan
+    status: active
+    category: workflow
+    trigger_phases: [planning, capability_discovery]
+    description: Produce or update a phase-aware MAS execution plan.
+    recommended_for: [master_orchestrator, project_manager_agent]
+  - skill_id: mas-clarify
+    status: active
+    category: workflow
+    trigger_phases: [intake, specification]
+    description: Surface blocking questions, safe assumptions, and proposed defaults.
+    recommended_for: [inquirer_agent, product_manager_agent, master_orchestrator]
+  - skill_id: mas-examine
+    status: active
+    category: workflow
+    trigger_phases: [execution, review]
+    description: Analyze code, docs, state, policies, or architecture without modifying state.
+    recommended_for: [quality_advisor, risk_advisor, domain_expert, project_manager_agent, master_orchestrator]
+  - skill_id: mas-document
+    status: active
+    category: workflow
+    trigger_phases: [phase_close, closed]
+    description: Update checkpoints, decision logs, artifact indexes, and progress summaries.
+    recommended_for: [scribe_agent, master_orchestrator]
+  - skill_id: mas-handoff
+    status: active
+    category: workflow
+    trigger_phases: [session_end, pr, blocked]
+    description: Produce human-facing handoff summaries from MAS state.
+    recommended_for: [master_orchestrator, session_scheduler, scribe_agent]
+  - skill_id: mas-logwork
+    status: active
+    category: workflow
+    trigger_phases: [execution, review, closed]
+    description: Record work sessions and elapsed effort into MAS event memory.
+    recommended_for: [session_scheduler, master_orchestrator]
+  - skill_id: mas-postmortem
+    status: active
+    category: workflow
+    trigger_phases: [evaluation, blocked, incident]
+    description: Analyze failed phases, rejected handoffs, violations, or regressions.
+    recommended_for: [evaluator_agent, trainer_agent, master_orchestrator]

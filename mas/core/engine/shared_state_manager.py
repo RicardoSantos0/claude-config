@@ -377,6 +377,34 @@ class SharedStateManager:
         self.logger.log_phase_transition(self.project_id, "current", phase)
         return snap_path
 
+    def cleanup_snapshots(self, keep_latest: int = 0, force: bool = False) -> list[Path]:
+        """Delete shared_state_snapshot_*.yaml files for this project.
+
+        Only executes when project status is 'closed' unless force=True.
+        Must be called as the LAST step in the close sequence — after all other
+        close operations are confirmed — to avoid partial cleanup on mid-sequence failure.
+        Returns list of deleted paths.
+        """
+        state = self.load()
+        status = state.get("core_identity", {}).get("status", "")
+        if status != "closed" and not force:
+            return []
+
+        snapshots = sorted(
+            self.project_dir.glob("shared_state_snapshot_*.yaml"),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True,
+        )
+        to_delete = snapshots[keep_latest:]
+        deleted: list[Path] = []
+        for path in to_delete:
+            try:
+                path.unlink()
+                deleted.append(path)
+            except FileNotFoundError:
+                continue
+        return deleted
+
     # --- GOVERNANCE TRACKING ---
 
     def _record_violation(self, state: dict, agent_id: str,

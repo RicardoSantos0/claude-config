@@ -121,7 +121,7 @@ class EventRecorder:
                 intent=event.intent,
                 result_shape=event.result_shape or "",
                 payload=normalised_payload,
-                db_path=str(self._db_path),
+                db_path=self._db_path,
             )
             return action_id
         except Exception as exc:  # noqa: BLE001

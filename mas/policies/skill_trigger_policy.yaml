@@ -1,0 +1,58 @@
+# MAS Skill Trigger Policy
+# Defines when skill use is recommended or required.
+# All rule IDs must be stable — do not rename once published.
+version: "1.0"
+skill_trigger_policy:
+  rules:
+    - id: skill-review-on-resume
+      when:
+        event: project_resume
+      recommend:
+        skill: mas-review
+        required: true
+        reason: Every resumed project should start by reviewing state, pending handoffs, and stale context.
+
+    - id: skill-plan-before-execution
+      when:
+        phase: planning
+        missing_artifact: planning/execution_plan.yaml
+      recommend:
+        skill: mas-plan
+        required: true
+        reason: Execution requires a current execution plan.
+
+    - id: skill-clarify-open-questions
+      when:
+        state_path_non_empty: decisions.open_questions
+      recommend:
+        skill: mas-clarify
+        required: true
+        reason: Open questions should be categorized before proceeding.
+
+    - id: skill-examine-before-policy-or-runtime-change
+      when:
+        touched_paths_any:
+          - mas/policies/**
+          - agents/**
+          - skills/**
+          - mas/core/**
+      recommend:
+        skill: mas-examine
+        required: true
+        reason: Policy, agent, skill, and core runtime changes require read-only examination before modification.
+
+    - id: skill-document-on-phase-close
+      when:
+        event: phase_close
+      recommend:
+        skill: mas-document
+        required: true
+        reason: Phase close must produce durable documentation.
+
+    - id: skill-postmortem-on-evaluation-fail
+      when:
+        status: "eval:fail"
+      recommend:
+        skill: mas-postmortem
+        required: true
+        reason: Evaluation failures require a postmortem before retry or closure.

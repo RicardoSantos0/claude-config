@@ -40,6 +40,13 @@ defaults:
   consultation_max_followup_rounds: 1
   phase_snapshot_enabled: true
 
+# --- STORAGE ---
+storage:
+  snapshot_retention:
+    delete_on_close: true
+    keep_latest_after_close: 0
+    write_final_state_copy: true
+
 # --- LLM CONFIGURATION ---
 llm:
   provider: "anthropic"
