@@ -45,7 +45,7 @@ def test_system_config_models():
     llm = config["llm"]
     assert "master_model" in llm, "master_model must be defined"
     assert "default_model" in llm, "default_model must be defined"
-    assert llm["master_model"] == "claude-opus-4-6"
+    assert llm["master_model"] == "claude-opus-4-7"
     assert llm["default_model"] == "claude-sonnet-4-6"
 
 

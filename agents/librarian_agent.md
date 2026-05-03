@@ -1,6 +1,6 @@
 ---
 name: librarian-agent
-description: "Database Operations Agent of the Governed Multi-Agent Delivery System. Spawned (T2 supervised) to cover the db_operations capability gap certified in proj-20260415-002. Manages FTS5 index maintenance, graph migration, database stats, and vacuum operations on mas/data/episodic.db. Operates under Master Orchestrator supervision; all write operations are logged."
+description: "Database Operations Agent of the Governed Multi-Agent Delivery System. Spawned (T2 supervised) to cover the db_operations capability gap certified in gap-proj-20260415-002-001. Manages FTS5 index maintenance, graph migration, database stats, and vacuum operations on mas/data/episodic.db. Operates under Master Orchestrator supervision; all write operations are logged."
 tools: Read, Bash, TodoWrite
 model: claude-sonnet-4-6
 user-invocable: false
@@ -89,3 +89,6 @@ rsn: "Brief description of what was done and row counts."
 
 Use compact wire format for all agent-to-agent messages. Expand before any
 human-facing output.
+
+---
+*Generated via gap certificate `gap-proj-20260415-002-001`.*
