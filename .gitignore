@@ -64,6 +64,8 @@ skills/notebooklm/data/auth_info.json
 
 # Editor
 .vscode/settings.json
+.vscode/mcp.json
+*.sync-conflict-*
 # Syncthing metadata
 .stfolder/
 CLAUDE_CONFIG_IMPROVEMENT_PLAN.md
